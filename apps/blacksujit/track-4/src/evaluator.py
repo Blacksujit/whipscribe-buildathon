@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import time
 import requests
 
 
@@ -72,6 +73,7 @@ def call_llm(provider, api_key, model, prompt, max_retries=3):
                 continue
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"].strip()
+        raise RuntimeError(f"Rate limited after {max_retries} retries (provider: {provider})")
 
     elif provider == "anthropic":
         url = "https://api.anthropic.com/v1/messages"
@@ -88,11 +90,11 @@ def call_llm(provider, api_key, model, prompt, max_retries=3):
         for attempt in range(max_retries):
             resp = requests.post(url, headers=headers, json=payload, timeout=60)
             if resp.status_code == 429:
-                import time
                 time.sleep(2 ** attempt)
                 continue
             resp.raise_for_status()
             return resp.json()["content"][0]["text"].strip()
+        raise RuntimeError(f"Rate limited after {max_retries} retries (provider: {provider})")
 
     raise ValueError(f"Unsupported provider: {provider}")
 
@@ -154,11 +156,12 @@ def _fallback_evaluate(segments):
     """Rule-based fallback evaluation when no LLM key is available."""
     action_items = []
     clarity_issues = []
+    tension_signals = []
     compliance_risks = []
 
     for seg in segments:
         text = seg.get("text", "")
-        speaker = seg.get("speaker", "UNKNOWN")
+        speaker = seg.get("speaker") or "UNKNOWN"
         start = seg.get("start", 0)
         end = seg.get("end", 0)
 
@@ -175,7 +178,7 @@ def _fallback_evaluate(segments):
             })
 
         # Clarity issues: hedging language
-        if any(w in lower for w in ["i think", "maybe", "probably", "i'm not sure", "i believe"]):
+        if any(w in lower for w in ["i think", "maybe", "probably", "i'm not sure", "i believe", "i guess", "sort of", "kind of"]):
             clarity_issues.append({
                 "text": text,
                 "speaker": speaker,
@@ -184,8 +187,20 @@ def _fallback_evaluate(segments):
                 "issue": "Uncertain/hedging language",
             })
 
+        # Tension: defensive or conflicting language
+        if any(w in lower for w in ["actually", "but", "however", "unfortunately", "disagree", "can't", "cannot", "isn't ready", "not ready"]):
+            tension_signals.append({
+                "text_a": text,
+                "speaker_a": speaker,
+                "start": start,
+                "end": end,
+                "text_b": "",
+                "speaker_b": "",
+                "signal": "Potential conflict or deflection",
+            })
+
         # Compliance risk: unbacked promises
-        if any(w in lower for w in ["we'll promise", "guarantee", "we'll ship", "can promise"]):
+        if any(w in lower for w in ["promise", "guarantee", "guarantee", "commit to", "commit to deliver"]):
             compliance_risks.append({
                 "text": text,
                 "speaker": speaker,
@@ -198,15 +213,14 @@ def _fallback_evaluate(segments):
     ai_score = max(0, 100 - len(action_items) * 5)
     clarity_score = max(0, 100 - len(clarity_issues) * 10)
     compliance_score = max(0, 100 - len(compliance_risks) * 15)
-    # Tension: no rule-based detection in fallback
-    tension_score = 85
+    tension_score = max(0, 100 - len(tension_signals) * 12)
 
     overall = round((ai_score + clarity_score + tension_score + compliance_score) / 4)
 
     return {
         "action_items": action_items,
         "clarity_issues": clarity_issues,
-        "tension_signals": [],
+        "tension_signals": tension_signals,
         "compliance_risks": compliance_risks,
         "category_scores": {
             "action_items": ai_score,

@@ -50,7 +50,7 @@ def generate_report(evaluation, transcript, job_id=None):
         priority = {"Compliance": 0, "Tension": 1, "Clarity": 2, "Action Item": 3}
         all_issues.sort(key=lambda x: priority.get(x[0], 99))
         for label, item in all_issues[:5]:
-            speaker = item.get("speaker", "UNKNOWN")
+            speaker = item.get("speaker") or "UNKNOWN"
             start = item.get("start", 0)
             end = item.get("end", 0)
             text = item.get("text", item.get("text_a", ""))
@@ -72,7 +72,7 @@ def generate_report(evaluation, transcript, job_id=None):
     lines.append(f"## Action Items ({len(ais)} found)\n")
     if ais:
         for item in ais:
-            speaker = item.get("speaker", "UNKNOWN")
+            speaker = item.get("speaker") or "UNKNOWN"
             start = item.get("start", 0)
             text = item.get("text", "")
             owner = item.get("owner", "unspecified")

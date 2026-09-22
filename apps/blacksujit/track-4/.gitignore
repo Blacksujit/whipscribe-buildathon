@@ -1,5 +1,14 @@
 # Generated reports
 report.md
+report_real.md
+
+# Test scripts and temp files
+test_api.py
+test_llm.py
+test_openai.py
+test_anthropic.py
+src/test_audio.wav
+src/test_speech.wav
 
 # Python venv
 .venv/
