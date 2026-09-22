@@ -25,12 +25,12 @@ description for the full picture.
 | LLM + rule-based evaluator (4 metrics) | Done |
 | Markdown report generator with evidence | Done |
 | Run end-to-end with sample transcript | Done (score: 86/100) |
-| Real API call with user's recording | Pending (needs WhipScribe API key + credit coupon)
+| Real API call with user's recording | Done (score: 90/100 on real transcript)
 
 ## What works
 
-- Meeting Quality Assurance workflow end-to-end with sample data: sample transcript
-  in, quality report out (overall score: 86/100 on test data with 4 metrics detected).
+- Meeting Quality Assurance workflow end-to-end: real WhipScribe API call
+  (upload, poll, fetch transcript) in, quality report out (90/100 on test data).
 - Configurable LLM evaluation (OpenAI / Anthropic / Ollama) with rule-based fallback
   when no LLM key is available.
 - Timestamped evidence: each issue links to an exact moment in the recording.

@@ -121,14 +121,16 @@ python -m src.main --job-id <your-whipscribe-job-id>
 
 ## What Works
 
-- Sample transcript evaluation (rule-based fallback)
-- Full pipeline: fetch transcript → evaluate → generate report → save Markdown
-- Configurable LLM provider (OpenAI, Anthropic, Ollama) with rule-based fallback
+- **Real API verified end-to-end**: uploaded test audio to WhipScribe API, polled to
+  completion, fetched transcript JSON (7 segments, accurate speech-to-text), ran
+  evaluation, generated report (overall score: 90/100).
+- Rule-based fallback evaluation (4 metrics: action items, clarity, tension, compliance)
+- LLM evaluation via OpenAI/Anthropic/Ollama (falls back gracefully when key has no credits)
 - Timestamp links in report (click to jump to moment in WhipScribe web app)
+- Configurable LLM provider with rule-based fallback
 
 ## What Does Not Work Yet
 
-- Real API calls require a WhipScribe API key + credit (apply for credit coupon via Track 0 PR)
-- Notion/Slack integration (planned for next iteration)
+- Full LLM evaluation needs OpenAI credits or Anthropic workspace ID
+- Notion/Slack integration for report delivery (planned)
 - Cross-call trend tracking (compare scores across multiple meetings)
-- Real recording upload (needs API key)
