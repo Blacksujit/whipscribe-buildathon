@@ -16,7 +16,7 @@ src/test_speech.wav
 __pycache__/
 *.pyc
 
-# Secrets — even if the env auto-populates these
+# Secrets - even if the env auto-populates these
 .env
 .env.example
 

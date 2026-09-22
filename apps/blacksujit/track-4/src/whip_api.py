@@ -53,7 +53,7 @@ def poll_job(api_key, job_id, timeout=300, interval=3):
         if status == "failed":
             raise RuntimeError(f"Job {job_id} failed: {resp.json().get('error', 'unknown')}")
         if status == "locked":
-            raise RuntimeError(f"Job {job_id} is paywalled — add credit at the unlock_url")
+            raise RuntimeError(f"Job {job_id} is paywalled - add credit at the unlock_url")
         if timeout <= 0:
             raise TimeoutError(f"Job {job_id} timed out after polling")
         time.sleep(interval)

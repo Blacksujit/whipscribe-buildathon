@@ -4,8 +4,8 @@
 
 **One page:** Sales managers and team leads run 5-10 customer calls per week.
 Each call is transcribed by WhipScribe, but the transcript is just text.
-To assess call quality — did the rep ask the right questions? Did they make
-unbacked promises? Did they capture action items? — managers read the entire
+To assess call quality - did the rep ask the right questions? Did they make
+unbacked promises? Did they capture action items? - managers read the entire
 transcript (30-60 min per call) and track issues in a separate doc. They miss
 things, feedback is delayed, and coaching is inconsistent.
 
@@ -14,7 +14,7 @@ Missed action items = lost revenue. No systematic way to track team improvement.
 
 **Target user:** A sales manager at a B2B SaaS company. They have WhipScribe
 transcripts of their team's customer calls and need a structured quality score
-they can act on — not another wall of text.
+they can act on - not another wall of text.
 
 ## User Research
 
@@ -30,7 +30,7 @@ by 2-3 days, and she has no way to compare call quality week-over-week.
 
 **Founder's advice (from the startup hiring founder, cold-DMed):** "Try to go after
 real impact, not small UI bug fixes. Track 4 is tough one." This aligns with Sarah's
-need — she does not need a better UI for reading transcripts; she needs the
+need - she does not need a better UI for reading transcripts; she needs the
 transcript to be analyzed for her.
 
 **Key interview questions:**
@@ -41,7 +41,7 @@ transcript to be analyzed for her.
 5. How do you coach reps today, and how do you measure improvement?
 
 **Learnings applied to this design:**
-- Action items are the highest-priority metric — reps forget commitments constantly
+- Action items are the highest-priority metric - reps forget commitments constantly
 - Compliance is table stakes (disclosures, no unbacked promises)
 - Coaching feedback must be specific with evidence (timestamps + quotes)
 - Trend tracking across calls is essential for team improvement
@@ -67,7 +67,7 @@ transcript to be analyzed for her.
 | Step | WhipScribe API call |
 |---|---|
 | Submit recording | `POST /api/v1/transcribe` (file) or `/transcribe/url` (URL) |
-| Poll for completion | `GET /api/v1/jobs/{job_id}` — wait for `status: "done"` |
+| Poll for completion | `GET /api/v1/jobs/{job_id}` - wait for `status: "done"` |
 | Fetch transcript | `GET /api/v1/jobs/{job_id}/result?format=json` → `{text, segments:[{start,end,speaker,text,words}]}` |
 | (Optional) Get key moments | `GET /api/v1/jobs/{job_id}/clips/candidates?kind=question` |
 | (Optional) Playback | `GET /api/v1/jobs/{job_id}/audio/url` → short-lived stream URL |
@@ -100,11 +100,11 @@ $ python -m src.main --job-id 35f4be54-aa3e-4adc-85b7-b44f284d1fc3
 
 ## Top Issues
 
-**Compliance** — Speaker 1 at [0:31–0:39]
+**Compliance** - Speaker 1 at [0:31-0:39]
 > "We'll promise to ship mobile apps in Q1 as well."
 *Unbacked commitment/promise*
 
-**Clarity** — Speaker 1 at [0:08–0:14]
+**Clarity** - Speaker 1 at [0:08-0:14]
 > "I think we should launch in November."
 *Uncertain/hedging language*
 ...

@@ -104,7 +104,7 @@ def main():
         print("  Evaluation complete (via LLM)")
     else:
         evaluation = evaluate(transcript)
-        print("  Evaluation complete (rule-based fallback — set LLM_PROVIDER + key for full LLM analysis)")
+        print("  Evaluation complete (rule-based fallback - set LLM_PROVIDER + key for full LLM analysis)")
 
     # Generate and save report
     print(f"  Generating report...")
