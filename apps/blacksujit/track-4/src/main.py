@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.whip_api import submit_file, submit_url, poll_job, get_transcript
 from src.evaluator import evaluate
 from src.reporter import generate_report, save_report
+from src.notion import deliver_report
 
 
 def load_env():
@@ -45,6 +46,8 @@ def main():
     parser.add_argument("--output", default="report.md", help="Output report file")
     parser.add_argument("--provider", default=None, help="LLM provider (openai/anthropic/ollama)")
     parser.add_argument("--model", default=None, help="LLM model to use")
+    parser.add_argument("--deliver", default=None, choices=["notion"],
+                        help="Deliver the report to Notion")
 
     args = parser.parse_args()
     load_env()
@@ -65,7 +68,7 @@ def main():
         job_id = args.job_id
         whip_key = os.getenv("WHIPSKRIBE_API_KEY")
         if not whip_key:
-            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.example to .env and add your key.")
+            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
             sys.exit(1)
         print(f"  Polling job {job_id}...")
         poll_job(whip_key, job_id)
@@ -74,7 +77,7 @@ def main():
     elif args.file:
         whip_key = os.getenv("WHIPSKRIBE_API_KEY")
         if not whip_key:
-            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.example to .env and add your key.")
+            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
             sys.exit(1)
         print(f"  Uploading {args.file}...")
         job_id = submit_file(whip_key, args.file, args.language)
@@ -85,7 +88,7 @@ def main():
     elif args.url:
         whip_key = os.getenv("WHIPSKRIBE_API_KEY")
         if not whip_key:
-            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.example to .env and add your key.")
+            print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
             sys.exit(1)
         print(f"  Submitting URL {args.url}...")
         job_id = submit_url(whip_key, args.url, args.language)
@@ -109,6 +112,17 @@ def main():
     save_report(report, args.output)
     print(f"  Report saved to: {args.output}")
     print(f"  Overall score: {evaluation.get('overall_score', 0)}/100")
+
+    # Optional: deliver to Notion
+    if args.deliver == "notion":
+        print("  Delivering report to Notion...")
+        try:
+            result = deliver_report(
+                report, job_id, evaluation.get("category_scores", {}),
+            )
+            print(f"  Notion page created: {result['page_url']}")
+        except Exception as e:
+            print(f"  [WARN] Notion delivery failed: {e}")
 
     # Print the report to console
     print("\n" + "=" * 60 + "\n")

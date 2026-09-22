@@ -16,6 +16,36 @@ Missed action items = lost revenue. No systematic way to track team improvement.
 transcripts of their team's customer calls and need a structured quality score
 they can act on — not another wall of text.
 
+## User Research
+
+**Persona:** Sarah, Customer Success Manager at a B2B SaaS company (revenue $10M ARR).
+She manages 3 SDRs who run 15-20 customer calls per week. Each call is recorded and
+transcribed by WhipScribe. Her job is to coach reps, ensure compliance, and track
+action items.
+
+**What it costs her today:** Sarah reads every transcript in full (30-60 min/week
+across 15 calls), highlights issues in a separate Google Doc, manually copies action
+items into her CRM, and still misses follow-ups. Her feedback to reps is delayed
+by 2-3 days, and she has no way to compare call quality week-over-week.
+
+**Founder's advice (from the startup hiring founder, cold-DMed):** "Try to go after
+real impact, not small UI bug fixes. Track 4 is tough one." This aligns with Sarah's
+need — she does not need a better UI for reading transcripts; she needs the
+transcript to be analyzed for her.
+
+**Key interview questions:**
+1. How much time do you spend reviewing call transcripts each week?
+2. What are the top 3 things you look for when reviewing a call?
+3. How do you currently track action items from calls?
+4. What compliance risks have you discovered after a call was recorded?
+5. How do you coach reps today, and how do you measure improvement?
+
+**Learnings applied to this design:**
+- Action items are the highest-priority metric — reps forget commitments constantly
+- Compliance is table stakes (disclosures, no unbacked promises)
+- Coaching feedback must be specific with evidence (timestamps + quotes)
+- Trend tracking across calls is essential for team improvement
+
 ## The Workflow
 
 1. Manager selects a recording (already in their WhipScribe library, or uploads
@@ -30,7 +60,7 @@ they can act on — not another wall of text.
    - Overall score + per-category scores (0-100)
    - Top 5 issues with clickable evidence (timestamp + quote)
    - Extracted action items (owner, deadline, evidence)
-5. Report is saved as Markdown and pushed to Notion (future) or Slack.
+5. Report is saved as Markdown and optionally pushed to Notion (`--deliver notion`).
 
 ### What the API/MCP does at each step
 
@@ -132,5 +162,23 @@ python -m src.main --job-id <your-whipscribe-job-id>
 ## What Does Not Work Yet
 
 - Full LLM evaluation needs OpenAI credits or Anthropic workspace ID
-- Notion/Slack integration for report delivery (planned)
+- Notion integration in code (deliver via --deliver notion; needs integration token + database ID)
 - Cross-call trend tracking (compare scores across multiple meetings)
+
+## Demo
+
+Run with a real recording:
+
+```bash
+python -m src.main --file ~/my-recording.mp3
+```
+
+Or test end-to-end with no API key (sample transcript):
+
+```bash
+python -m src.main --sample
+```
+
+The `--sample` mode runs the full pipeline (parse transcript, evaluate, generate
+report) without needing a WhipScribe key. The output includes scores, top issues
+with timestamped evidence, and extracted action items.
