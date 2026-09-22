@@ -1,0 +1,48 @@
+{
+  "text": "Good morning, Sarah. We're here to discuss the Q4 rollout plan. I think we should launch in November. Actually, the engineering team isn't ready yet. Can we push to December? Also, what about the pricing model? I'm not sure about the $99 price point. We'll promise to ship mobile apps in Q1 as well. Everyone okay with that? Let me circle back with you by Friday. Thanks.",
+  "language": "en",
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 8.2,
+      "speaker": "SPEAKER_00",
+      "text": "Good morning, Sarah. We're here to discuss the Q4 rollout plan."
+    },
+    {
+      "start": 8.3,
+      "end": 14.1,
+      "speaker": "SPEAKER_01",
+      "text": "I think we should launch in November."
+    },
+    {
+      "start": 14.2,
+      "end": 22.8,
+      "speaker": "SPEAKER_00",
+      "text": "Actually, the engineering team isn't ready yet. Can we push to December?"
+    },
+    {
+      "start": 22.9,
+      "end": 31.5,
+      "speaker": "SPEAKER_02",
+      "text": "Also, what about the pricing model? I'm not sure about the $99 price point."
+    },
+    {
+      "start": 31.6,
+      "end": 39.2,
+      "speaker": "SPEAKER_01",
+      "text": "We'll promise to ship mobile apps in Q1 as well."
+    },
+    {
+      "start": 39.3,
+      "end": 47.8,
+      "speaker": "SPEAKER_00",
+      "text": "Everyone okay with that?"
+    },
+    {
+      "start": 47.9,
+      "end": 60.5,
+      "speaker": "SPEAKER_02",
+      "text": "Let me circle back with you by Friday. Thanks."
+    }
+  ]
+}

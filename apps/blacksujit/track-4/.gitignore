@@ -1,0 +1,12 @@
+# Generated reports
+report.md
+
+# Python venv
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets — even if the env auto-populates these
+.env
+.env.example
+
