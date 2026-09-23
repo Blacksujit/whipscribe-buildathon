@@ -585,6 +585,59 @@ def api_jobs():
         return jsonify({"jobs": [], "success": False, "error": str(e)}), 500
 
 
+@app.route("/api/analyze/<job_id>", methods=["POST"])
+def api_analyze(job_id):
+    """API endpoint: analyze a single meeting and return JSON."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No API key configured"}), 401
+
+    provider, llm_key, model = get_eval_settings()
+    try:
+        transcript = get_transcript(api_key, job_id)
+        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
+        store.save_evaluation(job_id, transcript, evaluation)
+        return jsonify({
+            "success": True,
+            "job_id": job_id,
+            "score": evaluation.get("overall_score", 0),
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/analyze-all", methods=["POST"])
+def api_analyze_all():
+    """API endpoint: analyze all on-account jobs."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No API key configured"}), 401
+
+    provider, llm_key, model = get_eval_settings()
+    try:
+        all_jobs = list_jobs(api_key, limit=100)
+        done_jobs = [j for j in all_jobs if j.get("status") == "done"]
+        evaluated = 0
+        for job in done_jobs[:20]:
+            jid = job.get("job_id")
+            if not jid:
+                continue
+            try:
+                transcript = get_transcript(api_key, jid)
+                if not transcript.get("speech_detected", True):
+                    continue
+                if len(transcript.get("segments", [])) < 2:
+                    continue
+                evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
+                store.save_evaluation(jid, transcript, evaluation)
+                evaluated += 1
+            except Exception:
+                continue
+        return jsonify({"success": True, "evaluated": evaluated, "total": len(done_jobs)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/trends-data")
 def trends_data():
     """JSON endpoint for Chart.js to render trend charts."""

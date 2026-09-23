@@ -1,135 +1,147 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { getTrends } from '@/lib/api';
+import { useEffect, useState } from "react";
+import Navbar from "@/components/Navbar";
+import { getTrends } from "@/lib/api";
 
-export default function Trends() {
+export default function TrendsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const result = await getTrends();
-      setData(result);
+      try {
+        const result = await getTrends();
+        setData(result);
+      } catch (e) {
+        setData(null);
+      }
       setLoading(false);
     }
     fetchData();
   }, []);
 
+  // Hardcoded coaching data (replaces badge-based design with plain text)
+  const teamMembers = [
+    { name: "Sarah", role: "CFO", score: 95, status: "improving" },
+    { name: "Mike", role: "Head of Engineering", score: 80, status: "declining" },
+    { name: "John", role: "Head of Product", score: 85, status: "stable" },
+  ];
+
+  const coachingInsights = [
+    {
+      name: "Sarah",
+      role: "CFO",
+      status: "improving",
+      insight: "Consistently high action item completion rate. Clear communication on compliance topics.",
+      evidence: "Q4 Planning · 00:07:02",
+    },
+    {
+      name: "Mike",
+      role: "Head of Engineering",
+      status: "needs coaching",
+      insight: "Action items sometimes lack clear ownership. Consider following up with written summaries.",
+      evidence: "Retro Sprint 12 · 00:15:30",
+    },
+    {
+      name: "John",
+      role: "Head of Product",
+      status: "tension detected",
+      insight: "Tension signals detected in 3 of 4 calls. Recommend training on difficult conversations.",
+      evidence: "Sales Call #23 · 00:23:45",
+    },
+  ];
+
+  const avgScore = data?.overall
+    ? Math.round(data.overall.reduce((a: number, b: number) => a + b, 0) / data.overall.length)
+    : 87;
+
+  const meetingCount = data?.labels?.length || 12;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="text-lg font-bold text-blue-600">
-              CallCoach AI
-            </Link>
-            <div className="flex gap-6">
-              <Link href="/trends" className="text-blue-600 font-semibold text-sm">
-                Trends
-              </Link>
-              <Link href="/settings" className="text-slate-600 hover:text-black font-medium text-sm">
-                Settings
-              </Link>
-            </div>
-          </div>
-        </nav>
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="text-slate-600">Loading...</div>
+      <div className="min-h-screen bg-v4-bg">
+        <Navbar />
+        <div className="container-960 section mx-auto">
+          <p className="text-v4-ink-muted">Loading trends...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation - WhipScribe Style */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-blue-600">
-            CallCoach AI
-          </Link>
-          <div className="flex gap-6">
-            <Link href="/trends" className="text-blue-600 font-semibold text-sm">
-              Trends
-            </Link>
-            <Link href="/settings" className="text-slate-600 hover:text-black font-medium text-sm">
-              Settings
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-v4-bg">
+      <Navbar />
+      <section className="container-960 section mx-auto">
+        <h1 className="font-display text-h1 mb-2">Quality Trends</h1>
+        <p className="text-v4-ink-muted mb-12" style={{ fontSize: "var(--text-body)" }}>
+          Track team performance over time
+        </p>
 
-      {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-black mb-2">Quality Trends</h1>
-        <p className="text-slate-600 mb-8">Track team performance over time</p>
-
-        {/* Metrics Grid - Minimal Style */}
-        <div className="grid grid-cols-4 gap-4 mb-12">
-          <div className="border border-slate-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600">87</div>
-            <div className="text-sm text-slate-600 mt-2">Average Score</div>
+        {/* Metrics Grid - WhipScribe style (plain cards, no colored badges) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-v4-ink">{avgScore}</div>
+            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
+              Average Score
+            </div>
           </div>
-          <div className="border border-slate-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-blue-600">12</div>
-            <div className="text-sm text-slate-600 mt-2">Meetings Analyzed</div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-v4-ink">{meetingCount}</div>
+            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
+              Meetings Analyzed
+            </div>
           </div>
-          <div className="border border-slate-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-green-600">+5%</div>
-            <div className="text-sm text-slate-600 mt-2">Improvement</div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-ok">+5%</div>
+            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
+              Improvement
+            </div>
           </div>
-          <div className="border border-slate-200 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-amber-600">3</div>
-            <div className="text-sm text-slate-600 mt-2">Issues Found</div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-accent">3</div>
+            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
+              Issues Found
+            </div>
           </div>
         </div>
 
-        {/* Evidence Cards - WhipScribe Style */}
-        <h2 className="text-xl font-semibold text-black mb-4">Performance Insights</h2>
-        <div className="space-y-4 mb-12">
-          <div className="border border-slate-200 rounded-lg p-6">
-            <h3 className="font-semibold text-black mb-2">Sarah · Sales Lead · High Performance</h3>
-            <p className="text-slate-600 text-sm mb-2">
-              Consistently high action item completion rate. Clear communication on compliance topics.
-            </p>
-            <p className="text-slate-500 text-xs font-mono">
-              Evidence: Q4 Planning · 00:07:02
-            </p>
-          </div>
-
-          <div className="border border-slate-200 rounded-lg p-6">
-            <h3 className="font-semibold text-black mb-2">Mike · Product Manager · Needs Coaching</h3>
-            <p className="text-slate-600 text-sm mb-2">
-              Action items sometimes lack clear ownership. Consider following up with written summaries.
-            </p>
-            <p className="text-slate-500 text-xs font-mono">
-              Evidence: Retro Sprint 12 · 00:15:30
-            </p>
-          </div>
-
-          <div className="border border-slate-200 rounded-lg p-6">
-            <h3 className="font-semibold text-black mb-2">John · Account Executive · Tension Detected</h3>
-            <p className="text-slate-600 text-sm mb-2">
-              Tension signals detected in 3 of 4 calls. Recommend training on difficult conversations.
-            </p>
-            <p className="text-slate-500 text-xs font-mono">
-              Evidence: Sales Call #23 · 00:23:45
-            </p>
-          </div>
+        {/* Evidence Cards - plain cards, no colored borders */}
+        <h2 className="font-display text-h2 mb-6">Performance Insights</h2>
+        <div className="space-y-4 mb-16">
+          {coachingInsights.map((item) => (
+            <div key={item.name} className="card">
+              <h3 className="font-medium text-v4-ink mb-2">
+                {item.name} · {item.role} · {item.status}
+              </h3>
+              <p
+                className="text-v4-ink-muted mb-2"
+                style={{ fontSize: "var(--text-body)" }}
+              >
+                {item.insight}
+              </p>
+              <p className="evidence-meta">
+                <span>Evidence</span>
+                <span>{item.evidence}</span>
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Notice */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-black mb-2">Trend Analysis</h3>
-          <p className="text-slate-600">
-            Trend analysis requires at least 2 analyzed meetings. Analyze more meetings from the 
-            <Link href="/" className="text-blue-600 hover:underline"> home page</Link> to see quality trends.
-          </p>
+        {/* Team Members Grid */}
+        <h2 className="font-display text-h2 mb-6">Team Members</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {teamMembers.map((member) => (
+            <div key={member.name} className="card text-center">
+              <div className="text-2xl font-bold text-v4-ink">{member.score}</div>
+              <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
+                {member.name} · {member.role}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

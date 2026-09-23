@@ -1,5 +1,5 @@
 // Simple API client for Flask backend
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_FLASK_URL || 'http://localhost:5000';
 
 export interface Job {
   job_id: string;
@@ -34,7 +34,7 @@ export async function getJobs(apiKey: string): Promise<ApiJobsResponse> {
 
 export async function analyzeJob(apiKey: string, jobId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/analyze/${jobId}`, {
+    const res = await fetch(`${API_BASE}/api/analyze/${jobId}`, {
       method: 'POST',
       headers: { 'X-API-Key': apiKey },
     });
@@ -52,7 +52,7 @@ export async function analyzeJob(apiKey: string, jobId: string): Promise<{ succe
 
 export async function getTrends(): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE}/trends`);
+    const res = await fetch(`${API_BASE}/api/trends-data`);
     
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
