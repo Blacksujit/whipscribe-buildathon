@@ -9,7 +9,8 @@ Usage:
     python demo.py --sample                           # Demo with sample transcript
     python demo.py --file path/to/audio.wav           # Upload and transcribe your recording
     python demo.py --job-id <whipscribe-job-id>       # Analyze an existing WhipScribe job
-    python demo.py --deliver notion                   # Also push report to Notion
+    python demo.py --deliver notion                    # Also push report to Notion
+    python demo.py --compare-sample                    # Demo multi-meeting trend analysis
 
 Requires: .env file with WHIPSKRIBE_API_KEY, LLM_API_KEY (see .env.template)
 """
@@ -24,6 +25,7 @@ from src.whip_api import submit_file, submit_url, poll_job, get_transcript, get_
 from src.evaluator import evaluate
 from src.reporter import generate_report, save_report
 from src.main import load_env
+from src.compare import compare_evaluations, generate_comparison_report, make_sample_variation
 
 DIVIDER = "=" * 64
 
@@ -40,12 +42,74 @@ def load_sample_transcript():
         return json.load(f)
 
 
+def run_comparison_demo():
+    """Demo multi-meeting trend analysis with 3 sample meetings."""
+    print_banner("Multi-Meeting Trend Analysis Demo")
+    print("  3 sample meetings compared for quality trends\n")
+
+    names = ["Q4 Planning", "Retro: Sprint 12", "Sales Call #23"]
+    base_transcript = load_sample_transcript()
+    evaluations = []
+
+    for i, name in enumerate(names):
+        step(5 + i, f"Analyzing: {name}")
+        transcript = make_sample_variation(base_transcript, name)
+        evaluation = evaluate(transcript)  # rule-based fallback (no key needed)
+        scores = evaluation.get("category_scores", {})
+        print(f"  Overall: {evaluation.get('overall_score', 0)}/100")
+        print(f"  Action Items: {scores.get('action_items', 0)}  "
+              f"Clarity: {scores.get('clarity', 0)}  "
+              f"Tension: {scores.get('tension', 0)}  "
+              f"Compliance: {scores.get('compliance', 0)}")
+        evaluations.append(evaluation)
+
+    step(9, "Running trend analysis across meetings")
+    comparisons = compare_evaluations(evaluations, names)
+
+    print("\n  Score Trends:")
+    for metric in ["overall", "action_items", "clarity", "tension", "compliance"]:
+        trend = comparisons["trends"].get(metric, "stable")
+        scores = [m["scores"][metric] for m in comparisons["meetings"]]
+        arrow = {"improving": "+", "declining": "-", "stable": "="}.get(trend, "?")
+        print(f"    {metric:>14}: {' -> '.join(str(s) for s in scores)} [{arrow} {trend}]")
+
+    print("\n  Key Insights:")
+    for insight in comparisons["insights"]:
+        print(f"    * {insight}")
+
+    tracking = comparisons["action_item_tracking"]
+    print(f"\n  Action Items: {tracking['total']} total, "
+          f"{tracking['completion_rate']}% resolved")
+
+    report = generate_comparison_report(comparisons)
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "comparison_report.md")
+    with open(output_path, "w") as f:
+        f.write(report)
+    print(f"\n  [OK] Comparison report saved to: {output_path}")
+
+    print(f"\n{DIVIDER}")
+    print("  Demo complete - multi-meeting trend analysis finished.")
+    print(f"{DIVIDER}")
+
+
+def print_banner(title):
+    width = 70
+    print("=" * width)
+    print(f"  {title}")
+    print("=" * width)
+
+
 if __name__ == "__main__":
     sample = "--sample" in sys.argv
     deliver = "--deliver" in sys.argv and sys.argv[sys.argv.index("--deliver") + 1] if "--deliver" in sys.argv else None
     file_path = next((a for a in sys.argv[1:] if not a.startswith("--") and not sample), None)
+    compare_demo = "--compare-sample" in sys.argv
 
     load_env()
+
+    if compare_demo:
+        run_comparison_demo()
+        sys.exit(0)
 
     step(1, "Acquire transcript from WhipScribe")
 

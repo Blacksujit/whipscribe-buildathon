@@ -157,13 +157,14 @@ python -m src.main --job-id <your-whipscribe-job-id>
 - Rule-based fallback evaluation (4 metrics: action items, clarity, tension, compliance)
 - LLM evaluation via OpenAI/Anthropic/Ollama (falls back gracefully when key has no credits)
 - Timestamp links in report (click to jump to moment in WhipScribe web app)
+- **Multi-meeting trend analysis** (`--compare` / `--compare-sample`): compare quality across
+  multiple meetings, track action item completion rates, detect recurring issues
 - Configurable LLM provider with rule-based fallback
 
 ## What Does Not Work Yet
 
 - Full LLM evaluation needs OpenAI credits or Anthropic workspace ID
 - Notion integration in code (deliver via --deliver notion; needs integration token + database ID)
-- Cross-call trend tracking (compare scores across multiple meetings)
 
 ## Demo
 
@@ -177,6 +178,12 @@ Or test end-to-end with no API key (sample transcript):
 
 ```bash
 python -m src.main --sample
+```
+
+Multi-meeting trend analysis (no API key needed):
+
+```bash
+python demo.py --compare-sample
 ```
 
 The `--sample` mode runs the full pipeline (parse transcript, evaluate, generate
