@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Meeting Quality Assurance{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#1e293b;line-height:1.6;margin:0;">
+  <nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#ffffff;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:100;">
+    <a href="{{ url_for('index') }}" style="font-weight:700;font-size:18px;color:#007AFF;text-decoration:none;">Meeting QA</a>
+    <div style="display:flex;gap:16px;">
+      <a href="{{ url_for('index') }}" style="color:#6b7280;text-decoration:none;font-size:14px;font-weight:500;">Meetings</a>
+      <a href="{{ url_for('trends') }}" style="color:#6b7280;text-decoration:none;font-size:14px;font-weight:500;">Trends</a>
+      <a href="{{ url_for('speakers') }}" style="color:#6b7280;text-decoration:none;font-size:14px;font-weight:500;">Speakers</a>
+      <a href="{{ url_for('coach') }}" style="color:#6b7280;text-decoration:none;font-size:14px;font-weight:500;">Coach</a>
+      <a href="{{ url_for('settings') }}" style="color:#6b7280;text-decoration:none;font-size:14px;font-weight:500;">Settings</a>
+    </div>
+  </nav>
+
+  <main style="max-width:1200px;margin:0 auto;padding:24px;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,3 +1,7 @@
+# Environment secrets — NEVER COMMIT
+.env
+*.local
+
 # Generated reports
 report.md
 report_real.md
@@ -16,7 +20,12 @@ src/test_speech.wav
 __pycache__/
 *.pyc
 
-# Mockups and prototypes (not for git)
-mockups/
+# Frontend build artifacts
+frontend/.next/
+frontend/node_modules/
 
 report_test.md
+
+# Web dashboard
+evaluations.db
+uploads/

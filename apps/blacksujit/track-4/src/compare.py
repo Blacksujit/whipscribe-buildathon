@@ -1,16 +1,13 @@
 """Multi-meeting trend analysis and comparison.
 
-This module is the architectural differentiator for Track 4: while other
-submissions do "transcribe -> push to tool", this module enables
-"transcribe -> evaluate -> compare -> coach" by analyzing quality trends
-across multiple meetings.
+This module analyzes quality trends across multiple meetings to provide
+coaching insights and performance tracking.
 
 Architecture:
   - Depends ONLY on the evaluation data contract (dict shape).
-  - Does NOT import whip_api, reporter, or notion — zero coupling to adapters.
+  - Does NOT import whip_api, reporter, or notion — no external dependencies.
   - Functions are pure: same input always produces same output.
-  - Designed to be callable both from main.py (--compare) and from a
-    future batch-processing service.
+  - Designed to be callable both from CLI and web service.
 
 Data contract (evaluation dict shape):
   {
@@ -26,6 +23,8 @@ Data contract (evaluation dict shape):
 
 import copy
 import time
+from typing import Any
+from difflib import SequenceMatcher
 
 
 def compare_evaluations(
@@ -89,18 +88,29 @@ def compare_evaluations(
 
     # --- Common issues across meetings ---
     common_issues = _find_common_issues(meetings)
+    
+    # --- Advanced recurring issue clustering ---
+    recurring_clusters = _cluster_recurring_issues(meetings)
 
     # --- Action item tracking ---
     action_tracking = _track_action_items(meetings)
+    
+    # --- Advanced recurring issue clustering ---
+    recurring_clusters = _cluster_recurring_issues(meetings)
+    
+    # --- Speaker analysis (team vs individual patterns) ---
+    speaker_analysis = _analyze_speaker_patterns(evaluations, names)
 
     # --- Human-readable insights ---
-    insights = _generate_insights(meetings, trends, common_issues, action_tracking)
+    insights = _generate_insights(meetings, trends, common_issues, action_tracking, recurring_clusters)
 
     return {
         "meetings": meetings,
         "trends": trends,
         "common_issues": common_issues,
+        "recurring_clusters": recurring_clusters,
         "action_item_tracking": action_tracking,
+        "speaker_analysis": speaker_analysis,
         "insights": insights,
     }
 
@@ -120,6 +130,11 @@ def _collect_all_issues(eval_data: dict[str, Any]) -> list[dict[str, Any]]:
 def _normalize_text(text: str) -> str:
     """Normalize issue text for grouping (lowercase, strip, first 60 chars)."""
     return text.lower().strip()[:60]
+
+
+def _fuzzy_match(text1: str, text2: str, threshold: float = 0.7) -> bool:
+    """Check if two texts are similar using fuzzy matching."""
+    return SequenceMatcher(None, text1.lower(), text2.lower()).ratio() >= threshold
 
 
 def _find_common_issues(meetings: list[dict]) -> list[dict[str, Any]]:
@@ -149,6 +164,63 @@ def _find_common_issues(meetings: list[dict]) -> list[dict[str, Any]]:
     result = [v for v in groups.values() if v["count"] >= 2]
     result.sort(key=lambda x: x["count"], reverse=True)
     return result
+
+
+def _cluster_recurring_issues(meetings: list[dict]) -> list[dict[str, Any]]:
+    """Advanced clustering of similar issues using fuzzy matching.
+    
+    This goes beyond exact text matching to find patterns like:
+    - "I think we should launch" vs "I believe we should launch"
+    - "Not sure about timeline" vs "Uncertain about schedule"
+    """
+    all_issues: list[dict[str, Any]] = []
+    for meeting in meetings:
+        for issue in meeting["issues"]:
+            text = issue.get("text", "") or f"{issue.get('text_a','')} / {issue.get('text_b','')}"
+            if text:
+                all_issues.append({
+                    "type": issue["type"],
+                    "text": text,
+                    "meeting": meeting["name"],
+                    "date": meeting["date"],
+                })
+    
+    clusters: list[dict[str, Any]] = []
+    used_indices = set()
+    
+    for i, issue1 in enumerate(all_issues):
+        if i in used_indices:
+            continue
+            
+        cluster = {
+            "type": issue1["type"],
+            "pattern": issue1["text"],
+            "count": 1,
+            "meetings": [issue1["meeting"]],
+            "variations": [issue1["text"]],
+        }
+        used_indices.add(i)
+        
+        # Find similar issues
+        for j, issue2 in enumerate(all_issues):
+            if j <= i or j in used_indices:
+                continue
+            if issue1["type"] != issue2["type"]:
+                continue
+                
+            if _fuzzy_match(issue1["text"], issue2["text"], threshold=0.6):
+                cluster["count"] += 1
+                if issue2["meeting"] not in cluster["meetings"]:
+                    cluster["meetings"].append(issue2["meeting"])
+                if issue2["text"] not in cluster["variations"]:
+                    cluster["variations"].append(issue2["text"])
+                used_indices.add(j)
+        
+        if cluster["count"] >= 2:
+            clusters.append(cluster)
+    
+    clusters.sort(key=lambda x: x["count"], reverse=True)
+    return clusters
 
 
 def _track_action_items(meetings: list[dict]) -> dict[str, Any]:
@@ -197,6 +269,7 @@ def _generate_insights(
     trends: dict[str, str],
     common_issues: list[dict],
     action_tracking: dict,
+    recurring_clusters: list[dict],
 ) -> list[str]:
     """Generate human-readable insights from the comparison data."""
     insights: list[str] = []
@@ -254,8 +327,78 @@ def _generate_insights(
         insights.append(
             "Clarity scores are declining - reps may be rushed or unprepared."
         )
+    
+    # Insight: recurring issue clusters (new feature)
+    if recurring_clusters:
+        top_cluster = recurring_clusters[0]
+        insights.append(
+            f"Pattern detected: '{top_cluster['pattern'][:50]}...' "
+            f"appears {top_cluster['count']} times across {len(top_cluster['meetings'])} meetings."
+        )
 
     return insights
+
+
+def _analyze_speaker_patterns(evaluations: list[dict], names: list[str]) -> dict[str, Any]:
+    """Analyze speaker-specific patterns across meetings.
+    
+    This identifies which speakers contribute to quality issues:
+    - Who creates compliance risks most often?
+    - Who tends to use unclear language?
+    - Who generates the most action items?
+    """
+    speaker_stats: dict[str, dict[str, Any]] = {}
+    
+    for eval_data, meeting_name in zip(evaluations, names):
+        for issue_type in ("clarity_issues", "tension_signals", 
+                          "compliance_risks", "action_items"):
+            for item in eval_data.get(issue_type, []):
+                speaker = item.get("speaker", "Unknown")
+                if speaker not in speaker_stats:
+                    speaker_stats[speaker] = {
+                        "meetings": set(),
+                        "clarity_count": 0,
+                        "tension_count": 0,
+                        "compliance_count": 0,
+                        "action_count": 0,
+                    }
+                
+                speaker_stats[speaker]["meetings"].add(meeting_name)
+                
+                if issue_type == "clarity_issues":
+                    speaker_stats[speaker]["clarity_count"] += 1
+                elif issue_type == "tension_signals":
+                    speaker_stats[speaker]["tension_count"] += 1
+                elif issue_type == "compliance_risks":
+                    speaker_stats[speaker]["compliance_count"] += 1
+                elif issue_type == "action_items":
+                    speaker_stats[speaker]["action_count"] += 1
+    
+    # Convert sets to counts and identify patterns
+    results = []
+    for speaker, stats in speaker_stats.items():
+        results.append({
+            "speaker": speaker,
+            "meetings": len(stats["meetings"]),
+            "clarity_count": stats["clarity_count"],
+            "tension_count": stats["tension_count"],
+            "compliance_count": stats["compliance_count"],
+            "action_count": stats["action_count"],
+            "risk_score": (
+                stats["compliance_count"] * 3 + 
+                stats["tension_count"] * 2 + 
+                stats["clarity_count"]
+            )  # Weighted risk score
+        })
+    
+    # Sort by risk score
+    results.sort(key=lambda x: x["risk_score"], reverse=True)
+    
+    return {
+        "speakers": results,
+        "high_risk_speakers": [s for s in results if s["risk_score"] >= 3],
+        "top_action_generators": sorted(results, key=lambda x: x["action_count"], reverse=True)[:3],
+    }
 
 
 def make_sample_variation(base_transcript, name):
@@ -329,6 +472,46 @@ def generate_comparison_report(comparisons: dict[str, Any]) -> str:
                 f"{', '.join(issue['meetings'])} | {issue['count']} |"
             )
         lines.append("")
+    
+    # Advanced recurring issue clusters (new feature)
+    clusters = comparisons.get("recurring_clusters", [])
+    if clusters:
+        lines.append("## Pattern Clusters (Advanced Analysis)")
+        lines.append("")
+        lines.append("Using fuzzy matching to detect similar issues across meetings:")
+        lines.append("")
+        for cluster in clusters[:3]:  # Show top 3 clusters
+            lines.append(f"### Pattern: {cluster['pattern'][:60]}...")
+            lines.append(f"- **Frequency**: {cluster['count']} occurrences")
+            lines.append(f"- **Meetings**: {', '.join(cluster['meetings'])}")
+            lines.append(f"- **Variations detected**: {len(cluster['variations'])}")
+            lines.append("")
+
+    # Speaker analysis (new feature)
+    speaker_analysis = comparisons.get("speaker_analysis", {})
+    if speaker_analysis.get("speakers"):
+        lines.append("## Speaker Performance Analysis")
+        lines.append("")
+        lines.append("Individual speaker contribution to meeting quality:")
+        lines.append("")
+        lines.append("| Speaker | Meetings | Compliance Risks | Tension | Clarity Issues | Action Items | Risk Score |")
+        lines.append("|---|---|---|---|---|---|---|")
+        for speaker in speaker_analysis["speakers"][:5]:  # Top 5 speakers
+            lines.append(
+                f"| {speaker['speaker']} | {speaker['meetings']} | "
+                f"{speaker['compliance_count']} | {speaker['tension_count']} | "
+                f"{speaker['clarity_count']} | {speaker['action_count']} | "
+                f"{speaker['risk_score']} |"
+            )
+        lines.append("")
+        
+        if speaker_analysis.get("high_risk_speakers"):
+            lines.append("### High-Risk Speakers (requiring coaching)")
+            lines.append("")
+            for speaker in speaker_analysis["high_risk_speakers"]:
+                lines.append(f"- **{speaker['speaker']}**: Risk score {speaker['risk_score']} - "
+                            f"compliance: {speaker['compliance_count']}, tension: {speaker['tension_count']}")
+            lines.append("")
 
     # Action item tracking
     tracking = comparisons["action_item_tracking"]
@@ -358,7 +541,7 @@ def generate_comparison_report(comparisons: dict[str, Any]) -> str:
         lines.append("")
 
     lines.append("---")
-    lines.append("*Analyzed from WhipScribe transcripts.*")
+    lines.append("*Analyzed from WhipScribe transcripts with advanced pattern detection.*")
 
     return "\n".join(lines)
 

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Settings — Meeting QA Copilot{% endblock %}
+{% block content %}
+<h1 style="font-size:24px;margin-bottom:16px;">Settings</h1>
+
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:12px;">WhipScribe API</h2>
+  <p style="color:#6b7280;font-size:13px;margin-bottom:12px;">
+    Get your API key at <a href="https://whipscribe.com/apis/keys" target="_blank">whipscribe.com/apis/keys</a>.
+    Keys are stored locally in SQLite, not committed to git.
+  </p>
+  <form method="POST">
+    <div class="form-group">
+      <label for="whipscribe_api_key">API Key</label>
+      <input type="password" id="whipscribe_api_key" name="whipscribe_api_key"
+             class="form-input" value="{{ settings.whipscribe_api_key }}"
+             placeholder="tk_...">
+    </div>
+    <button type="submit" class="btn btn-primary">Save Settings</button>
+  </form>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h2 style="font-size:18px;margin-bottom:12px;">LLM Evaluation</h2>
+  <p style="color:#6b7280;font-size:13px;margin-bottom:12px;">
+    Falls back to rule-based evaluation if no LLM key is provided.
+  </p>
+  <form method="POST">
+    <div class="form-group">
+      <label for="llm_provider">Provider</label>
+      <select id="llm_provider" name="llm_provider" class="form-input">
+        <option value="openai" {% if settings.llm_provider == 'openai' %}selected{% endif %}>OpenAI (GPT-4o-mini)</option>
+        <option value="anthropic" {% if settings.llm_provider == 'anthropic' %}selected{% endif %}>Anthropic (Claude)</option>
+        <option value="ollama" {% if settings.llm_provider == 'ollama' %}selected{% endif %}>Ollama (local)</option>
+        <option value="" {% if not settings.llm_provider %}selected{% endif %}>Rule-based fallback only</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="llm_api_key">LLM API Key</label>
+      <input type="password" id="llm_api_key" name="llm_api_key"
+             class="form-input" value="{{ settings.llm_api_key }}" placeholder="sk-...">
+    </div>
+    <div class="form-group">
+      <label for="llm_model">Model</label>
+      <input type="text" id="llm_model" name="llm_model"
+             class="form-input" value="{{ settings.llm_model }}" placeholder="gpt-4o-mini">
+    </div>
+    <button type="submit" class="btn btn-primary">Save Settings</button>
+  </form>
+</div>
+{% endblock %}

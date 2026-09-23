@@ -5,3 +5,6 @@
 node_modules/
 
 .commandcode
+
+# Standalone product (separate from buildathon entry)
+../callcoach-ai/

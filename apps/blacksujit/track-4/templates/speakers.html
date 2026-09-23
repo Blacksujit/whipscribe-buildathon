@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Speaker Analysis — Meeting QA Copilot{% endblock %}
+{% block content %}
+<div class="card">
+  <h1 style="font-size:24px;margin-bottom:8px;">Speaker Performance Analysis</h1>
+  <p style="color:#6b7280;font-size:14px;margin-bottom:16px;">
+    Track individual speaker contributions to meeting quality and identify coaching opportunities.
+  </p>
+</div>
+
+{% if speaker_analysis.speakers %}
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:12px;">Speaker Rankings</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Speaker</th>
+        <th>Meetings</th>
+        <th>Compliance Risks</th>
+        <th>Tension</th>
+        <th>Clarity Issues</th>
+        <th>Action Items</th>
+        <th>Risk Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for speaker in speaker_analysis.speakers %}
+      <tr class="{% if speaker.risk_score >= 10 %}risk-high{% elif speaker.risk_score >= 5 %}risk-medium{% else %}risk-low{% endif %}">
+        <td><strong>{{ speaker.speaker }}</strong></td>
+        <td>{{ speaker.meetings }}</td>
+        <td>{{ speaker.compliance_count }}</td>
+        <td>{{ speaker.tension_count }}</td>
+        <td>{{ speaker.clarity_count }}</td>
+        <td>{{ speaker.action_count }}</td>
+        <td><strong>{{ speaker.risk_score }}</strong></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if speaker_analysis.high_risk_speakers %}
+<div class="card" style="border-left: 4px solid #ef4444;">
+  <h2 style="font-size:18px;margin-bottom:12px;">⚠️ High-Risk Speakers (Coaching Required)</h2>
+  <p style="color:#6b7280;font-size:14px;margin-bottom:16px;">
+    These speakers consistently contribute to quality issues. Consider targeted coaching:
+  </p>
+  <ul style="margin: 0; padding-left: 20px;">
+    {% for speaker in speaker_analysis.high_risk_speakers %}
+    <li style="margin-bottom: 8px;">
+      <strong>{{ speaker.speaker }}</strong> (Risk Score: {{ speaker.risk_score }})<br>
+      <small style="color:#6b7280;">Compliance: {{ speaker.compliance_count }} | Tension: {{ speaker.tension_count }} | Clarity: {{ speaker.clarity_count }}</small>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if speaker_analysis.top_action_generators %}
+<div class="card" style="border-left: 4px solid #16a34a;">
+  <h2 style="font-size:18px;margin-bottom:12px;">✅ Top Action Item Generators</h2>
+  <p style="color:#6b7280;font-size:14px;margin-bottom:16px;">
+    These speakers consistently drive action items and outcomes:
+  </p>
+  <ul style="margin: 0; padding-left: 20px;">
+    {% for speaker in speaker_analysis.top_action_generators %}
+    <li style="margin-bottom: 8px;">
+      <strong>{{ speaker.speaker }}</strong> ({{ speaker.action_count }} action items)
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+  <div style="text-align:center;padding:40px;">
+    <h3 style="font-size:16px;margin-bottom:8px;">No speaker data available</h3>
+    <p style="color:#6b7280;font-size:14px;">Analyze more meetings to see speaker performance patterns.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top:16px;">Analyze Meetings</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

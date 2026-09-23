@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}QA Report — {{ job_id[:8] }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <h1 style="font-size:20px;">Meeting QA Report</h1>
+    <span class="score-badge {% if evaluation.overall_score >= 85 %}score-excellent{% elif evaluation.overall_score >= 70 %}score-good{% elif evaluation.overall_score >= 50 %}score-warn{% else %}score-bad{% endif %}">
+      {{ evaluation.overall_score }}/100
+    </span>
+  </div>
+  <p style="color:#6b7280;font-size:13px;">Job ID: <code>{{ job_id }}</code></p>
+  {% if audio_url %}
+  <audio controls style="margin:12px 0;width:100%;max-width:500px;">
+    <source src="{{ audio_url }}" type="audio/mpeg">
+  </audio>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin-bottom:12px;">Category Scores</h2>
+  <div class="grid " style="grid-template-columns:repeat(4,1fr);gap:12px;">
+    {% for cat, score in evaluation.category_scores.items() %}
+    <div class="metric-card">
+      <div class="metric-value" style="color:{% if score >= 85 %}#16a34a{% elif score >= 70 %}#d97706{% elif score >= 50 %}#ea580c{% else %}#dc2626{% endif %};">
+        {{ score }}
+      </div>
+      <div class="metric-label">{{ cat.replace('_', ' ').title() }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin-bottom:12px;">Top Issues</h2>
+  {% set has_issues = evaluation.compliance_risks or evaluation.tension_signals or evaluation.clarity_issues %}
+  {% if has_issues %}
+  {% for issue in evaluation.compliance_risks %}
+  <div class="issue-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <span class="badge" style="font-size:10px;text-transform:uppercase;background:#fee2e2;color:#dc2626;">compliance</span>
+        <strong style="display:block;margin-top:6px;">{{ issue.text_a or issue.risk }}</strong>
+        {% if issue.risk %}<span style="font-size:12px;color:#6b7280;">{{ issue.risk }}</span>{% endif %}
+      </div>
+      <div style="font-size:12px;color:#9ca3af;text-align:right;">
+        <div>{{ issue.speaker_a or 'UNKNOWN' }}</div>
+        <div>{{ "%.1f"|format(issue.start_a or 0) }}s</div>
+        <a href="https://whipscribe.com/transcript/{{ job_id }}?t={{ (issue.start_a or 0) | int }}" target="_blank" style="font-size:11px;color:#2563eb;">Jump to moment</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% for issue in evaluation.tension_signals %}
+  <div class="issue-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <span class="badge" style="font-size:10px;text-transform:uppercase;background:#fef3c7;color:#d97706;">tension</span>
+        <strong style="display:block;margin-top:6px;">{{ issue.text_a or issue.signal }}</strong>
+        {% if issue.signal %}<span style="font-size:12px;color:#6b7280;">{{ issue.signal }}</span>{% endif %}
+      </div>
+      <div style="font-size:12px;color:#9ca3af;text-align:right;">
+        <div>{{ issue.speaker_a or 'UNKNOWN' }}</div>
+        <div>{{ "%.1f"|format(issue.start_a or 0) }}s</div>
+        <a href="https://whipscribe.com/transcript/{{ job_id }}?t={{ (issue.start_a or 0) | int }}" target="_blank" style="font-size:11px;color:#2563eb;">Jump to moment</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% for issue in evaluation.clarity_issues %}
+  <div class="issue-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <span class="badge" style="font-size:10px;text-transform:uppercase;background:#dcfce7;color:#16a34a;">clarity</span>
+        <strong style="display:block;margin-top:6px;">{{ issue.text_a or issue.issue }}</strong>
+        {% if issue.issue %}<span style="font-size:12px;color:#6b7280;">{{ issue.issue }}</span>{% endif %}
+      </div>
+      <div style="font-size:12px;color:#9ca3af;text-align:right;">
+        <div>{{ issue.speaker_a or 'UNKNOWN' }}</div>
+        <div>{{ "%.1f"|format(issue.start_a or 0) }}s</div>
+        <a href="https://whipscribe.com/transcript/{{ job_id }}?t={{ (issue.start_a or 0) | int }}" target="_blank" style="font-size:11px;color:#2563eb;">Jump to moment</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p style="color:#6b7280;">No significant issues detected.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin-bottom:12px;">Action Items ({{ evaluation.action_items|length }})</h2>
+  {% if evaluation.action_items %}
+  <table>
+    <thead>
+      <tr><th>Text</th><th>Owner</th><th>Deadline</th><th>Time</th><th>Evidence</th></tr>
+    </thead>
+    <tbody>
+      {% for item in evaluation.action_items %}
+      <tr>
+        <td>{{ item.text[:60] }}{% if item.text|length > 60 %}...{% endif %}</td>
+        <td>{{ item.owner or 'unspecified' }}</td>
+        <td>{{ item.deadline or 'unspecified' }}</td>
+        <td>{{ "%.1f"|format(item.start or 0) }}s</td>
+        <td><a href="https://whipscribe.com/transcript/{{ job_id }}?t={{ (item.start or 0) | int }}" target="_blank">Jump</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:#6b7280;">No action items detected.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:16px;margin-bottom:12px;">Transcript Segments</h2>
+  <div style="max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;">
+    {% for seg in transcript.segments %}
+    <div style="padding:6px 10px;border-bottom:1px solid #f3f4f5;">
+      <span style="color:#9ca3af;">{{ "%.1f"|format(seg.start or 0) }}s [{{ seg.speaker or 'UNKNOWN' }}]</span>
+      {{ seg.text }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

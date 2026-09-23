@@ -1,4 +1,4 @@
-"""LLM quality evaluation: score a transcript for action items, clarity, tension, compliance."""
+"""AI quality evaluation: score a transcript for action items, clarity, tension, compliance."""
 
 import json
 import os

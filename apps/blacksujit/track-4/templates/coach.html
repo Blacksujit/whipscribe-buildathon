@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Coach — Meeting QA Copilot{% endblock %}
+{% block content %}
+<h1 style="font-size:24px;margin-bottom:16px;">Coaching Insights</h1>
+<p style="color:#6b7280;font-size:14px;margin-bottom:24px;">
+  Prescriptive advice generated from your meeting quality trends.
+  Go to <a href="{{ url_for('trends') }}">Trends</a> for the raw data.
+</p>
+
+{% if insights %}
+{% for insight in insights %}
+<div class="card" style="border-left:4px solid {% if insight.type == 'trend_declining' %}#ef4444{% elif insight.type == 'trend_improving' %}#16a34a{% elif insight.type == 'action_items_warning' %}#f59e0b{% else %}#3b82f6{% endif %};">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <div style="font-size:12px;text-transform:uppercase;color:#6b7280;margin-bottom:4px;">
+        {{ insight.type.replace('_', ' ').title() }}
+      </div>
+      <h3 style="font-size:16px;margin-bottom:8px;">{{ insight.message }}</h3>
+      <p style="color:#374151;font-size:14px;">{{ insight.advice }}</p>
+      {% if insight.scores %}
+      <div style="margin-top:8px;">
+        <span style="font-size:12px;color:#9ca3af;">Scores across meetings: </span>
+        {% for s in insight.scores %}
+        <span style="display:inline-block;width:28px;height:12px;background:{% if s >= 85 %}#16a34a{% elif s >= 70 %}#f59e0b{% else %}#ef4444{% endif %};border-radius:2px;margin:0 2px;" title="{{ s }}"></span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <p style="color:#6b7280;text-align:center;padding:30px;">
+    No coaching insights yet. Analyze at least 2 meetings to see trends.
+  </p>
+</div>
+{% endif %}
+
+{% if comparisons.common_issues %}
+<div class="card" style="margin-top:16px;">
+  <h2 style="font-size:18px;margin-bottom:12px;">Recurring Issues Across Meetings</h2>
+  <table>
+    <thead>
+      <tr><th>Issue</th><th>Type</th><th>Meetings</th><th>Count</th></tr>
+    </thead>
+    <tbody>
+      {% for issue in comparisons.common_issues %}
+      <tr>
+        <td>{{ issue.text[:70] }}{% if issue.text|length > 70 %}...{% endif %}</td>
+        <td>{{ issue.type }}</td>
+        <td>{{ issue.meetings|join(', ') }}</td>
+        <td>{{ issue.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if comparisons.action_item_tracking %}
+<div class="card" style="margin-top:16px;">
+  <h2 style="font-size:18px;margin-bottom:12px;">Action Item Tracking</h2>
+  <div style="font-size:14px;">
+    <strong>{{ comparisons.action_item_tracking.total }}</strong> total items,
+    <strong>{{ comparisons.action_item_tracking.resolved }}</strong> resolved,
+    <strong>{{ comparisons.action_item_tracking.completion_rate }}%</strong> completion rate.
+  </div>
+  {% if comparisons.action_item_tracking.unresolved %}
+  <div style="margin-top:8px;">
+    <strong>{{ comparisons.action_item_tracking.unresolved|length }} unresolved:</strong>
+    <ul style="margin-top:6px;font-size:13px;">
+      {% for item in comparisons.action_item_tracking.unresolved %}
+      <li style="margin-bottom:4px;">{{ item.text[:80] }}{% if item.text|length > 80 %}...{% endif %} (from: {{ item.from }})</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

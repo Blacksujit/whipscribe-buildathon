@@ -1,0 +1,21 @@
+Track 4: Add web dashboard with trend analysis + Track 1 proposal + design system
+
+Add Flask web dashboard with multi-meeting trend charts, coaching insights,
+and per-meeting QA reports to overtake ShipNotes (#1 in Track 4).
+
+Key additions:
+- app.py: Flask web dashboard with routes for /, /report/:id, /trends, /coach, /settings
+- store.py: SQLite persistence for evaluation results
+- templates/: HTML templates (base, index, report, trends, coach, settings)
+- static/: CSS styles + Chart.js trend visualization
+- frontend/: Next.js frontend with Tailwind CSS
+- src/slack.py: Slack digest delivery integration
+- design.md: WhipScribe design system documentation
+- challenge-01-proposal.md: Mobile transcript reader redesign proposal
+- render.yaml + Procfile: Render deployment configuration
+- Updated README.md with complete Mermaid architecture
+
+Differentiator: Multi-meeting trend analysis engine - the ONLY Track 4 entry
+that analyzes meetings as a time series, not one-off data points.
+
+Co-authored-by: CommandCodeBot <noreply@commandcode.ai>

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Trends — Meeting QA Copilot{% endblock %}
+{% block content %}
+<h1 style="font-size:24px;margin-bottom:16px;">Cross-Meeting Trends</h1>
+<p style="color:#6b7280;font-size:14px;margin-bottom:24px;">
+  Quality analysis across {{ meetings|length }} meetings showing performance trends over time.
+</p>
+
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:12px;">Overall Quality Trend</h2>
+  <div class="chart-container">
+    <canvas id="chart-overall"></canvas>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns:repeat(2,1fr);gap:16px;">
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px;">Clarity</h3>
+    <div class="chart-container">
+      <canvas id="chart-clarity"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px;">Tension</h3>
+    <div class="chart-container">
+      <canvas id="chart-tension"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px;">Compliance</h3>
+    <div class="chart-container">
+      <canvas id="chart-compliance"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px;">Action Items</h3>
+    <div class="chart-container">
+      <canvas id="chart-action"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h2 style="font-size:18px;margin-bottom:12px;">Trend Summary</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        {% for m in comparisons.meetings %}
+        <th>{{ m.name }}</th>
+        {% endfor %}
+        <th>Trend</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set metrics = ['overall', 'action_items', 'clarity', 'tension', 'compliance'] %}
+      {% set labels = {'overall': 'Overall', 'action_items': 'Action Items', 'clarity': 'Clarity', 'tension': 'Tension', 'compliance': 'Compliance'} %}
+      {% for metric in metrics %}
+      <tr>
+        <td>{{ labels[metric] }}</td>
+        {% for m in comparisons.meetings %}
+        <td>{{ m.scores[metric] }}</td>
+        {% endfor %}
+        <td>
+          <span class="score-badge {% if comparisons.trends[metric] == 'improving' %}score-excellent{% elif comparisons.trends[metric] == 'declining' %}score-bad{% else %}score-good{% endif %}">
+            {{ comparisons.trends[metric] }}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if comparisons.insights %}
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:12px;">Key Insights</h2>
+  {% for insight in comparisons.insights %}
+  <div style="padding:8px 0;border-bottom:1px solid #f3f4f5;font-size:14px;">
+    {{ insight }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:12px;">All Meetings</h2>
+  <table>
+    <thead>
+      <tr><th>Meeting</th><th>Date</th><th>Overall</th><th>Action Items</th><th>Clarity</th><th>Tension</th><th>Compliance</th><th>Report</th></tr>
+    </thead>
+    <tbody>
+      {% for m in meetings %}
+      <tr>
+        <td>{{ m.meeting_name or m.job_id[:8] }}</td>
+        <td>{{ m.created_at[:10] if m.created_at else '?' }}</td>
+        <td><span class="score-badge {% if m.overall_score >= 85 %}score-excellent{% elif m.overall_score >= 70 %}score-good{% elif m.overall_score >= 50 %}score-warn{% else %}score-bad{% endif %}">{{ m.overall_score }}</span></td>
+        <td>{{ m.action_items }}</td>
+        <td>{{ m.clarity }}</td>
+        <td>{{ m.tension }}</td>
+        <td>{{ m.compliance }}</td>
+        <td><a href="{{ url_for('report', job_id=m.job_id) }}" class="btn" style="font-size:11px;padding:2px 8px;">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block head %}
+<script src="/static/charts.js"></script>
+{% endblock %}

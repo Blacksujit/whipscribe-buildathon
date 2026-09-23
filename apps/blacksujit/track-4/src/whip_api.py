@@ -94,3 +94,43 @@ def get_session_summary(api_key, job_id):
     resp = requests.get(f"{BASE_URL}/jobs/{job_id}/clips/summary", headers=_headers(api_key))
     resp.raise_for_status()
     return resp.json()
+
+
+def list_jobs(api_key, limit=100):
+    """List all jobs on the account. Enables bulk trend analysis."""
+    resp = requests.get(
+        f"{BASE_URL}/jobs",
+        headers=_headers(api_key),
+        params={"limit": limit},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_me(api_key):
+    """Get account info: email, tier, retention_days, signed_in."""
+    resp = requests.get(f"{BASE_URL}/me", headers=_headers(api_key))
+    resp.raise_for_status()
+    return resp.json()
+
+
+def search_transcript(api_key, job_id, query):
+    """Search within a transcript for a keyword/phrase."""
+    resp = requests.get(
+        f"{BASE_URL}/jobs/{job_id}/clips/search",
+        headers=_headers(api_key),
+        params={"q": query},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_high_signal_moments(api_key, job_id, kind="hook", limit=30):
+    """Get high-signal moments: hooks, questions, numbers, speaker changes, high energy."""
+    resp = requests.get(
+        f"{BASE_URL}/jobs/{job_id}/clips/candidates",
+        headers=_headers(api_key),
+        params={"kind": kind, "limit": limit},
+    )
+    resp.raise_for_status()
+    return resp.json()

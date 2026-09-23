@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Track 4 Demo Script - Meeting Quality Assurance Workflow
+Demo Script - Meeting Quality Assurance Workflow
 
 Shows the full flow: recording -> transcript -> LLM evaluation -> QA report.
 This script is designed to be screen-recorded for a two-minute demo.
