@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { saveSettings } from "@/lib/api";
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const key = localStorage.getItem("whipscribe_api_key");
-    if (key) setApiKey(key);
-  }, []);
-
-  function handleSave() {
-    localStorage.setItem("whipscribe_api_key", apiKey);
+  async function handleSave() {
+    setError("");
+    setSaving(true);
+    const result = await saveSettings(apiKey);
+    setSaving(false);
+    if (!result.success) {
+      setError(result.error || "Unable to save settings");
+      return;
+    }
     setSaved(true);
-    setTimeout(() => {
-      router.push("/");
-    }, 1000);
+    router.push("/");
   }
 
   return (
@@ -60,8 +63,8 @@ export default function Settings() {
 
           {/* Save / Cancel */}
           <div className="flex gap-4 mt-8">
-            <button onClick={handleSave} className="btn-primary">
-              {saved ? "Saved!" : "Save Settings"}
+              <button onClick={handleSave} className="btn-primary" disabled={saving || !apiKey.trim()}>
+              {saving ? "Saving..." : saved ? "Saved!" : "Save Settings"}
             </button>
             <button
               onClick={() => router.push("/")}
@@ -71,13 +74,14 @@ export default function Settings() {
             </button>
           </div>
 
+          {error && <p className="mt-4 text-sm text-red-700" role="alert">{error}</p>}
+
           {/* Privacy Notice */}
           <div className="card mt-8" style={{ backgroundColor: "var(--color-v4-bg-alt)" }}>
             <h3 className="text-v4-ink font-medium mb-2">Privacy Notice</h3>
             <p className="text-v4-ink-muted" style={{ fontSize: "var(--text-body)" }}>
-              Your API key is stored locally in your browser and is never sent to our
-              servers. All analysis happens on your WhipScribe account using your own API
-              credentials.
+              Your API key is stored by the local Flask backend and used only to call
+              your WhipScribe account. Keep this development server private.
             </p>
           </div>
         </div>

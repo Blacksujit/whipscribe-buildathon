@@ -43,8 +43,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def get_api_key():
-    """Get API key from env or DB settings."""
-    return os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key")
+    """Get a request-scoped key, then fall back to env or local settings."""
+    request_key = request.headers.get("X-API-Key", "").strip()
+    return request_key or os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key")
 
 
 def get_eval_settings():
@@ -551,6 +552,21 @@ def api_health():
     return jsonify({"status": "ok", "message": "Flask backend is running"})
 
 
+@app.route("/api/settings", methods=["GET", "POST"])
+def api_settings():
+    """Read or save frontend connection settings without exposing secrets in responses."""
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        api_key = str(payload.get("whipscribe_api_key", "")).strip()
+        if not api_key:
+            return jsonify({"success": False, "error": "WhipScribe API key is required"}), 400
+        store.save_setting("whipscribe_api_key", api_key)
+        return jsonify({"success": True})
+
+    configured = bool(os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key"))
+    return jsonify({"configured": configured})
+
+
 @app.route("/api/jobs")
 def api_jobs():
     """Return jobs as JSON for Next.js frontend."""
@@ -636,6 +652,43 @@ def api_analyze_all():
         return jsonify({"success": True, "evaluated": evaluated, "total": len(done_jobs)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    """Upload one recording from the Next.js drop zone and analyze it."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No WhipScribe API key configured"}), 401
+
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"success": False, "error": "Choose an audio or video file"}), 400
+
+    filename = secure_filename(uploaded.filename)
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    uploaded.save(filepath)
+
+    try:
+        job_id = submit_file(api_key, filepath)
+        poll_job(api_key, job_id, timeout=300)
+        transcript = get_transcript(api_key, job_id)
+        provider, llm_key, model = get_eval_settings()
+        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
+        store.save_evaluation(job_id, transcript, evaluation)
+        return jsonify({
+            "success": True,
+            "job_id": job_id,
+            "score": evaluation.get("overall_score", 0),
+            "segments": len(transcript.get("segments", [])),
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 502
+    finally:
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
 
 
 @app.route("/api/trends-data")

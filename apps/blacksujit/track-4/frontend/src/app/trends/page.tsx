@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
-import { getTrends } from "@/lib/api";
+import { getTrends, TrendsResponse } from "@/lib/api";
 
 export default function TrendsPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,11 +53,11 @@ export default function TrendsPage() {
     },
   ];
 
-  const avgScore = data?.overall
-    ? Math.round(data.overall.reduce((a: number, b: number) => a + b, 0) / data.overall.length)
-    : 87;
+  const avgScore = data?.overall?.length
+    ? Math.round(data.overall.reduce((total, score) => total + score, 0) / data.overall.length)
+    : null;
 
-  const meetingCount = data?.labels?.length || 12;
+  const meetingCount = data?.labels?.length || 0;
 
   if (loading) {
     return (
@@ -82,7 +82,7 @@ export default function TrendsPage() {
         {/* Metrics Grid - WhipScribe style (plain cards, no colored badges) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
           <div className="card text-center">
-            <div className="text-3xl font-bold text-v4-ink">{avgScore}</div>
+            <div className="text-3xl font-bold text-v4-ink">{avgScore ?? "-"}</div>
             <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
               Average Score
             </div>
@@ -94,13 +94,13 @@ export default function TrendsPage() {
             </div>
           </div>
           <div className="card text-center">
-            <div className="text-3xl font-bold text-ok">+5%</div>
+            <div className="text-3xl font-bold text-ok">{data?.overall?.length && data.overall.length > 1 ? "Live" : "-"}</div>
             <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
               Improvement
             </div>
           </div>
           <div className="card text-center">
-            <div className="text-3xl font-bold text-accent">3</div>
+            <div className="text-3xl font-bold text-accent">{data?.compliance?.filter((score) => score < 70).length ?? "-"}</div>
             <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
               Issues Found
             </div>

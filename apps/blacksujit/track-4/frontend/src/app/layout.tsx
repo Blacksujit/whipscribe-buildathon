@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, DM_Serif_Display, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const serifDisplay = DM_Serif_Display({
+const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   variable: "--font-mono",
   display: "swap",
 });
@@ -35,9 +31,8 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={[
-          inter.variable,
-          serifDisplay.variable,
-          jetbrainsMono.variable,
+          spaceGrotesk.variable,
+          ibmPlexMono.variable,
           "antialiased",
           "font-sans",
         ].join(" ")}

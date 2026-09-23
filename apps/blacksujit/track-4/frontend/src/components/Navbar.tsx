@@ -15,16 +15,16 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="bg-v4-bg border-b" style={{ borderColor: "var(--color-v4-border)" }}>
-      <div className="container-960 mx-auto px-6 py-4 flex items-center justify-between">
+    <nav className="sticky top-0 z-20 bg-v4-bg/95 backdrop-blur border-b">
+      <div className="container-960 mx-auto px-6 py-5 flex items-center justify-between gap-8">
         <Link
           href="/"
-          className="text-v4-ink font-semibold"
-          style={{ fontSize: "var(--text-body)" }}
+          className="text-v4-ink font-semibold tracking-[-0.04em]"
+          style={{ fontSize: "20px" }}
         >
-          CallCoach AI
+          whipscribe<span className="text-[#a9dc28]">.</span>
         </Link>
-        <div className="flex gap-8">
+        <div className="hidden md:flex items-center gap-7">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -35,6 +35,7 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
+        <Link href="/settings" className="btn-primary hidden sm:inline-flex">Connect source</Link>
       </div>
     </nav>
   );
