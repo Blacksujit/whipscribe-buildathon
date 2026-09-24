@@ -24,6 +24,22 @@ export interface TrendsResponse {
   compliance: number[];
 }
 
+export interface CoachInsight {
+  type: string;
+  metric: string;
+  message: string;
+  advice: string;
+  scores: number[];
+}
+
+export interface CoachResponse {
+  ready: boolean;
+  message?: string;
+  insights: CoachInsight[];
+  trends?: Record<string, string>;
+  action_item_tracking?: { total: number; resolved: number; completion_rate: number };
+}
+
 export async function getJobs(apiKey: string): Promise<ApiJobsResponse> {
   try {
     const res = await fetch(`${API_BASE}/api/jobs`, {
@@ -104,5 +120,15 @@ export async function uploadRecording(file: File): Promise<{ success: boolean; j
     return payload;
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unable to reach Flask backend' };
+  }
+}
+
+export async function getCoachData(): Promise<CoachResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/coach-data`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
   }
 }

@@ -712,6 +712,40 @@ def trends_data():
     })
 
 
+@app.route("/api/coach-data")
+def coach_data():
+    """Return real cross-meeting coaching insights for the Next.js frontend."""
+    evaluations = store.get_all_evaluations()
+    if len(evaluations) < 2:
+        return jsonify({"ready": False, "insights": [], "message": "Analyze at least two meetings first."})
+
+    eval_dicts = []
+    names = []
+    for item in evaluations:
+        eval_dicts.append({
+            "overall_score": item["overall_score"],
+            "category_scores": {
+                "action_items": item["action_items"],
+                "clarity": item["clarity"],
+                "tension": item["tension"],
+                "compliance": item["compliance"],
+            },
+            "action_items": item.get("action_items_list", []),
+            "clarity_issues": item.get("clarity_issues_list", []),
+            "tension_signals": item.get("tension_signals_list", []),
+            "compliance_risks": item.get("compliance_risks_list", []),
+        })
+        names.append(item["meeting_name"] or item["job_id"][:8])
+
+    comparisons = compare_evaluations(eval_dicts, names)
+    return jsonify({
+        "ready": True,
+        "insights": _generate_coaching_insights(comparisons, evaluations),
+        "trends": comparisons.get("trends", {}),
+        "action_item_tracking": comparisons.get("action_item_tracking", {}),
+    })
+
+
 if __name__ == "__main__":
     store.init_db()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
