@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { getReport, ReportResponse } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
@@ -73,6 +74,7 @@ export default function ReportPage() {
   const scoreColor = colorForScore(score);
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="section-wide report-header" style={{ paddingTop: "92px" }}>
@@ -248,5 +250,6 @@ export default function ReportPage() {
         </div>
       </section>
     </main>
+  </PageTransition>
   );
 }

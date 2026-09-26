@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getCoachData, CoachDataResponse } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -59,6 +60,7 @@ export default function CoachPage() {
   const trends = data.trends || {};
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="section-wide" style={{ paddingTop: "92px" }}>
@@ -151,5 +153,6 @@ export default function CoachPage() {
         </motion.div>
       </section>
     </main>
+  </PageTransition>
   );
 }

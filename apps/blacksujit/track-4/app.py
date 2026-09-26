@@ -881,7 +881,7 @@ def trends_data():
             continue
 
     labels = [p["meeting_name"] for p in parsed_evals]
-    scores = [p["overall_score"] for p in parsed_evals]
+    scores = [p["overall_score"] or 0 for p in parsed_evals]
     
     # Calculate real mathematical metrics
     velocity = calculate_deal_velocity([p["core"] for p in parsed_evals])

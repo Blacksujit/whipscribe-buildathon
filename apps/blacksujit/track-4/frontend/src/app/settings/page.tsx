@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { getSettings, saveSettings, SettingsResponse } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -72,6 +73,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="section-wide" style={{ paddingTop: "92px" }}>
@@ -243,5 +245,6 @@ export default function SettingsPage() {
         </div>
       </section>
     </main>
+  </PageTransition>
   );
 }

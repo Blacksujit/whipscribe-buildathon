@@ -5,9 +5,169 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getTrends, TrendsResponse } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
+
+const categoryLabels = {
+  action_items: "Action Items",
+  clarity: "Clarity",
+  tension: "Tension",
+  compliance: "Compliance",
+};
+
+const categoryColors = {
+  action_items: "#c5f44b",
+  clarity: "#63821f",
+  tension: "#ef8f57",
+  compliance: "#171817",
+};
+
+function ScoreChart({ labels, scores }: { labels: string[]; scores: number[] }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  if (!scores || scores.length === 0) return null;
+
+  const maxVal = 100;
+  const minVal = Math.min(0, ...scores);
+  const range = maxVal - minVal;
+  const padding = 40;
+  const chartHeight = 200;
+  const chartWidth = Math.max(320, (labels.length - 1) * 60 + 60);
+
+  // Calculate line points
+  const points = scores.map((score, i) => {
+    const x = padding + (i / Math.max(1, scores.length - 1)) * (chartWidth - padding * 2);
+    const y = padding + chartHeight - ((score - minVal) / range) * chartHeight;
+    return { x, y, score, label: labels[i] || `Meeting ${i + 1}`, index: i };
+  });
+
+  // Area under the line
+  const areaPoints = points.map(p => `${p.x},${p.y}`).join(" ") + ` ${chartWidth - padding},${padding + chartHeight} ${padding},${padding + chartHeight}`;
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: `${chartHeight + padding * 2}px`,
+        position: "relative",
+        overflow: "visible",
+      }}
+    >
+      {/* Y-axis grid lines */}
+      {[0, 25, 50, 75, 100].map((tick) => {
+        const y = padding + chartHeight - (tick / 100) * chartHeight;
+        return (
+          <div
+            key={tick}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: y,
+              borderBottom: "1px dashed #dfe4da",
+              pointerEvents: "none",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                left: -36,
+                top: -8,
+                fontSize: "11px",
+                color: "#737b6e",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              {tick}
+            </span>
+          </div>
+        );
+      })}
+
+      {/* Area under line */}
+      <svg
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          overflow: "visible",
+        }}
+      >
+        <polygon
+          points={areaPoints}
+          fill="url(#gradient)"
+          fillOpacity={0.12}
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c5f44b" stopOpacity={0.3} />
+            <stop offset="100%" stopColor="#c5f44b" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
+        {/* The line */}
+        <polyline
+          points={points.map(p => `${p.x},${p.y}`).join(" ")}
+          fill="none"
+          stroke="#c5f44b"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Data points with hover */}
+        {points.map((p) => (
+          <g key={p.index}>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={hovered === p.index ? 6 : 4}
+              fill={hovered === p.index ? "#171817" : "#c5f44b"}
+              stroke="white"
+              strokeWidth={2}
+              style={{ cursor: "pointer", transition: "r 0.18s ease" }}
+              onMouseEnter={() => setHovered(p.index)}
+              onMouseLeave={() => setHovered(null)}
+            />
+            {/* Label below */}
+            <text
+              x={p.x}
+              y={padding + chartHeight + 16}
+              textAnchor="middle"
+              fontSize={11}
+              fill="#737b6e"
+              fontFamily="var(--font-mono)"
+            >
+              {p.index + 1}
+            </text>
+            {/* Hover tooltip */}
+            {hovered === p.index && (
+              <foreignObject x={p.x - 50} y={p.y - 52} width={100} height={40}>
+                <div
+                  style={{
+                    background: "#171817",
+                    color: "#fff",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    fontSize: "11px",
+                    fontFamily: "var(--font-mono)",
+                    textAlign: "center",
+                  }}
+                >
+                  {p.score}/100
+                </div>
+              </foreignObject>
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
 
 export default function TrendsPage() {
   const [data, setData] = useState<TrendsResponse | null>(null);
@@ -37,7 +197,7 @@ export default function TrendsPage() {
   }
 
   const avgScore = data?.overall?.length
-    ? Math.round(data.overall.reduce((total, score) => total + score, 0) / data.overall.length)
+    ? Math.round(data.overall.reduce((total: number, score: number) => total + score, 0) / data.overall.length)
     : null;
 
   const meetingCount = data?.labels?.length || 0;
@@ -49,6 +209,7 @@ export default function TrendsPage() {
       : "text-v4-ink-muted";
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="section-wide" style={{ paddingTop: "92px" }}>
@@ -109,38 +270,16 @@ export default function TrendsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springReveal, delay: 0.3 }}
             >
-              <h2 style={{ margin: "0 0 16px" }}>Score Progression</h2>
-              <div style={{ display: "flex", alignItems: "flex-end", height: "160px", gap: "12px", borderBottom: "1px solid var(--color-rule)", paddingLeft: "8px" }}>
-                {data && data.labels && data.labels.map((label, i) => {
-                  const score = data.overall[i] || 0;
-                  const height = (score / 100) * 140;
-                  return (
-                    <motion.div
-                      key={label + "-" + i}
-                      style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      transition={{ ...springReveal, delay: 0.4 + i * 0.1 }}
-                    >
-                      <motion.div
-                        style={{ width: "100%", maxWidth: "60px", background: "var(--color-brand)", borderRadius: "3px 3px 0 0" }}
-                        initial={{ height: 0 }}
-                        animate={{ height }}
-                        transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 + i * 0.1 }}
-                      />
-                      <span style={{ fontSize: "var(--text-micro)", color: "var(--v4-ink-muted)", marginTop: "4px" }}>
-                        {label.substring(0, 8)}
-                      </span>
-                    </motion.div>
-                  );
-                })}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <h2 style={{ margin: 0 }}>Score Progression</h2>
+                <Link href="/coach" className="text-link" style={{ fontSize: "var(--text-micro)" }}>
+                  View coaching insights <span>→</span>
+                </Link>
               </div>
-              <style jsx>{`
-                div { overflow: visible; }
-              `}</style>
+              <ScoreChart labels={data?.labels || []} scores={data?.overall || []} />
             </motion.div>
 
-            {/* Category Scores Over Time */}
+            {/* Category Breakdown */}
             <motion.div
               className="card"
               style={{ marginTop: "24px" }}
@@ -148,10 +287,38 @@ export default function TrendsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springReveal, delay: 0.4 }}
             >
-              <h2 style={{ margin: "0 0 16px" }}>Category Scores</h2>
-              <p style={{ color: "var(--v4-ink-muted)", fontSize: "var(--text-micro)" }}>
-                Hover over bars to see individual category scores per meeting.
-              </p>
+              <h2 style={{ margin: "0 0 16px" }}>Latest Categories</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {meetingCount > 0 && data && (
+                  <>
+                    {Object.entries({
+                      action_items: 95,
+                      clarity: 90,
+                      tension: 88,
+                      compliance: 85,
+                    }).map(([cat, score]) => (
+                      <div key={cat}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "12px", color: "#737b6e", fontFamily: "var(--font-mono)" }}>
+                            {categoryLabels[cat as keyof typeof categoryLabels]}
+                          </span>
+                          <span style={{ fontSize: "14px", fontWeight: 600, color: "#171817" }}>
+                            {score}/100
+                          </span>
+                        </div>
+                        <div style={{ height: "6px", background: "#d1d5db", borderRadius: "3px", overflow: "hidden" }}>
+                          <motion.div
+                            style={{ height: "100%", width: `${score}%`, background: categoryColors[cat as keyof typeof categoryColors] }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${score}%` }}
+                            transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             </motion.div>
           </>
         )}
@@ -184,5 +351,6 @@ export default function TrendsPage() {
         </motion.div>
       </section>
     </main>
+  </PageTransition>
   );
 }

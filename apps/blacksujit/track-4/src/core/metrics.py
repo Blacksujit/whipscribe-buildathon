@@ -16,7 +16,7 @@ def calculate_deal_velocity(evaluations: List[Dict[str, Any]]) -> float:
     clarity_scores = []
 
     for eval_data in evaluations:
-        eval_obj = eval_data.get("evaluation", {})
+        eval_obj = eval_data.get("evaluation", {}) if isinstance(eval_data.get("evaluation"), dict) else {}
         
         # Promised are the action items identified in the call
         action_items = eval_obj.get("action_items", [])
@@ -28,8 +28,8 @@ def calculate_deal_velocity(evaluations: List[Dict[str, Any]]) -> float:
         
         # Extract clarity score from category_scores
         cat_scores = eval_obj.get("category_scores", {})
-        clarity = cat_scores.get("narrative", 0) # narrative agent = clarity
-        clarity_scores.append(clarity)
+        clarity = cat_scores.get("narrative", 0) or 0  # narrative agent = clarity
+        clarity_scores.append(clarity if clarity is not None else 0)
 
     if total_promised == 0:
         # If no promises were made, velocity depends entirely on clarity
@@ -50,8 +50,13 @@ def calculate_momentum_slope(scores: List[float]) -> float:
     """
     if len(scores) < 2:
         return 0.0
-    
-    x = np.arange(len(scores))
-    y = np.array(scores)
+
+    # Filter out None or non-numeric values
+    numeric_scores = [float(s) for s in scores if s is not None and isinstance(s, (int, float))]
+    if len(numeric_scores) < 2:
+        return 0.0
+
+    x = np.arange(len(numeric_scores))
+    y = np.array(numeric_scores)
     slope, _ = np.polyfit(x, y, 1)
     return float(slope)

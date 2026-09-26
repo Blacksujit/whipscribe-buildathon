@@ -6,7 +6,6 @@
 - Local:         http://localhost:3000
 - Network:       http://172.21.96.1:3000
 - Environments: .env.local
-✓ Ready in 607ms
-✓ Running next.config.ts took 50ms
+✓ Ready in 849ms
+✓ Running next.config.ts took 78ms
 
- GET / 200 in 511ms (next.js: 268ms, application-code: 243ms)

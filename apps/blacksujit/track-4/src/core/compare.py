@@ -89,11 +89,11 @@ def compare_evaluations(
             "name": name,
             "date": dates[i],
             "scores": {
-                "overall": eval_data.get("overall_score", 0) if "overall_score" in eval_data else eval_data.get("evaluation", {}).get("overall_score", 0),
-                "action_items": scores.get("action_items", 0),
-                "clarity": scores.get("clarity", 0),
-                "tension": scores.get("tension", 0),
-                "compliance": scores.get("compliance", 0),
+                "overall": int(eval_data.get("overall_score", 0) or 0) if "overall_score" in eval_data else int(eval_data.get("evaluation", {}).get("overall_score", 0) or 0),
+                "action_items": int(scores.get("action_items", 0) or 0),
+                "clarity": int(scores.get("clarity", 0) or 0),
+                "tension": int(scores.get("tension", 0) or 0),
+                "compliance": int(scores.get("compliance", 0) or 0),
             },
             "issues": _collect_all_issues(eval_data),
         }

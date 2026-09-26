@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getSpeakers, SpeakersResponse } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -60,6 +61,7 @@ export default function SpeakersPage() {
   const topContributors = data.top_contributors || [];
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="section-wide" style={{ paddingTop: "92px" }}>
@@ -197,5 +199,6 @@ export default function SpeakersPage() {
         </motion.div>
       </section>
     </main>
+  </PageTransition>
   );
 }

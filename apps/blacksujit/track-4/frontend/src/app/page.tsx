@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { uploadRecording } from "@/lib/api";
+import PageTransition from "@/components/PageTransition";
 
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
@@ -66,6 +67,7 @@ export default function Home() {
   }
 
   return (
+    <PageTransition>
     <main className="site-shell">
       <Navbar />
       <section className="hero section-wide">
@@ -277,5 +279,6 @@ export default function Home() {
         <p className="footer-legal">© Neugence Technology Pvt. Ltd. · WhipScribe is open source · <Link href="/settings">Terms</Link> · <Link href="/settings">Privacy</Link></p>
       </footer>
     </main>
+  </PageTransition>
   );
 }
