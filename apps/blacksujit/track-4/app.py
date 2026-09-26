@@ -15,22 +15,22 @@ Routes:
 import json
 import os
 import sys
-
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 # Import existing core modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from src.whip_api import (
+from src.api.whip_api import (
     list_jobs, get_transcript, poll_job, submit_file, get_me,
     get_session_summary, get_high_signal_moments,
 )
-from src.evaluator import evaluate
-from src.reporter import generate_report
-from src.compare import compare_evaluations, generate_comparison_report
-from src.slack import deliver_qa_report_to_slack, deliver_trend_summary_to_slack
-import store
+from src.core.evaluator import evaluate
+from src.core.compare import compare_evaluations, generate_comparison_report
+from src.api.notion import deliver_report
+from src.database import store
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-me")
@@ -51,8 +51,25 @@ def get_api_key():
 def get_eval_settings():
     """Get LLM settings from env or DB."""
     provider = os.environ.get("LLM_PROVIDER") or store.get_setting("llm_provider")
-    api_key = os.environ.get("LLM_API_KEY") or store.get_setting("llm_api_key")
     model = os.environ.get("LLM_MODEL") or store.get_setting("llm_model") or "gpt-4o-mini"
+
+    # Resolve API key based on provider
+    api_key = None
+    if provider == "groq":
+        api_key = os.environ.get("GROQ_API_KEY") or store.get_setting("groq_api_key")
+    elif provider == "anthropic":
+        api_key = os.environ.get("ANTHROPIC_API_KEY") or store.get_setting("llm_api_key")
+    elif provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY") or store.get_setting("llm_api_key")
+    else:
+        api_key = os.environ.get("LLM_API_KEY") or store.get_setting("llm_api_key")
+
+    # Override model based on provider defaults
+    if provider == "groq" and not os.environ.get("LLM_MODEL"):
+        model = "openai/gpt-oss-120b"
+    elif provider == "anthropic" and not os.environ.get("LLM_MODEL"):
+        model = "claude-3-5-sonnet-20241022"
+
     return provider, api_key, model
 
 
@@ -239,6 +256,78 @@ def report(job_id):
         audio_url=audio_url,
     )
 
+
+@app.route("/api/report/<job_id>")
+def api_report(job_id):
+    """JSON endpoint for a single meeting report."""
+    result = store.get_evaluation(job_id)
+    if result is None:
+        return jsonify({"success": False, "error": "No evaluation found. Analyze first."}), 404
+
+    transcript = result["transcript"]
+    evaluation = result["evaluation"]
+    
+    audio_url = None
+    api_key = get_api_key()
+    if api_key:
+        try:
+            from src.whip_api import get_audio_url
+            audio_data = get_audio_url(api_key, job_id)
+            audio_url = audio_data.get("url")
+        except Exception:
+            pass
+
+    return jsonify({
+        "success": True,
+        "job_id": job_id,
+        "transcript": transcript,
+        "evaluation": evaluation,
+        "audio_url": audio_url
+    })
+
+
+@app.route("/api/speakers")
+def api_speakers():
+    """JSON endpoint for speaker performance analysis."""
+    evaluations = store.get_all_evaluations()
+    if len(evaluations) < 2:
+        return jsonify({"success": False, "error": "Need at least 2 analyzed meetings for speaker analysis."}), 400
+
+    eval_dicts = []
+    names = []
+    for e in evaluations:
+        eval_json = json.loads(e["evaluation"]) if isinstance(e["evaluation"], str) else e["evaluation"]
+        core = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
+        eval_dicts.append({
+            "overall_score": core.get("overall_score", 0),
+            "category_scores": core.get("category_scores", {}),
+            "action_items": core.get("action_items", []),
+            "clarity_issues": core.get("clarity_issues", []),
+            "tension_signals": core.get("tension_signals", []),
+            "compliance_risks": core.get("compliance_risks", []),
+        })
+        names.append(e.get("meeting_name") or e["job_id"][:8])
+
+    from src.core.compare import compare_evaluations
+    comparisons = compare_evaluations(eval_dicts, names)
+    
+    speaker_analysis = comparisons.get("speaker_analysis", {})
+    speakers_list = [
+        {
+            "name": name,
+            "issue_count": info.get("count", 0),
+            "issue_types": list(info.get("types", [])),
+        }
+        for name, info in speaker_analysis.items()
+    ]
+    speakers_list.sort(key=lambda s: s["issue_count"], reverse=True)
+
+    return jsonify({
+        "success": True,
+        "speakers": speakers_list,
+        "high_risk": [s["name"] for s in speakers_list if s["issue_count"] > 5][:5],
+        "top_contributors": speakers_list[:5],
+    })
 
 @app.route("/trends")
 def trends():
@@ -431,9 +520,11 @@ def _generate_coaching_insights(comparisons, evaluations):
             })
 
     # Action item tracking insights
-    total = action_tracking.get("total", 0)
-    rate = action_tracking.get("completion_rate", 0)
-    if total > 0:
+    resolved = action_tracking.get("resolved", 0)
+    unresolved_list = action_tracking.get("unresolved", [])
+    total_items = resolved + len(unresolved_list)
+    if total_items > 0:
+        rate = round((resolved / total_items) * 100)
         if rate < 50:
             insights.append({
                 "type": "action_items_warning",
@@ -466,51 +557,48 @@ def _generate_coaching_insights(comparisons, evaluations):
     return insights
 
 
-@app.route("/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST"])
 def upload():
     """Handle file upload — submit to WhipScribe API."""
     api_key = get_api_key()
     if not api_key:
-        return redirect(url_for("settings"))
+        return jsonify({"success": False, "error": "API key not configured"}), 401
 
     file = request.files.get("file")
     if not file or not file.filename:
-        flash("No file selected.", "error")
-        return redirect(url_for("index"))
+        return jsonify({"success": False, "error": "No file selected"}), 400
 
     filename = secure_filename(file.filename)
     filepath = os.path.join(UPLOAD_DIR, filename)
     file.save(filepath)
-
     try:
-        from src.whip_api import submit_file, poll_job, get_transcript as fetch_transcript
+        from src.api.whip_api import submit_file, poll_job, get_transcript as fetch_transcript
+        from src.core.evaluator import evaluate
+        from src.database import store
+        
         job_id = submit_file(api_key, filepath)
-        flash(f"File uploaded. Job {job_id} submitted. Polling...", "info")
-
-        # Store a marker that this job is being processed
-        # In production, use a background task queue
-        try:
-            poll_job(api_key, job_id, timeout=300)
-            transcript = fetch_transcript(api_key, job_id)
-            provider, llm_key, model = get_eval_settings()
-            evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
-            store.save_evaluation(job_id, transcript, evaluation)
-            flash(f"Analysis complete! Score: {evaluation['overall_score']}/100", "success")
-            return redirect(url_for("report", job_id=job_id))
-        except Exception as e:
-            flash(f"Error during transcription: {e}", "error")
-
-    finally:
-        # Clean up uploaded file
-        try:
-            os.remove(filepath)
-        except OSError:
-            pass
-
-    return redirect(url_for("index"))
-
-
-@app.route("/settings", methods=["GET", "POST"])
+        
+        # Logic for async processing in a production environment.
+        # Here we poll synchronously for the demo flow.
+        poll_job(api_key, job_id, timeout=300)
+        transcript = fetch_transcript(api_key, job_id)
+        
+        # THE CLOSING LOOP: Get unresolved promises from previous calls
+        pending_items = store.get_unresolved_action_items()
+        
+        provider, llm_key, model = get_eval_settings()
+        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider, pending_items=pending_items)
+        
+        store.save_evaluation(job_id, transcript, evaluation)
+        
+        # Update DB: Mark resolved items as delivered
+        resolved = evaluation.get("evaluation", {}).get("resolved_items", [])
+        for item in resolved:
+            store.resolve_action_item(item.get("text", ""))
+        
+        return jsonify({"success": True, "job_id": job_id, "score": evaluation.get("evaluation", {}).get("overall_score")}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 def settings():
     """Settings page: API key + LLM provider + Slack configuration."""
     if request.method == "POST":
@@ -560,12 +648,79 @@ def api_settings():
         api_key = str(payload.get("whipscribe_api_key", "")).strip()
         if not api_key:
             return jsonify({"success": False, "error": "WhipScribe API key is required"}), 400
+        
         store.save_setting("whipscribe_api_key", api_key)
+        if "llm_model" in payload: store.save_setting("llm_model", payload["llm_model"])
+        if "slack_webhook" in payload: store.save_setting("slack_webhook", payload["slack_webhook"])
+        if "notion_token" in payload: store.save_setting("notion_token", payload["notion_token"])
+        if "notion_database_id" in payload: store.save_setting("notion_database_id", payload["notion_database_id"])
+        
         return jsonify({"success": True})
 
-    configured = bool(os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key"))
-    return jsonify({"configured": configured})
+    return jsonify({
+        "configured": bool(os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key")),
+        "api_key": "********",
+        "llm_model": store.get_setting("llm_model") or os.environ.get("LLM_MODEL", "gpt-4o-mini"),
+        "slack_webhook": store.get_setting("slack_webhook") or os.environ.get("SLACK_WEBHOOK_URL", ""),
+        "notion_token": store.get_setting("notion_token") or os.environ.get("NOTION_TOKEN", ""),
+        "notion_database_id": store.get_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID", "")
+    })
 
+
+@app.route("/api/export/notion", methods=["POST"])
+def api_export_notion():
+    """Export a report to Notion."""
+    job_id = request.json.get("job_id")
+    if not job_id:
+        return jsonify({"success": False, "error": "Missing job_id"}), 400
+
+    eval_data = store.get_evaluation(job_id)
+    if not eval_data:
+        return jsonify({"success": False, "error": "Evaluation not found"}), 404
+
+    try:
+        # Convert eval data to simple MD for Notion
+        report_md = f"# Meeting QA Report: {job_id}\n\n"
+        report_md += f"Overall Score: {eval_data['evaluation'].get('overall_score', 'N/A')}\n\n"
+        report_md += "## Key Insights\n"
+        for cat, score in eval_data['evaluation'].get('category_scores', {}).items():
+            report_md += f"- {cat}: {score}\n"
+
+        notion_token = store.get_setting("notion_token") or os.environ.get("NOTION_TOKEN")
+        notion_db_id = store.get_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID")
+
+        result = deliver_report(
+            report_md=report_md,
+            job_id=job_id,
+            scores=eval_data['evaluation'],
+            notion_token=notion_token,
+            database_id=notion_db_id
+        )
+        return jsonify({"success": True, "page_url": result.get("page_url")})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+@app.route("/api/export/slack", methods=["POST"])
+def api_export_slack():
+    """Deliver a report to Slack."""
+    job_id = request.json.get("job_id")
+    if not job_id:
+        return jsonify({"success": False, "error": "Missing job_id"}), 400
+
+    eval_data = store.get_evaluation(job_id)
+    if not eval_data:
+        return jsonify({"success": False, "error": "Evaluation not found"}), 404
+
+    try:
+        slack_result = deliver_qa_report_to_slack(
+            eval_data['evaluation'], 
+            eval_data['transcript'], 
+            job_id
+        )
+        if slack_result:
+            return jsonify({"success": True, "message": slack_result})
+        return jsonify({"success": False, "error": "Slack delivery failed"}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/jobs")
 def api_jobs():
@@ -588,19 +743,26 @@ def api_jobs():
         if isinstance(all_jobs, list):
             for job in all_jobs:
                 if isinstance(job, dict) and job.get("status") == "done":
+                    # Enrich job with stored evaluation score if available
+                    stored_eval = store.get_evaluation(job.get("job_id"))
+                    score = None
+                    if stored_eval:
+                        eval_json = stored_eval.get("evaluation", {})
+                        if isinstance(eval_json, str):
+                            eval_json = json.loads(eval_json)
+                        score = eval_json.get("overall_score")
                     jobs.append({
                         "job_id": job.get("job_id"),
                         "filename": job.get("filename", "unknown"),
                         "status": job.get("status"),
                         "duration": job.get("audio_duration_seconds", 0),
                         "created_at": job.get("created_at", ""),
+                        "score": score,
                     })
         
         return jsonify({"jobs": jobs, "success": True})
     except Exception as e:
         return jsonify({"jobs": [], "success": False, "error": str(e)}), 500
-
-
 @app.route("/api/analyze/<job_id>", methods=["POST"])
 def api_analyze(job_id):
     """API endpoint: analyze a single meeting and return JSON."""
@@ -694,21 +856,44 @@ def api_upload():
 @app.route("/api/trends-data")
 def trends_data():
     """JSON endpoint for Chart.js to render trend charts."""
+    from src.core.metrics import calculate_deal_velocity, calculate_momentum_slope
+    import json
     evaluations = store.get_all_evaluations()
     if not evaluations:
-        return jsonify({"meetings": [], "metrics": []})
+        return jsonify({"labels": [], "overall": [], "velocity": 0, "momentum": "stable"})
 
-    # Sort by created_at
-    evals = sorted(evaluations, key=lambda e: e["created_at"])
-    labels = [e["meeting_name"] or e["job_id"][:8] for e in evals]
+    # Sort by created_at for chronological slope calculation
+    sorted_evals = sorted(evaluations, key=lambda e: e["created_at"])
+    
+    parsed_evals = []
+    for e in sorted_evals:
+        try:
+            # The 'evaluation' column is a JSON string
+            eval_json = json.loads(e["evaluation"])
+            # Handle both the wrapper { 'evaluation': { ... } } and the direct { ... }
+            core_eval = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
+            parsed_evals.append({
+                "meeting_name": e["meeting_name"] or e["job_id"][:8],
+                "overall_score": core_eval.get("overall_score", 0),
+                "core": core_eval
+            })
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+    labels = [p["meeting_name"] for p in parsed_evals]
+    scores = [p["overall_score"] for p in parsed_evals]
+    
+    # Calculate real mathematical metrics
+    velocity = calculate_deal_velocity([p["core"] for p in parsed_evals])
+    slope = calculate_momentum_slope(scores)
+    momentum = "increasing" if slope > 0.5 else "decreasing" if slope < -0.5 else "stable"
 
     return jsonify({
         "labels": labels,
-        "overall": [e["overall_score"] for e in evals],
-        "action_items": [e["action_items"] for e in evals],
-        "clarity": [e["clarity"] for e in evals],
-        "tension": [e["tension"] for e in evals],
-        "compliance": [e["compliance"] for e in evals],
+        "overall": scores,
+        "velocity": round(velocity, 1),
+        "momentum": momentum,
+        "slope": round(slope, 2)
     })
 
 
@@ -722,25 +907,22 @@ def coach_data():
     eval_dicts = []
     names = []
     for item in evaluations:
+        eval_json = json.loads(item["evaluation"]) if isinstance(item["evaluation"], str) else item["evaluation"]
+        core = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
         eval_dicts.append({
-            "overall_score": item["overall_score"],
-            "category_scores": {
-                "action_items": item["action_items"],
-                "clarity": item["clarity"],
-                "tension": item["tension"],
-                "compliance": item["compliance"],
-            },
-            "action_items": item.get("action_items_list", []),
-            "clarity_issues": item.get("clarity_issues_list", []),
-            "tension_signals": item.get("tension_signals_list", []),
-            "compliance_risks": item.get("compliance_risks_list", []),
+            "overall_score": core.get("overall_score", 0),
+            "category_scores": core.get("category_scores", {}),
+            "action_items": core.get("action_items", []),
+            "clarity_issues": core.get("clarity_issues", []),
+            "tension_signals": core.get("tension_signals", []),
+            "compliance_risks": core.get("compliance_risks", []),
         })
-        names.append(item["meeting_name"] or item["job_id"][:8])
+        names.append(item.get("meeting_name") or item["job_id"][:8])
 
     comparisons = compare_evaluations(eval_dicts, names)
     return jsonify({
         "ready": True,
-        "insights": _generate_coaching_insights(comparisons, evaluations),
+        "insights": _generate_coaching_insights(comparisons, eval_dicts),
         "trends": comparisons.get("trends", {}),
         "action_item_tracking": comparisons.get("action_item_tracking", {}),
     })

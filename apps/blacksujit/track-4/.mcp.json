@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "react-bits": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://reactbits.dev/r/mcp"
+      ]
+    }
+  }
+}

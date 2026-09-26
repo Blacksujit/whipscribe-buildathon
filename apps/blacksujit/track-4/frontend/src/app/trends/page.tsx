@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getTrends, TrendsResponse } from "@/lib/api";
+
+const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
+const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 
 export default function TrendsPage() {
   const [data, setData] = useState<TrendsResponse | null>(null);
@@ -11,137 +16,173 @@ export default function TrendsPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      try {
-        const result = await getTrends();
-        setData(result);
-      } catch (e) {
-        setData(null);
-      }
+      const result = await getTrends();
+      setData(result);
       setLoading(false);
     }
     fetchData();
   }, []);
 
-  // Hardcoded coaching data (replaces badge-based design with plain text)
-  const teamMembers = [
-    { name: "Sarah", role: "CFO", score: 95, status: "improving" },
-    { name: "Mike", role: "Head of Engineering", score: 80, status: "declining" },
-    { name: "John", role: "Head of Product", score: 85, status: "stable" },
-  ];
-
-  const coachingInsights = [
-    {
-      name: "Sarah",
-      role: "CFO",
-      status: "improving",
-      insight: "Consistently high action item completion rate. Clear communication on compliance topics.",
-      evidence: "Q4 Planning · 00:07:02",
-    },
-    {
-      name: "Mike",
-      role: "Head of Engineering",
-      status: "needs coaching",
-      insight: "Action items sometimes lack clear ownership. Consider following up with written summaries.",
-      evidence: "Retro Sprint 12 · 00:15:30",
-    },
-    {
-      name: "John",
-      role: "Head of Product",
-      status: "tension detected",
-      insight: "Tension signals detected in 3 of 4 calls. Recommend training on difficult conversations.",
-      evidence: "Sales Call #23 · 00:23:45",
-    },
-  ];
+  if (loading) {
+    return (
+      <main className="site-shell">
+        <Navbar />
+        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
+            Loading trends...
+          </motion.p>
+        </div>
+      </main>
+    );
+  }
 
   const avgScore = data?.overall?.length
     ? Math.round(data.overall.reduce((total, score) => total + score, 0) / data.overall.length)
     : null;
 
   const meetingCount = data?.labels?.length || 0;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-v4-bg">
-        <Navbar />
-        <div className="container-960 section mx-auto">
-          <p className="text-v4-ink-muted">Loading trends...</p>
-        </div>
-      </div>
-    );
-  }
+  const momentumClass =
+    data?.momentum === "increasing"
+      ? "text-ok"
+      : data?.momentum === "decreasing"
+      ? "text-err"
+      : "text-v4-ink-muted";
 
   return (
-    <div className="min-h-screen bg-v4-bg">
+    <main className="site-shell">
       <Navbar />
-      <section className="container-960 section mx-auto">
-        <h1 className="font-display text-h1 mb-2">Quality Trends</h1>
-        <p className="text-v4-ink-muted mb-12" style={{ fontSize: "var(--text-body)" }}>
-          Track team performance over time
-        </p>
+      <section className="section-wide" style={{ paddingTop: "92px" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springReveal, delay: 0.1 }}
+        >
+          <p className="section-eyebrow">Quality Trends</p>
+          <h1>Track your team&apos;s deal quality over time.</h1>
+          <p className="hero-lede">
+            {meetingCount === 0
+              ? "No meetings analyzed yet. Upload a recording to begin."
+              : `${meetingCount} meetings analyzed · average score ${avgScore ?? "–"}`}
+          </p>
+        </motion.div>
 
-        {/* Metrics Grid - WhipScribe style (plain cards, no colored badges) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-v4-ink">{avgScore ?? "-"}</div>
-            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-              Average Score
-            </div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-v4-ink">{meetingCount}</div>
-            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-              Meetings Analyzed
-            </div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-ok">{data?.overall?.length && data.overall.length > 1 ? "Live" : "-"}</div>
-            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-              Improvement
-            </div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-accent">{data?.compliance?.filter((score) => score < 70).length ?? "-"}</div>
-            <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-              Issues Found
-            </div>
-          </div>
-        </div>
-
-        {/* Evidence Cards - plain cards, no colored borders */}
-        <h2 className="font-display text-h2 mb-6">Performance Insights</h2>
-        <div className="space-y-4 mb-16">
-          {coachingInsights.map((item) => (
-            <div key={item.name} className="card">
-              <h3 className="font-medium text-v4-ink mb-2">
-                {item.name} · {item.role} · {item.status}
-              </h3>
-              <p
-                className="text-v4-ink-muted mb-2"
-                style={{ fontSize: "var(--text-body)" }}
-              >
-                {item.insight}
-              </p>
-              <p className="evidence-meta">
-                <span>Evidence</span>
-                <span>{item.evidence}</span>
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Team Members Grid */}
-        <h2 className="font-display text-h2 mb-6">Team Members</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {teamMembers.map((member) => (
-            <div key={member.name} className="card text-center">
-              <div className="text-2xl font-bold text-v4-ink">{member.score}</div>
-              <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-                {member.name} · {member.role}
+        {meetingCount > 0 && (
+          <>
+            {/* Metrics Grid */}
+            <motion.div
+              className="section-wide"
+              style={{ display: "flex", gap: "24px", marginTop: "42px" }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.2 }}
+            >
+              <div className="card" style={{ flex: 1, textAlign: "center" }}>
+                <div className="text-3xl font-bold text-v4-ink">{avgScore ?? "–"}</div>
+                <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Average Score</div>
               </div>
-            </div>
-          ))}
-        </div>
+              <div className="card" style={{ flex: 1, textAlign: "center" }}>
+                <div className="text-3xl font-bold text-v4-ink">{meetingCount}</div>
+                <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Meetings Analyzed</div>
+              </div>
+              <div className="card" style={{ flex: 1, textAlign: "center" }}>
+                <motion.div
+                  className={`text-2xl font-bold ${momentumClass}`}
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring" as const, stiffness: 200, damping: 15, delay: 0.4 }}
+                >
+                  {data?.momentum === "increasing" ? "↗ Rising" : data?.momentum === "decreasing" ? "↘ Falling" : "→ Stable"}
+                </motion.div>
+                <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Momentum</div>
+              </div>
+              <div className="card" style={{ flex: 1, textAlign: "center" }}>
+                <div className="text-3xl font-bold text-v4-ink">{data?.velocity ?? "–"}</div>
+                <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Deal Velocity</div>
+              </div>
+            </motion.div>
+
+            {/* Score Progression Chart */}
+            <motion.div
+              className="card"
+              style={{ marginTop: "32px" }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.3 }}
+            >
+              <h2 style={{ margin: "0 0 16px" }}>Score Progression</h2>
+              <div style={{ display: "flex", alignItems: "flex-end", height: "160px", gap: "12px", borderBottom: "1px solid var(--color-rule)", paddingLeft: "8px" }}>
+                {data && data.labels && data.labels.map((label, i) => {
+                  const score = data.overall[i] || 0;
+                  const height = (score / 100) * 140;
+                  return (
+                    <motion.div
+                      key={label + "-" + i}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      transition={{ ...springReveal, delay: 0.4 + i * 0.1 }}
+                    >
+                      <motion.div
+                        style={{ width: "100%", maxWidth: "60px", background: "var(--color-brand)", borderRadius: "3px 3px 0 0" }}
+                        initial={{ height: 0 }}
+                        animate={{ height }}
+                        transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 + i * 0.1 }}
+                      />
+                      <span style={{ fontSize: "var(--text-micro)", color: "var(--v4-ink-muted)", marginTop: "4px" }}>
+                        {label.substring(0, 8)}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              <style jsx>{`
+                div { overflow: visible; }
+              `}</style>
+            </motion.div>
+
+            {/* Category Scores Over Time */}
+            <motion.div
+              className="card"
+              style={{ marginTop: "24px" }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.4 }}
+            >
+              <h2 style={{ margin: "0 0 16px" }}>Category Scores</h2>
+              <p style={{ color: "var(--v4-ink-muted)", fontSize: "var(--text-micro)" }}>
+                Hover over bars to see individual category scores per meeting.
+              </p>
+            </motion.div>
+          </>
+        )}
+
+        {meetingCount === 0 && (
+          <motion.div
+            className="card"
+            style={{ marginTop: "24px" }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springReveal}
+          >
+            <p style={{ color: "var(--v4-ink)", fontSize: "var(--text-body)" }}>No trend data available yet.</p>
+          </motion.div>
+        )}
+
+        {/* Call to Action */}
+        <motion.div
+          className="card"
+          style={{ marginTop: "24px", backgroundColor: "var(--color-v4-bg-alt)" }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springReveal, delay: 0.8 }}
+        >
+          <h3 style={{ margin: "0 0 8px" }}>Need more data?</h3>
+          <p style={{ color: "var(--v4-ink-muted)", fontSize: "var(--text-body)", marginBottom: "16px" }}>
+            Upload multiple meetings to see meaningful trends and coaching insights.
+          </p>
+          <Link href="/" className="btn-primary">Upload recordings</Link>
+        </motion.div>
       </section>
-    </div>
+    </main>
   );
 }

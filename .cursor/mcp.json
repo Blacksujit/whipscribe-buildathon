@@ -16,6 +16,66 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
+    },
+    "stitch": {
+      "type": "http",
+      "url": "https://stitch.googleapis.com/mcp",
+      "headers": {
+        "X-Goog-Api-Key": "${STITCH_API_KEY}"
+      }
+    },
+    "render": {
+      "type": "http",
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${RENDER_MCP_TOKEN}"
+      }
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.vercel.com"]
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=ppeegiwpdtqbrluwahkb"
+    },
+    "claude-code-docs": {
+      "type": "http",
+      "url": "https://code.claude.com/docs/mcp"
+    },
+    "21st": {
+      "type": "http",
+      "url": "https://21st.dev/api/mcp",
+      "headers": {
+        "x-api-key": "${TWENTY_FIRST_API_KEY}"
+      }
+    },
+    "chrome-devtools-mcp": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "gumroad": {
+      "command": "npx",
+      "args": ["-y", "gumroad-mcp@latest"],
+      "env": { "GUMROAD_ACCESS_TOKEN": "${GUMROAD_ACCESS_TOKEN}" }
+    },
+    "devfolio": {
+      "type": "http",
+      "url": "https://mcp.devfolio.co/mcp"
+    },
+    "designmd": {
+      "type": "http",
+      "url": "https://www.designmd.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer 2smLerWSwo9bZRqQZsh+zRkL/Voof7lpWtBPlWTRByQ="
+      }
+    },
+    "originkit": {
+      "type": "http",
+      "url": "https://mcp.originkit.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer cmp_live_p3P2UnnmgwOyhSkGPMUPnC08rp8x9gYQ"
+      }
     }
   }
 }

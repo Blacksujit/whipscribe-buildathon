@@ -153,9 +153,14 @@ if __name__ == "__main__":
 
     step(2, "Run quality evaluation (action items, clarity, tension, compliance)")
 
-    provider = os.getenv("LLM_PROVIDER")
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    provider = os.getenv("LLM_PROVIDER", "groq")
+    api_key = (
+        os.getenv("GROQ_API_KEY")
+        or os.getenv("LLM_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or os.getenv("ANTHROPIC_API_KEY")
+    )
+    model = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
 
     if provider and api_key:
         evaluation = evaluate(transcript, api_key=api_key, model=model, provider=provider)
