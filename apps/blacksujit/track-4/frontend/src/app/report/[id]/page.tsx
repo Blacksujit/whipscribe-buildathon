@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { getReport, ReportResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import CountUp from "@/components/reactbits/CountUp/CountUp";
+import GradientText from "@/components/reactbits/GradientText/GradientText";
 
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
@@ -109,7 +111,24 @@ export default function ReportPage() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.35 }}
               >
-                {score}/100
+                <GradientText
+                  colors={['#c5f44b', '#9ee038', '#c5f44b']}
+                  animationSpeed={8}
+                  direction="horizontal"
+                  showBorder={false}
+                  className="report-score-gradient"
+                >
+                  <CountUp
+                    from={0}
+                    to={score}
+                    duration={2}
+                    delay={0.35}
+                    className="text-current text-4xl md:text-5xl font-black leading-none"
+                  />
+                </GradientText>
+                <span style={{ color: 'var(--color-v4-ink-muted)', fontSize: 'var(--text-h3)' }}>
+                  /100
+                </span>
               </motion.div>
             </div>
 

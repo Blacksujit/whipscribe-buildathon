@@ -6,6 +6,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getTrends, TrendsResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
+import CountUp from "@/components/reactbits/CountUp/CountUp";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -237,15 +239,19 @@ export default function TrendsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springReveal, delay: 0.2 }}
             >
-              <div className="card" style={{ flex: 1, textAlign: "center" }}>
-                <div className="text-3xl font-bold text-v4-ink">{avgScore ?? "–"}</div>
+              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.15)" className="metric-card">
+                <div className="text-3xl font-bold text-v4-ink">
+                  {avgScore != null ? <CountUp from={0} to={avgScore} duration={2} delay={0.3} /> : "–"}
+                </div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Average Score</div>
-              </div>
-              <div className="card" style={{ flex: 1, textAlign: "center" }}>
-                <div className="text-3xl font-bold text-v4-ink">{meetingCount}</div>
+              </SpotlightCard>
+              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.15)" className="metric-card">
+                <div className="text-3xl font-bold text-v4-ink">
+                  <CountUp from={0} to={meetingCount} duration={2} delay={0.4} />
+                </div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Meetings Analyzed</div>
-              </div>
-              <div className="card" style={{ flex: 1, textAlign: "center" }}>
+              </SpotlightCard>
+              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.15)" className="metric-card">
                 <motion.div
                   className={`text-2xl font-bold ${momentumClass}`}
                   initial={{ scale: 0.5, opacity: 0 }}
@@ -255,11 +261,13 @@ export default function TrendsPage() {
                   {data?.momentum === "increasing" ? "↗ Rising" : data?.momentum === "decreasing" ? "↘ Falling" : "→ Stable"}
                 </motion.div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Momentum</div>
-              </div>
-              <div className="card" style={{ flex: 1, textAlign: "center" }}>
-                <div className="text-3xl font-bold text-v4-ink">{data?.velocity ?? "–"}</div>
+              </SpotlightCard>
+              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.15)" className="metric-card">
+                <div className="text-3xl font-bold text-v4-ink">
+                  {data?.velocity != null ? <CountUp from={0} to={data.velocity} duration={2} delay={0.5} /> : "–"}
+                </div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Deal Velocity</div>
-              </div>
+              </SpotlightCard>
             </motion.div>
 
             {/* Score Progression Chart */}

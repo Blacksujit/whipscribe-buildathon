@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getSpeakers, SpeakersResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -89,14 +90,15 @@ export default function SpeakersPage() {
             const isHighRisk = highRisk.includes(speaker.name);
             const issueTypes = speaker.issue_types || [];
             return (
-              <motion.div
-                key={speaker.name}
-                className="card"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ ...springReveal, delay: 0.3 + i * 0.1 }}
-                whileHover="hover"
-              >
+              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.1)" className="speaker-card">
+                <motion.div
+                  key={speaker.name}
+                  className="card"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ ...springReveal, delay: 0.3 + i * 0.1 }}
+                  whileHover="hover"
+                >
                 <motion.div
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}
                   variants={{ hover: { x: 4 } }}
@@ -132,6 +134,7 @@ export default function SpeakersPage() {
                   </div>
                 </div>
               </motion.div>
+              </SpotlightCard>
             );
           })}
         </motion.div>

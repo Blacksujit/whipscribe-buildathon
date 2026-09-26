@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { uploadRecording } from "@/lib/api";
+
+
 import PageTransition from "@/components/PageTransition";
+import GradientText from "@/components/reactbits/GradientText/GradientText";
+import SpecularButton from "@/components/reactbits/SpecularButton/SpecularButton";
+import CountUp from "@/components/reactbits/CountUp/CountUp";
 
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
@@ -73,7 +78,17 @@ export default function Home() {
       <section className="hero section-wide">
         <div className="hero-copy">
           <p className="hero-kicker">whipscribe <span>BETA</span></p>
-          <h1>Stop watching.<br />Start reading.</h1>
+          <GradientText
+            colors={['#c5f44b', '#a9dc28', '#c5f44b']}
+            animationSpeed={6}
+            direction="horizontal"
+            showBorder={false}
+            className="hero-headline"
+          >
+            <span style={{ fontSize: 'var(--text-h1)', lineHeight: 'var(--text-h1-lh)', fontWeight: 650, letterSpacing: '-0.075em' }}>
+              Stop watching.<br />Start reading.
+            </span>
+          </GradientText>
           <p className="hero-lede">Audio and video intelligence. Encrypted, diarized, yours.</p>
           <div className="hero-props"><span>Private</span><span>Fast</span><span>Cheaper</span></div>
         </div>
@@ -87,6 +102,15 @@ export default function Home() {
           <div className="upload-body">
             <p className="section-eyebrow">Upload your audio</p>
             <p className="upload-price">First transcript <strong>$0.99</strong> · no account needed</p>
+            <SpecularButton
+              size="sm"
+              radius={8}
+              tint="#c5f44b"
+              autoAnimate={true}
+              className="mt-3 w-full"
+            >
+              Drop or click to upload
+            </SpecularButton>
             <label className={`dropzone ${uploadState}`}>
               <input type="file" className="sr-only" accept="audio/*,video/*" onChange={(event) => handleUpload(event.target.files?.[0])} />
               <span className="upload-icon" aria-hidden="true">{uploadState === "done" ? "✓" : "↑"}</span>

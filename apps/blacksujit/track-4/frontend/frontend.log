@@ -6,6 +6,125 @@
 - Local:         http://localhost:3000
 - Network:       http://172.21.96.1:3000
 - Environments: .env.local
-✓ Ready in 863ms
-✓ Running next.config.ts took 264ms
+✓ Ready in 799ms
+✓ Running next.config.ts took 109ms
 
+[browser] ./src/app/speakers/page.tsx:138:13
+Error: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+  136 |               </motion.div>
+  137 |             );
+> 138 |           })}
+      |             ^
+  139 |         </motion.div>
+  140 |
+  141 |         {/* High Risk Speakers */}
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/app/speakers/page.tsx [Client Component Browser]
+    ./src/app/speakers/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/speakers/page.tsx [Client Component SSR]
+    ./src/app/speakers/page.tsx [Server Component] 
+[browser] ./src/app/settings/page.tsx:247:15
+Error: Expected '</', got 'jsx text'
+  245 |             )}
+  246 |           </motion.div>
+> 247 |         </div>
+      |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 248 |       </section>
+      | ^^^^^^
+  249 |     </main>
+  250 |   </PageTransition>
+  251 |   );
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/app/settings/page.tsx [Client Component Browser]
+    ./src/app/settings/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/settings/page.tsx [Client Component SSR]
+    ./src/app/settings/page.tsx [Server Component] 
+[browser] ./src/app/settings/page.tsx:247:15
+Error: Expected '</', got 'jsx text'
+  245 |             )}
+  246 |           </motion.div>
+> 247 |         </div>
+      |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 248 |       </section>
+      | ^^^^^^
+  249 |     </main>
+  250 |   </PageTransition>
+  251 |   );
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/app/settings/page.tsx [Client Component Browser]
+    ./src/app/settings/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/settings/page.tsx [Client Component SSR]
+    ./src/app/settings/page.tsx [Server Component] 
+[browser] ./src/app/settings/page.tsx:247:15
+Error: Expected '</', got 'jsx text'
+  245 |             )}
+  246 |           </motion.div>
+> 247 |         </div>
+      |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 248 |       </section>
+      | ^^^^^^
+  249 |     </main>
+  250 |   </PageTransition>
+  251 |   );
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/app/settings/page.tsx [Client Component Browser]
+    ./src/app/settings/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/settings/page.tsx [Client Component SSR]
+    ./src/app/settings/page.tsx [Server Component] 
+[browser] ./src/app/settings/page.tsx:247:15
+Error: Expected '</', got 'jsx text'
+  245 |             )}
+  246 |           </motion.div>
+> 247 |         </div>
+      |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 248 |       </section>
+      | ^^^^^^
+  249 |     </main>
+  250 |   </PageTransition>
+  251 |   );
+
+Parsing ecmascript source code failed
+
+Import traces:
+  Client Component Browser:
+    ./src/app/settings/page.tsx [Client Component Browser]
+    ./src/app/settings/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/settings/page.tsx [Client Component SSR]
+    ./src/app/settings/page.tsx [Server Component] 
+ GET / 200 in 955ms (next.js: 538ms, application-code: 416ms)
+ GET / 200 in 49ms (next.js: 7ms, application-code: 43ms)
+ GET /coach 200 in 90ms (next.js: 30ms, application-code: 60ms)
+ GET /trends 200 in 72ms (next.js: 43ms, application-code: 30ms)
+ GET /speakers 200 in 95ms (next.js: 34ms, application-code: 61ms)
+ GET /settings 200 in 85ms (next.js: 30ms, application-code: 55ms)
+ GET /report/c32a3520-7a54-4efc-9d7d-c9f15e6d0461 200 in 684ms (next.js: 638ms, application-code: 46ms)
+ GET /coach 200 in 27ms (next.js: 6ms, application-code: 21ms)
+ GET /coach 200 in 33ms (next.js: 3ms, application-code: 30ms)
+ GET /trends 200 in 31ms (next.js: 6ms, application-code: 25ms)
+ GET / 200 in 42ms (next.js: 3ms, application-code: 39ms)
