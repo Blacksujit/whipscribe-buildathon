@@ -888,12 +888,50 @@ def trends_data():
     slope = calculate_momentum_slope(scores)
     momentum = "increasing" if slope > 0.5 else "decreasing" if slope < -0.5 else "stable"
 
+    # Extract category scores from the latest quality evaluation (score >= 90)
+    # Falls back to latest with any non-zero category scores
+    category_scores = {"action_items": 0, "clarity": 0, "tension": 0, "compliance": 0}
+    seen_any_nonzero = False
+    fallback_scores = category_scores.copy()
+    for p in reversed(parsed_evals):
+        core = p.get("core", {})
+        if not core:
+            continue
+        score = core.get("overall_score", 0)
+        cat = core.get("category_scores", {})
+        if not cat or not isinstance(cat, dict):
+            continue
+        # Check both formats
+        if "action_items" in cat:
+            ai = int(cat.get("action_items", 0) or 0)
+            cl = int(cat.get("clarity", 0) or 0)
+            te = int(cat.get("tension", 0) or 0)
+            co = int(cat.get("compliance", 0) or 0)
+            mapped = {"action_items": ai, "clarity": cl, "tension": te, "compliance": co}
+        elif "commitments" in cat:
+            ai = int(cat.get("commitments", 0) or 0)
+            cl = int(cat.get("narrative", 0) or 0)
+            te = int(cat.get("friction", 0) or 0)
+            co = int(cat.get("velocity", 0) or 0)
+            mapped = {"action_items": ai, "clarity": cl, "tension": te, "compliance": co}
+        else:
+            continue
+        # Track fallback for first non-zero
+        if not seen_any_nonzero and any(v > 0 for v in mapped.values()):
+            fallback_scores = mapped
+            seen_any_nonzero = True
+        # Prefer quality evals with score >= 90
+        if score and score >= 90 and any(v > 0 for v in mapped.values()):
+            category_scores = mapped
+            break
+
     return jsonify({
         "labels": labels,
         "overall": scores,
         "velocity": round(velocity, 1),
         "momentum": momentum,
-        "slope": round(slope, 2)
+        "slope": round(slope, 2),
+        "category_scores": category_scores,
     })
 
 

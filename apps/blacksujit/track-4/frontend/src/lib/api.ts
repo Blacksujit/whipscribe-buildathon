@@ -15,14 +15,6 @@ export interface ApiJobsResponse {
   error?: string;
 }
 
-export interface TrendsResponse {
-  labels: string[];
-  overall: number[];
-  velocity: number;
-  momentum: string;
-  slope: number;
-}
-
 export interface SettingsResponse {
   configured: boolean;
   api_key: string;
@@ -30,6 +22,15 @@ export interface SettingsResponse {
   slack_webhook: string;
   notion_token: string;
   notion_database_id: string;
+}
+
+export interface TrendsResponse {
+  labels: string[];
+  overall: number[];
+  velocity: number;
+  momentum: "increasing" | "decreasing" | "stable";
+  slope: number;
+  category_scores?: Record<string, number>;
 }
 
 export interface ReportResponse {

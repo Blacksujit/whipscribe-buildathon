@@ -291,11 +291,11 @@ export default function TrendsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 {meetingCount > 0 && data && (
                   <>
-                    {Object.entries({
-                      action_items: 95,
-                      clarity: 90,
-                      tension: 88,
-                      compliance: 85,
+                    {Object.entries(data?.category_scores || {
+                      action_items: 0,
+                      clarity: 0,
+                      tension: 0,
+                      compliance: 0,
                     }).map(([cat, score]) => (
                       <div key={cat}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
