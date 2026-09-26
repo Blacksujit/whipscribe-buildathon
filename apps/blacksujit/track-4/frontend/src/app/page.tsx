@@ -77,7 +77,7 @@ export default function Home() {
       <Navbar />
       <section className="hero section-wide">
         <div className="hero-copy">
-          <p className="hero-kicker">whipscribe <span>BETA</span></p>
+          <p className="hero-kicker">whisp<span className="text-[#c5f44b]">·</span>scribe <span className="text-[#a9dc28]">CallCoach-AI</span></p>
           <GradientText
             colors={['#c5f44b', '#a9dc28', '#c5f44b']}
             animationSpeed={6}
@@ -280,7 +280,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="site-footer section-wide">
         <div className="footer-brand">
-          <strong>whipscribe <span>BETA</span></strong>
+          <strong>whisp<span className="text-[#c5f44b]">·</span>scribe <span className="text-[#a9dc28]">CallCoach-AI</span></strong>
           <p>Audio &amp; video intelligence.<br />Encrypted, diarized, yours.</p>
         </div>
         <div className="footer-links">

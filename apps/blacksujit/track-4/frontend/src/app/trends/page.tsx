@@ -189,7 +189,7 @@ export default function TrendsPage() {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
+        <div className="section-wide metrics-grid" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
             Loading trends...
           </motion.p>
@@ -234,7 +234,7 @@ export default function TrendsPage() {
             {/* Metrics Grid */}
             <motion.div
               className="section-wide"
-              style={{ display: "flex", gap: "24px", marginTop: "42px" }}
+              style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "24px", marginTop: "42px" }}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...springReveal, delay: 0.2 }}

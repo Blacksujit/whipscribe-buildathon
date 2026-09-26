@@ -90,7 +90,7 @@ export default function CoachPage() {
             transition={{ ...springReveal, delay: 0.2 }}
           >
             {Object.entries(trends).map(([key, value]) => (
-              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.1)" className="metric-card">
+              <SpotlightCard key={key} spotlightColor="rgba(197, 244, 75, 0.1)" className="metric-card">
               <div key={key} className="card" style={{ flex: 1, textAlign: "center" }}>
                 <div className="text-3xl font-bold text-v4-ink">{<CountUp from={0} to={typeof value === 'number' ? value : 0} duration={2} />}</div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
@@ -105,7 +105,7 @@ export default function CoachPage() {
         {/* Coaching Items */}
         <motion.div style={{ marginTop: "32px" }}>
           {insights.map((item, index) => (
-            <SpotlightCard spotlightColor="rgba(239, 143, 87, 0.1)" className="insight-card mb-4">
+            <SpotlightCard key={index} spotlightColor="rgba(239, 143, 87, 0.1)" className="insight-card mb-4">
             <motion.div
               key={index}
               className="card"

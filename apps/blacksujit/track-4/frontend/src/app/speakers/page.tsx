@@ -90,7 +90,7 @@ export default function SpeakersPage() {
             const isHighRisk = highRisk.includes(speaker.name);
             const issueTypes = speaker.issue_types || [];
             return (
-              <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.1)" className="speaker-card">
+              <SpotlightCard key={speaker.name} spotlightColor="rgba(197, 244, 75, 0.1)" className="speaker-card">
                 <motion.div
                   key={speaker.name}
                   className="card"
