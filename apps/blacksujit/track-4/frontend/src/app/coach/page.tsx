@@ -6,8 +6,6 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getCoachData, CoachDataResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
-import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
-import CountUp from "@/components/reactbits/CountUp/CountUp";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -90,14 +88,12 @@ export default function CoachPage() {
             transition={{ ...springReveal, delay: 0.2 }}
           >
             {Object.entries(trends).map(([key, value]) => (
-              <SpotlightCard key={key} spotlightColor="rgba(197, 244, 75, 0.1)" className="metric-card">
               <div key={key} className="card" style={{ flex: 1, textAlign: "center" }}>
-                <div className="text-3xl font-bold text-v4-ink">{<CountUp from={0} to={typeof value === 'number' ? value : 0} duration={2} />}</div>
+                <div className="text-3xl font-bold text-v4-ink">{value}</div>
                 <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
                   {key.charAt(0).toUpperCase() + key.slice(1)}
                 </div>
               </div>
-              </SpotlightCard>
             ))}
           </motion.div>
         )}
@@ -105,7 +101,6 @@ export default function CoachPage() {
         {/* Coaching Items */}
         <motion.div style={{ marginTop: "32px" }}>
           {insights.map((item, index) => (
-            <SpotlightCard key={index} spotlightColor="rgba(239, 143, 87, 0.1)" className="insight-card mb-4">
             <motion.div
               key={index}
               className="card"
@@ -139,7 +134,6 @@ export default function CoachPage() {
                 </div>
               )}
             </motion.div>
-            </SpotlightCard>
           ))}
         </motion.div>
 

@@ -270,33 +270,17 @@
   .hero { grid-template-columns: 1fr; gap: 45px; padding-top: 58px; padding-bottom: 62px; }.hero h1 { font-size: clamp(52px, 15vw, 72px); }.hero-lede { font-size: 16px; }.proof-strip { flex-direction: column; gap: 8px; }.demo-section, .use-case-section, .tools-section { padding-top: 72px; padding-bottom: 72px; }.demo-row { grid-template-columns: 20px 42px 1fr auto; gap: 10px; }.demo-thumb { width: 38px; height: 38px; }.demo-language, .demo-duration { display: none; }.demo-open { text-align: left; }.evidence-section { padding-top: 72px; padding-bottom: 72px; }.evidence-demo { grid-template-columns: 1fr; }.evidence-search { min-height: 120px; border-right: 0; border-bottom: 1px solid #dfe7cf; }.evidence-answer { padding: 28px; }.quote { font-size: 21px; }.media-types { flex-wrap: wrap; gap: 12px 22px; }.use-case-grid, .tools-grid { grid-template-columns: 1fr 1fr; }.use-case:nth-child(odd) { padding-left: 0; border-left: 0; }.use-case:nth-child(even) { padding-left: 15px; }.use-case p { min-height: 96px; }.tools-grid a:nth-child(odd) { padding-left: 0; border-left: 0; }.tools-grid a:nth-child(even) { padding-left: 15px; }.bulk-section { grid-template-columns: 1fr; gap: 30px; padding-top: 72px; padding-bottom: 72px; }.site-footer { grid-template-columns: 1fr; gap: 36px; }.footer-links { gap: 16px; }
 }
 
-/* SpotlightCard overrides for WhipScribe theme */
-.metric-card,
-.speaker-card,
-.insight-card,
-.setting-card {
-  background: var(--color-paper);
-  border-color: var(--color-rule);
-  border-radius: var(--card-radius);
-  padding: var(--card-padding);
-  box-shadow: var(--card-shadow);
-  transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
 
-.metric-card:hover,
-.speaker-card:hover,
-.insight-card:hover,
-.setting-card:hover {
-  border-color: rgba(197, 244, 75, 0.4);
-  box-shadow: 0 16px 32px rgba(197, 244, 75, 0.1);
-  transform: translateY(-2px);
-}
-
-/* Ensure proper spacing in grid layouts */
+/* Clean metrics grid - no SaaS cards */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
+}
+
+.metrics-grid .card {
+  text-align: center;
+  padding: 24px 16px;
 }
 
 @media (max-width: 760px) {

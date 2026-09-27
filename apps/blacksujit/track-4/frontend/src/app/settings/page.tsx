@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { getSettings, saveSettings, SettingsResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
-import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -92,7 +91,6 @@ export default function SettingsPage() {
 
         <div style={{ maxWidth: "640px", marginTop: "42px" }}>
           {/* WhipScribe Connection */}
-          <SpotlightCard spotlightColor="rgba(197, 244, 75, 0.1)" className="setting-card">
           <motion.div
             className="card"
             initial={{ opacity: 0, y: 12 }}
@@ -126,7 +124,6 @@ export default function SettingsPage() {
               </p>
             </div>
           </motion.div>
-          </SpotlightCard>
 
           {/* AI Model */}
           <motion.div

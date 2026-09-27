@@ -6,7 +6,6 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getSpeakers, SpeakersResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
-import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
@@ -90,7 +89,6 @@ export default function SpeakersPage() {
             const isHighRisk = highRisk.includes(speaker.name);
             const issueTypes = speaker.issue_types || [];
             return (
-              <SpotlightCard key={speaker.name} spotlightColor="rgba(197, 244, 75, 0.1)" className="speaker-card">
                 <motion.div
                   key={speaker.name}
                   className="card"
@@ -134,7 +132,6 @@ export default function SpeakersPage() {
                   </div>
                 </div>
               </motion.div>
-              </SpotlightCard>
             );
           })}
         </motion.div>
