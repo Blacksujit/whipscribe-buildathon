@@ -183,12 +183,12 @@ def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=
 
     context_line = f"\\nAdditional Context from WhipScribe API: {context}" if context else ""
     synthesis_prompt = f"""You are a sales call quality coach. Based on these findings, provide an overall quality score (0-100) for how well this sales representative handled the customer conversation.
-    Scoring guidance (IMPORTANT — use these as benchmarks):
-    - 90-100: Excellent — handled everything professionally, all risks mitigated, clear outcomes.
-    - 75-89: Good — solid performance with minor coaching opportunities.
-    - 60-74: Acceptable — had some issues but managed the conversation adequately.
-    - 40-59: Poor — significant issues that need immediate coaching attention.
-    - 0-39: Very poor — serious failure (broken commitments, toxic behavior, major compliance violations).
+    Scoring guidance (IMPORTANT  use these as benchmarks):
+    - 90-100: Excellent  handled everything professionally, all risks mitigated, clear outcomes.
+    - 75-89: Good  solid performance with minor coaching opportunities.
+    - 60-74: Acceptable  had some issues but managed the conversation adequately.
+    - 40-59: Poor  significant issues that need immediate coaching attention.
+    - 0-39: Very poor  serious failure (broken commitments, toxic behavior, major compliance violations).
     A typical business call with minor issues like hedging, mild tension, and one unbacked commitment scores 60-70.{context_line}
     Findings:
     {json.dumps(results)}

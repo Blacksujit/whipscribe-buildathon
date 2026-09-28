@@ -6,16 +6,18 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getTrends, TrendsResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import CountUp from "@/components/reactbits/CountUp/CountUp";
+import {
+  ListChecksIcon,
+  CrosshairIcon,
+  WaveformIcon,
+  ShieldCheckIcon,
+  InboxIcon,
+  TrendUpIcon,
+} from "@/components/icons";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
-const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
-
-const categoryIcons: Record<string, string> = {
-  action_items: "✅",
-  clarity: "🎯",
-  tension: "🔥",
-  compliance: "⚠",
-};
 
 const categoryColors: Record<string, string> = {
   action_items: "var(--cat-actions)",
@@ -23,6 +25,20 @@ const categoryColors: Record<string, string> = {
   tension: "var(--cat-tension)",
   compliance: "var(--cat-compliance)",
 };
+
+const categoryLabels: Record<string, string> = {
+  action_items: "Action items",
+  clarity: "Clarity",
+  tension: "Tension",
+  compliance: "Compliance",
+};
+
+function CategoryIcon({ category, size = 16 }: { category: string; size?: number }) {
+  if (category === "compliance") return <ShieldCheckIcon size={size} />;
+  if (category === "tension") return <WaveformIcon size={size} />;
+  if (category === "clarity") return <CrosshairIcon size={size} />;
+  return <ListChecksIcon size={size} />;
+}
 
 function ScoreChart({ labels, scores }: { labels: string[]; scores: number[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -39,7 +55,7 @@ function ScoreChart({ labels, scores }: { labels: string[]; scores: number[] }) 
   const points = scores.map((score, i) => {
     const x = padding + (i / Math.max(1, scores.length - 1)) * (chartWidth - padding * 2);
     const y = padding + chartHeight - ((score - minVal) / range) * chartHeight;
-    return { x, y, score, label: labels[i] || `Meeting ${i + 1}`, index: i };
+    return { x, y, score, label: labels[i] || `Call ${i + 1}`, index: i };
   });
 
   const areaPoints = points.map(p => `${p.x},${p.y}`).join(" ") + ` ${chartWidth - padding},${padding + chartHeight} ${padding},${padding + chartHeight}`;
@@ -120,10 +136,12 @@ export default function TrendsPage() {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
-            Loading trends...
-          </motion.p>
+        <div className="section-wide section-pad">
+          <div className="skeleton skeleton-title" />
+          <div className="skeleton skeleton-line" style={{ width: "55%" }} />
+          <div className="card" style={{ marginTop: 24 }}>
+            <div className="skeleton" style={{ height: 260 }} />
+          </div>
         </div>
       </main>
     );
@@ -141,12 +159,8 @@ export default function TrendsPage() {
       ? "text-err"
       : "text-secondary";
 
-  const momentumIcon =
-    data?.momentum === "increasing"
-      ? "↗"
-      : data?.momentum === "decreasing"
-      ? "↘"
-      : "→";
+  const momentumLabel =
+    data?.momentum === "increasing" ? "Rising" : data?.momentum === "decreasing" ? "Falling" : "Steady";
 
   return (
     <PageTransition>
@@ -158,18 +172,18 @@ export default function TrendsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springReveal, delay: 0.1 }}
         >
-          <p className="section-eyebrow">Quality Trends</p>
-          <h1 className="section-title">Track your team&apos;s deal quality over time.</h1>
+          <p className="section-eyebrow">Trends</p>
+          <h1 className="section-title">Is the pitch getting better?</h1>
           <p className="section-subtitle">
             {meetingCount === 0
-              ? "No meetings analyzed yet. Upload a recording to begin."
-              : `${meetingCount} meetings analyzed · average score ${avgScore ?? "—"}`}
+              ? "Score a call and the trend starts here."
+              : `${meetingCount} calls scored - average ${avgScore ?? "-"}`}
           </p>
         </motion.div>
 
         {meetingCount > 0 && (
           <>
-            {/* Metrics Grid */}
+            {/* Metrics */}
             <motion.div
               className="metrics-grid"
               initial={{ opacity: 0, y: 12 }}
@@ -177,12 +191,14 @@ export default function TrendsPage() {
               transition={{ ...springReveal, delay: 0.2 }}
             >
               <div className="metric-card">
-                <div className="metric-value">{avgScore != null ? avgScore : "—"}</div>
-                <div className="metric-label">Average Score</div>
+                <div className="metric-value">
+                  {avgScore != null ? <CountUp from={0} to={avgScore} duration={1.4} /> : "-"}
+                </div>
+                <div className="metric-label">Average score</div>
               </div>
               <div className="metric-card">
                 <div className="metric-value">{meetingCount}</div>
-                <div className="metric-label">Meetings</div>
+                <div className="metric-label">Calls</div>
               </div>
               <div className="metric-card">
                 <motion.div
@@ -191,40 +207,30 @@ export default function TrendsPage() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring" as const, stiffness: 200, damping: 15, delay: 0.4 }}
                 >
-                  {momentumIcon} {data?.momentum === "increasing" ? "Rising" : data?.momentum === "decreasing" ? "Falling" : "Stable"}
+                  <TrendUpIcon size={16} /> {momentumLabel}
                 </motion.div>
                 <div className="metric-label">Momentum</div>
               </div>
               <div className="metric-card">
-                <div className="metric-value">{data?.velocity != null ? data.velocity : "—"}</div>
-                <div className="metric-label">Deal Velocity</div>
+                <div className="metric-value">{data?.velocity != null ? data.velocity : "-"}</div>
+                <div className="metric-label">Deal velocity</div>
               </div>
             </motion.div>
 
-            {/* Score Progression Chart */}
-            <motion.div
-              className="card chart-card"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springReveal, delay: 0.3 }}
-            >
+            {/* Score progression */}
+            <AnimatedContent className="card chart-card" delay={0.25}>
               <div className="chart-header">
-                <h2 className="chart-title">Score Progression</h2>
+                <h2 className="chart-title">Score by call</h2>
                 <Link href="/coach" className="text-link">
-                  Coaching insights →
+                  What to fix next
                 </Link>
               </div>
               <ScoreChart labels={data?.labels || []} scores={data?.overall || []} />
-            </motion.div>
+            </AnimatedContent>
 
-            {/* Category Breakdown */}
-            <motion.div
-              className="card"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springReveal, delay: 0.4 }}
-            >
-              <h2 className="chart-title">Latest Categories</h2>
+            {/* Categories */}
+            <AnimatedContent className="card" delay={0.3}>
+              <h2 className="chart-title">Latest call, by category</h2>
               <div className="category-grid">
                 {Object.entries(data?.category_scores || {
                   action_items: 0,
@@ -235,7 +241,7 @@ export default function TrendsPage() {
                   <div key={cat} className="category-row">
                     <div className="category-label">
                       <span className="cat-dot" style={{ color: categoryColors[cat] }}>
-                        {categoryIcons[cat]} {cat.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                        <CategoryIcon category={cat} size={16} /> {categoryLabels[cat] || cat}
                       </span>
                       <span className="category-score">{score}/100</span>
                     </div>
@@ -251,7 +257,7 @@ export default function TrendsPage() {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </AnimatedContent>
           </>
         )}
 
@@ -263,23 +269,13 @@ export default function TrendsPage() {
 
         {!error && meetingCount === 0 && (
           <motion.div className="card empty-state" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <div className="empty-state-icon">📊</div>
-            <p className="section-subtitle">No trend data available yet. Upload meetings to see quality trends over time.</p>
-            <Link href="/" className="btn-primary">Upload recordings</Link>
+            <span className="empty-state-icon" aria-hidden="true">
+              <InboxIcon size={28} />
+            </span>
+            <p className="section-subtitle">Nothing scored yet. Upload a call and come back.</p>
+            <Link href="/" className="btn-primary">Upload a call</Link>
           </motion.div>
         )}
-
-        {/* CTA */}
-        <motion.div
-          className="card cta-card"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.8 }}
-        >
-          <h3 className="chart-title">Need more data?</h3>
-          <p className="section-subtitle">Upload multiple meetings to see meaningful trends and coaching insights.</p>
-          <Link href="/" className="btn-primary">Upload recordings</Link>
-        </motion.div>
       </section>
     </main>
     </PageTransition>

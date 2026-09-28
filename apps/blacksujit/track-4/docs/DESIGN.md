@@ -1,12 +1,32 @@
-# Design System — CallCoach-AI × WhipScribe Visual Language
+# Design System - CallCoach-AI x WhipScribe Visual Language
 
-> Extracted from `frontend/src/assets/whipscribe.html` computed styles via Playwright. Every token is verified pixel-for-pixel against the live whipscribe.com surface.
+> Re-extracted from the live whipscribe.com on 2026-09-28 via Playwright: both
+> the `:root` declarations and the *resolved* computed values. The site ships a
+> token override block that wins the cascade, so the rendered values are the
+> ones that matter (e.g. `--ink-3` resolves to #475569 and `--rule-2` to
+> #cbd5e1, not the violet originals in the first `:root`).
+> `frontend/src/assets/whipscribe.html` is a cached copy of the page.
+
+## Implementation notes (2026-09-28 redesign)
+
+- Nav: `#ffffff` background, 72px tall, container 1280px, links `#374151`
+  (active `#111827`), hover background `#f9fafb`, rule `rgba(17, 24, 39, 0.07)`.
+- Footer: `#eefce8` background, 64px top padding, text `#64748b`.
+- Headline accent: DM Serif Display italic, forest green `#2f5d3a`, 3px
+  underline with 6px offset.
+- File pane: `#f7fbf3` background, `#d8e6cd` border, 16px radius.
+- Primary button: 135deg `#c5f44f` -> `#a3dc2d`, 1px `#8bc220` border, 14px
+  radius, `#14532d` text, 15px/700, 12px 28px padding.
+- React Bits ports (reactbits.dev, MIT) in `frontend/src/components/reactbits/`:
+  BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp.
+- No emoji in the UI; icons are 1.5px-stroke inline SVGs in
+  `frontend/src/components/icons.tsx`.
 
 ---
 
 ## 1. Color System
 
-### Root tokens (from `:root` in whipscribe.html lines 229–304)
+### Root tokens (from `:root` in whipscribe.html lines 229-304)
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -50,13 +70,13 @@
 | `--cat-compliance` | `#ef4444` (red) |
 | `--cat-tension` | `#f59e0b` (amber) |
 | `--cat-clarity` | `#6366f1` (indigo) |
-| `--cat-actions` | `#00c2cb` (cyan) — **CallCoach-AI cyan, for evidence tags only** |
+| `--cat-actions` | `#00c2cb` (cyan) - **CallCoach-AI cyan, for evidence tags only** |
 
 ---
 
 ## 2. Typography
 
-### Font families (lines 247–250)
+### Font families (lines 247-250)
 
 | Token | Fonts | Usage |
 |-------|-------|-------|
@@ -66,7 +86,7 @@
 | `--hand-big` | Caveat, Kalam, cursive | Large handwritten elements |
 | `--mono` | JetBrains Mono, ui-monospace, Menlo, monospace | Code, timestamps, filenames |
 
-### Scale (lines 277–285)
+### Scale (lines 277-285)
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -80,10 +100,10 @@
 | `--type-body-lg` | `17.5px` | Large body |
 | `--type-micro` | `13px` | Captions, nav labels |
 
-### Computed H1 (`.d-hero-v2-h1.d-hero-v2-h1-sm`, lines 3705–3710)
+### Computed H1 (`.d-hero-v2-h1.d-hero-v2-h1-sm`, lines 3705-3710)
 
 - **Font family**: `"DM Serif Display", "Playfair Display", "Georgia", serif`
-- **Font size**: `clamp(30px, 5vw, 56px)` → 56px at 1920px viewport, 30px at 390px
+- **Font size**: `clamp(30px, 5vw, 56px)` -> 56px at 1920px viewport, 30px at 390px
 - **Font weight**: `700`
 - **Line height**: `1.06`
 - **Letter spacing**: `-0.012em`
@@ -91,7 +111,7 @@
 - **Margin**: `0 0 24px`
 - **Text-align**: center (on `.d-hero-v2-inner`)
 
-### H1 accent word (`.d-hero-v2-h1 .accent-italic`, lines 3712–3716)
+### H1 accent word (`.d-hero-v2-h1 .accent-italic`, lines 3712-3716)
 
 - **Font family**: `"DM Serif Display", "Playfair Display", "Georgia", serif`
 - **Font style**: italic
@@ -99,7 +119,7 @@
 - **Text decoration**: underline, 3px thickness, 6px offset
 - **Color**: `#2f5d3a` (forest green, overridden by `#0f172a` via `!important` in brand application)
 
-### Body text (body, line 317–327)
+### Body text (body, line 317-327)
 
 - **Font family**: Inter
 - **Font size**: `16px`
@@ -107,7 +127,7 @@
 - **Color**: `#1e1b4b` (`--ink`)
 - **Font smoothing**: `-webkit-font-smoothing: antialiased`
 
-### Sub text (`.d-hero-v2-sub`, lines 3749–3757)
+### Sub text (`.d-hero-v2-sub`, lines 3749-3757)
 
 - **Font size**: `15.5px`
 - **Line height**: `1.55`
@@ -116,20 +136,20 @@
 - **Margin**: `0 auto`
 - **Text-align**: center (inherited from `.d-hero-v2-inner`)
 
-### Pane title (`.d-hero-pane-title`, lines 3296–3300)
+### Pane title (`.d-hero-pane-title`, lines 3296-3300)
 
 - **Font size**: `16px`
 - **Font weight**: `500`
 - **Letter spacing**: `-0.01em`
 - **Color**: `#0f172a` (`--v4-ink`)
 
-### Pane subtitle (`.d-hero-pane-sub`, lines 3303–3305)
+### Pane subtitle (`.d-hero-pane-sub`, lines 3303-3305)
 
 - **Font size**: `13.5px`
 - **Color**: `#64748b` (`--v4-ink-muted`)
 - **Line height**: `1.5`
 
-### Button text (`.d-hero-pane-go`, lines 3308–3321)
+### Button text (`.d-hero-pane-go`, lines 3308-3321)
 
 - **Font size**: `15px`
 - **Font weight**: `700`
@@ -148,25 +168,25 @@
 
 ## 3. Layout & Spacing
 
-### Stage container (`.stage`, line 748–753)
+### Stage container (`.stage`, line 748-753)
 
 - **max-width**: `1100px`
 - **margin**: `0 auto`
 - **padding**: `16px 28px 40px` (desktop), `8px 14px 28px` (mobile < 720px)
 
-### Hero section (`.d-hero-v2`, line 7349–7354)
+### Hero section (`.d-hero-v2`, line 7349-7354)
 
 - **max-width**: `1080px`
 - **margin**: `0 auto`
 - **padding**: `0 24px`
 
-### Hero inner (`.d-hero-v2-inner`, line 7372–7377)
+### Hero inner (`.d-hero-v2-inner`, line 7372-7377)
 
 - **padding**: `48px 0px 64px` (desktop), `32px 0` (mobile < 720px)
 - **text-align**: center
 - **max-width**: `100%` (on copy)
 
-### Upload card (`.d-hero-v2-try`, line 7606–7617)
+### Upload card (`.d-hero-v2-try`, line 7606-7617)
 
 - **max-width**: `1080px`
 - **margin**: `24px auto 0` (desktop)
@@ -178,7 +198,7 @@
 - **display**: flex, column, gap `20px`
 - **text-align**: left
 
-### File upload pane (`.d-hero-pane.t-file`, lines 3278–3285)
+### File upload pane (`.d-hero-pane.t-file`, lines 3278-3285)
 
 - **background**: `#f7fbf3`
 - **border**: `1px solid #d8e6cd`
@@ -189,7 +209,7 @@
 - **text-align**: center
 - **Hover**: box-shadow `0 0 0 4px rgba(197,244,79,0.20), 0 18px 44px -18px rgba(139,194,32,0.45)`, border-color `#8bc220`
 
-### Progress bar (`.d-hero-pane-progress`, lines 3727–3733)
+### Progress bar (`.d-hero-pane-progress`, lines 3727-3733)
 
 - **width**: `100%`, max-width `540px`
 - **height**: `24px`
@@ -198,12 +218,12 @@
 - **border**: `1px solid rgba(20, 83, 45, 0.15)`
 - **box-shadow**: inset `0 1px 3px rgba(20, 83, 45, 0.10)`
 
-### Progress fill (`.d-hero-pane-progress-fill`, lines 3735–3743)
+### Progress fill (`.d-hero-pane-progress-fill`, lines 3735-3743)
 
 - **Background**: `linear-gradient(90deg, #4d7c0f 0%, #65a30d 25%, #84cc16 55%, #a3dc2d 80%, #c5f44f 100%)`
 - **Box-shadow**: `0 0 14px rgba(163, 220, 45, 0.70)`
 
-### Steps (`.d-hero-steps`, line 7840–7846)
+### Steps (`.d-hero-steps`, line 7840-7846)
 
 - **display**: flex, align-items center, gap `11px` per li
 - **li**: `display: flex; align-items: center; gap: 11px; padding: 8px 0; position: relative`
@@ -219,7 +239,7 @@
 - **grid-template-columns**: `1fr` (mobile), `repeat(4, 1fr)` (desktop)
 - **gap**: `18px`
 
-### Feature card (`.d-intel-card`, lines 5719–5728)
+### Feature card (`.d-intel-card`, lines 5719-5728)
 
 - **padding**: `var(--card-padding)` = `32px`
 - **background**: `#ffffff` (`--v4-bg`)
@@ -233,7 +253,7 @@
 
 ## 3. Buttons
 
-### Primary CTA button (`.d-hero-pane-go`, lines 3308–3322)
+### Primary CTA button (`.d-hero-pane-go`, lines 3308-3322)
 
 Full CSS:
 ```css
@@ -241,7 +261,7 @@ Full CSS:
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font: inherit; font-weight: 700; font-size: 15px;
   padding: 12px 28px; border-radius: 14px;
-  background: linear-gradient(135deg, #c5f44f, #a3dc2d); /* --brand → --brand-700 */
+  background: linear-gradient(135deg, #c5f44f, #a3dc2d); /* --brand -> --brand-700 */
   color: #14532d;
   border: 1px solid #8bc220;
   box-shadow: 0 1px 0 rgba(20, 83, 45, 0.08);
@@ -280,7 +300,7 @@ Full CSS:
 
 ---
 
-## 5. Trust Strip (`.d-hero-trust`, line 398–407)
+## 5. Trust Strip (`.d-hero-trust`, line 398-407)
 
 - **display**: flex, justify-content: center, flex-wrap: wrap
 - **gap**: `10px`
@@ -290,7 +310,7 @@ Full CSS:
 - **max-width**: `1080px`
 - **margin**: `0 auto`
 
-Trust item (`.d-hero-trust-item`, line 3991–3994):
+Trust item (`.d-hero-trust-item`, line 3991-3994):
 - **display**: flex, align-items: center, gap: `12px`
 - **justify-content**: center
 - **font-size**: `14px`
@@ -322,14 +342,14 @@ Trust item (`.d-hero-trust-item`, line 3991–3994):
 
 ## 7. Nav
 
-### Container (`.w-nav`, lines 332–338)
+### Container (`.w-nav`, lines 332-338)
 
 - **position**: sticky, top: 0, z-index: 50
 - **height**: `72px`
 - **background**: `rgba(246, 244, 253, 0.88)` with blur `blur(14px) saturate(160%)`
 - **border-bottom**: `1px solid rgba(30, 27, 75, 0.06)`
 
-### Inner (`.w-nav-inner`, line 339–344)
+### Inner (`.w-nav-inner`, line 339-344)
 
 - **max-width**: `1280px`
 - **margin**: `0 auto`
@@ -337,14 +357,14 @@ Trust item (`.d-hero-trust-item`, line 3991–3994):
 - **display**: flex, align-items: center, justify-content: space-between
 - **gap**: `18px`
 
-### Brand (`.w-brand`, lines 345–349)
+### Brand (`.w-brand`, lines 345-349)
 
 - **display**: inline-flex, align-items: center, gap: `10px`
 - **font**: `16px/700`
 - **color**: `--ink` = `#1e1b4b`
 - **letter-spacing**: `-0.01em`
 
-### Brand mark (lines 350–356)
+### Brand mark (lines 350-356)
 - **width/height**: `26px`
 - **border-radius**: `7px`
 - **background**: `linear-gradient(135deg, #ffd5bf, #ff9aa2 60%, #b991ff)`
@@ -352,11 +372,11 @@ Trust item (`.d-hero-trust-item`, line 3991–3994):
 - **color**: `#fff`, font-weight: 700, font-size: `13px`
 - **box-shadow**: `0 2px 6px rgba(51, 65, 85, 0.3)`
 
-### Nav links (`.w-nav-right a`, lines 367–374)
+### Nav links (`.w-nav-right a`, lines 367-374)
 
 - **font-size**: `13px`
 - **font-weight**: `500`
-- **color**: `#312e81` (`--ink-2`) — inactive
+- **color**: `#312e81` (`--ink-2`) - inactive
 - **padding**: `4px 0`
 - **Active**: color `#1e1b4b` (`--ink`), inset box-shadow `0 -2px 0 #334155`
 
@@ -421,16 +441,16 @@ Keyframe animations:
 
 ## 12. Implementation Notes for CallCoach-AI
 
-1. **H1 text**: "Stop listening to every call yourself. Score them all instead." — match WS structure with accent word
+1. **H1 text**: "Stop listening to every call yourself. Score them all instead." - match WS structure with accent word
 2. **Sub text**: Use `--v4-ink-muted` `#64748b`, `15.5px`, `max-width: 520px`, center-aligned
-3. **Hero layout**: Single centered column on `.d-hero-v2` → `.d-hero-v2-inner` (not two-column grid)
+3. **Hero layout**: Single centered column on `.d-hero-v2` -> `.d-hero-v2-inner` (not two-column grid)
 4. **Upload card**: `.d-hero-v2-try` replaces `SpotlightCard` wrapper entirely
 5. **Primary CTA**: `.d-hero-pane-go` button under the upload card (not `.btn-primary` link)
 6. **Trust strip**: `.d-hero-trust` with privacy + results + languages pills, positioned after the upload card
 7. **Feature cards**: Use `.d-intel-card` with `--card-padding` (32px) and multi-layer shadow
 8. **Footer**: Keep the existing `.site-footer` structure but match WS text sizes/colors
 9. **`--coach-cyan`**: RETAINED for evidence-tag category colors only (NOT for buttons/links)
-10. **Color palette**: White + dark slate + lime brand — NOT cyan accents
+10. **Color palette**: White + dark slate + lime brand - NOT cyan accents
 
 ---
 

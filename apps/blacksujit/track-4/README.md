@@ -1,4 +1,4 @@
-# CallCoach-AI
+# CallCoach-AI x WhipScribe
 
 **Turn every founder-investor call into a score you can act on, with evidence at the exact second.**
 
@@ -8,6 +8,31 @@ four specialized AI agents, and returns a quality report where every issue
 links to the moment it was said. Analyze several calls and the same pipeline
 shows whether the pitch is improving, stagnating, or repeating the same
 mistakes.
+
+## Screens
+
+![Upload and library](docs/screenshots/home.png)
+*Upload a call; the library lists every recording with its stored score.*
+
+![Evidence dossier](docs/screenshots/report.png)
+*The report: score, category bars, primary risk, and every flagged quote with
+its speaker, timestamp and a link into the recording.*
+
+More screens: [trends](docs/screenshots/trends.png) |
+[coach](docs/screenshots/coach.png) |
+[speakers](docs/screenshots/speakers.png) |
+[settings](docs/screenshots/settings.png)
+
+## Design
+
+The dashboard wears the WhipScribe identity, not a lookalike: the tokens were
+re-extracted from the live site on 2026-09-28 with Playwright (resolved values,
+not just `:root`) - lime `#c5f44f` accent, DM Serif Display headlines,
+Inter body, white nav with `rgba(17,24,39,0.07)` rule, mint footer
+`#eefce8`, forest-green headline accent `#2f5d3a`. The full token table is in
+[docs/DESIGN.md](docs/DESIGN.md). Motion comes from React Bits components
+(reactbits.dev): BlurText, ShinyText, SpotlightCard, AnimatedContent and
+CountUp, all adapted to this design system.
 
 ---
 

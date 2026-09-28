@@ -1,7 +1,11 @@
-# CallCoach-AI dashboard
+# CallCoach-AI x WhipScribe dashboard
 
 The Next.js 16 (App Router, React 19) frontend for CallCoach-AI. It talks to
 the Flask JSON API in the parent directory.
+
+Design tokens and the component language come from the live whipscribe.com
+(re-extracted 2026-09-28; see `../docs/DESIGN.md`), with React Bits components
+(BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp) for motion.
 
 ## Pages
 

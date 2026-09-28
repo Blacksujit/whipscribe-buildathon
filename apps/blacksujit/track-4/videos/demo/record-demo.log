@@ -1,0 +1,10 @@
+[demo] 2026-09-28T13:45:11.357Z starting; base=http://localhost:3000 mode=existing job dd8898fd-b1e6-441d-b735-9546539474c9
+[demo] 2026-09-28T13:45:12.674Z opening http://localhost:3000
+[demo] 2026-09-28T13:45:16.731Z opening report dd8898fd-b1e6-441d-b735-9546539474c9 from the library
+[demo] 2026-09-28T13:45:27.152Z report page: http://localhost:3000/report/dd8898fd-b1e6-441d-b735-9546539474c9
+[demo] 2026-09-28T13:45:27.156Z scrolling through the evidence dossier
+[demo] 2026-09-28T13:45:33.978Z visiting /trends
+[demo] 2026-09-28T13:45:40.420Z visiting /coach
+[demo] 2026-09-28T13:45:48.107Z visiting /speakers
+[demo] 2026-09-28T13:45:55.785Z visiting /settings
+[demo] 2026-09-28T13:46:03.426Z saved D:\Whisp-scribe\whipscribe-buildathon\apps\blacksujit\track-4\videos\demo\callcoach-demo-2026-09-28T13-46-01.webm

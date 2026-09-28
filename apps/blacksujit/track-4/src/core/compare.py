@@ -5,7 +5,7 @@ coaching insights and performance tracking.
 
 Architecture:
   - Depends ONLY on the evaluation data contract (dict shape).
-  - Does NOT import whip_api, reporter, or notion — no external dependencies.
+  - Does NOT import whip_api, reporter, or notion  no external dependencies.
   - Functions are pure: same input always produces same output.
   - Designed to be callable both from CLI and web service.
 

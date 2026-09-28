@@ -24,11 +24,11 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CallCoach AI",
+  title: "CallCoach-AI x WhipScribe",
   description:
-    "Score every call. Coach every rep. AI sales call coaching with four specialized agents. Powered by WhipScribe transcription.",
+    "Every investor call, scored - with the quotes to prove it. WhipScribe transcription, four scoring agents, evidence at the exact second.",
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='65'>◦</text></svg>",
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23c5f44f'/><text x='50' y='74' font-size='64' font-family='Georgia,serif' text-anchor='middle' fill='%2314532d'>C</text></svg>",
   },
 };
 

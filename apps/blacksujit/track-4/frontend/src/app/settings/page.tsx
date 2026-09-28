@@ -125,8 +125,8 @@ export default function SettingsPage() {
           transition={{ ...springReveal, delay: 0.1 }}
         >
           <p className="section-eyebrow">Settings</p>
-          <h1 className="section-title">Configure your connections.</h1>
-          <p className="section-subtitle">Connect WhipScribe and AI services to power your workflow.</p>
+          <h1 className="section-title">Connect your tools.</h1>
+          <p className="section-subtitle">Keys stay on your machine; the dashboard reads them from the API.</p>
         </motion.div>
 
         <div className="settings-form">

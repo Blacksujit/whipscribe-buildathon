@@ -1,5 +1,5 @@
 # PRD: Meeting Intelligence Pipeline (Track 4)
-**Product:** CallCoach — Investment Readiness QA for Founders  
+**Product:** CallCoach  Investment Readiness QA for Founders  
 **Author:** Buildathon Team  
 **Date:** September 2026  
 **Status:** MVP in Development  
@@ -89,7 +89,7 @@ Most Track 4 submissions follow a single-call pattern:
 ### 3.2 Product Strategy (6 Points)
 
 1.  **Solve one real job for one real user:** QA for founder-investor calls
-2.  **Make the workflow visible:** Upload → Analyze → Dashboard → Coach
+2.  **Make the workflow visible:** Upload  Analyze  Dashboard  Coach
 3.  **Show live evidence:** Timestamp-grounded quotes from WhipScribe transcripts
 4.  **Demonstrate comparison:** Multi-call trend analysis on `/trends`
 5.  **Build a coaching layer:** Prescriptive feedback on `/coach`
@@ -131,7 +131,7 @@ Most Track 4 submissions follow a single-call pattern:
 **Layout Contract (From design.md):**
 - Max content width: 1120px
 - Desktop padding: 28px / Mobile: 18px
-- Hero: Two-column (copy ↔ upload), collapses at 760px
+- Hero: Two-column (copy  upload), collapses at 760px
 - Rules over shadows, editorial spacing over SaaS card grids
 - Lime reserved for upload affordances, active tabs, links
 
@@ -139,45 +139,45 @@ Most Track 4 submissions follow a single-call pattern:
 
 ```
 src/components/
-├── ui/                     # Shared primitives (Button, Card, Skeleton)
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Skeleton.tsx
-│   └── Toast.tsx
-├── dashboard/              # Dashboard-specific composites
-│   ├── UploadPanel.tsx     # Multi-tab uploader (File/Link/Record)
-│   ├── StatsCard.tsx       # Animated stat cards + pipeline stages
-│   └── RecordingsList.tsx  # Ruled list of recordings
-├── report/                 # Report page components
-│   ├── DealKillerCard.tsx
-│   ├── StrategicIntelligence.tsx
-│   ├── DealMomentum.tsx
-│   └── Scorecard.tsx
-└── ...
+ ui/                     # Shared primitives (Button, Card, Skeleton)
+    Button.tsx
+    Card.tsx
+    Skeleton.tsx
+    Toast.tsx
+ dashboard/              # Dashboard-specific composites
+    UploadPanel.tsx     # Multi-tab uploader (File/Link/Record)
+    StatsCard.tsx       # Animated stat cards + pipeline stages
+    RecordingsList.tsx  # Ruled list of recordings
+ report/                 # Report page components
+    DealKillerCard.tsx
+    StrategicIntelligence.tsx
+    DealMomentum.tsx
+    Scorecard.tsx
+ ...
 ```
 
 ### 4.3 Key User Flows
 
 1. **Upload & Analyze Flow**
    ```
-   [Upload recording] → [WhipScribe API transcribes] → [Multi-Agent Analysis]
-      ↓
+   [Upload recording]  [WhipScribe API transcribes]  [Multi-Agent Analysis]
+      
    [Report generated with Scorecard, Issues, Action Items]
-      ↓
-   [Data saved to SQLite → Trends Dashboard updates]
+      
+   [Data saved to SQLite  Trends Dashboard updates]
    ```
 
 2. **Trend Analysis Flow**
    ```
-   [Multiple reports in DB] → [metrics.py calculates Velocity & Momentum]
-      ↓
+   [Multiple reports in DB]  [metrics.py calculates Velocity & Momentum]
+      
    [/trends page renders Score Progression + Momentum Indicator]
    ```
 
 3. **Coaching Flow**
    ```
-   [User visits /coach] → [useCoach hook fetches coach-data API]
-      ↓
+   [User visits /coach]  [useCoach hook fetches coach-data API]
+      
    [AI generates prescriptive advice tied to timestamps]
    ```
 
@@ -354,37 +354,37 @@ Four specialized agents run in parallel via `call_llm`:
 
 ## 7. Implementation Plan
 
-### Phase 1: Foundation (Completed ✅)
-- ✅ Flask backend with `/api/upload`, `/api/report`, `/api/trends-data`
-- ✅ Multi-agent evaluator (`src/core/evaluator.py`)
-- ✅ Mathematical deal velocity (`src/core/metrics.py`)
-- ✅ SQLite store with action item tracking
-- ✅ Next.js frontend with TypeScript
+### Phase 1: Foundation (Completed )
+-  Flask backend with `/api/upload`, `/api/report`, `/api/trends-data`
+-  Multi-agent evaluator (`src/core/evaluator.py`)
+-  Mathematical deal velocity (`src/core/metrics.py`)
+-  SQLite store with action item tracking
+-  Next.js frontend with TypeScript
 
-### Phase 2: Modern UI (Done ✅)
-- ✅ Pipeline stage visualization on upload
-- ✅ Real recordings list on the dashboard (stored scores, links to reports)
-- ✅ Report page: score + category bars + evidence dossier (compliance, tension,
+### Phase 2: Modern UI (Done )
+-  Pipeline stage visualization on upload
+-  Real recordings list on the dashboard (stored scores, links to reports)
+-  Report page: score + category bars + evidence dossier (compliance, tension,
   clarity, action items) with timestamp links into the recording
-- ✅ Trends chart, coach insights, speakers, settings pages
-- ✅ Drag-and-drop upload; error and empty states on every page
-- ❌ Not built: 3-tab UploadPanel (file/link/record), reusable
+-  Trends chart, coach insights, speakers, settings pages
+-  Drag-and-drop upload; error and empty states on every page
+-  Not built: 3-tab UploadPanel (file/link/record), reusable
   Button/Card/Skeleton component library, lucide-react icons
-- ❌ React Bits components beyond CountUp were removed (heavy three.js deps,
+-  React Bits components beyond CountUp were removed (heavy three.js deps,
   drift from the design system; see the README "what was removed and why")
 
 ### Phase 3: Production Polish (Planned)
-- ☐ Add Cypress/E2E testing
-- ☐ Implement error boundaries
-- ☐ Add loading skeletons everywhere
-- ☐ Connect to WhipScribe audio playback URLs
-- ☐ Full responsive design audit
+-  Add Cypress/E2E testing
+-  Implement error boundaries
+-  Add loading skeletons everywhere
+-  Connect to WhipScribe audio playback URLs
+-  Full responsive design audit
 
 ### Phase 4: Advanced Features (Future)
-- ☐ Golden Path benchmark comparison
-- ☐ CRM connector (HubSpot/Salesforce)
-- ☐ Speaker diarization analysis page
-- ☐ Export to Notion/PDF
+-  Golden Path benchmark comparison
+-  CRM connector (HubSpot/Salesforce)
+-  Speaker diarization analysis page
+-  Export to Notion/PDF
 
 ---
 
@@ -418,28 +418,28 @@ Before PR, we must demonstrate:
 ### 9.1 File Structure Reference
 ```
 apps/blacksujit/track-4/
-├── app.py                      # Flask JSON API (dashboard pages were retired)
-├── frontend/                   # Next.js app
-│   ├── src/
-│   │   ├── app/                # Pages (app router): /, /report/[id], /trends, /coach, /speakers, /settings
-│   │   ├── components/         # Navbar, PageTransition, reactbits/CountUp
-│   │   └── lib/                # API client + shared types
-│   ├── scripts/                # record-demo.mjs (Playwright walkthrough capture)
-│   └── package.json
-├── src/                        # Backend modules
-│   ├── core/                   # Evaluator, metrics, comparison engine
-│   ├── api/                    # WhipScribe, Slack, Notion clients
-│   ├── database/               # SQLite store
-│   ├── mcp_server.py           # MCP server (4 tools)
-│   └── main.py                 # CLI entry point
-├── docs/                       # PRD + DESIGN.md (implemented design system)
-├── videos/                     # Demo captures
-├── requirements.txt
-├── e2e_test.py                 # Integration test (--offline / --real)
-├── .mcp.json                   # MCP server config for local tools
-├── README.md
-├── PROBLEM.md
-└── design.md                   # superseded design direction (see docs/DESIGN.md)
+ app.py                      # Flask JSON API (dashboard pages were retired)
+ frontend/                   # Next.js app
+    src/
+       app/                # Pages (app router): /, /report/[id], /trends, /coach, /speakers, /settings
+       components/         # Navbar, PageTransition, reactbits/CountUp
+       lib/                # API client + shared types
+    scripts/                # record-demo.mjs (Playwright walkthrough capture)
+    package.json
+ src/                        # Backend modules
+    core/                   # Evaluator, metrics, comparison engine
+    api/                    # WhipScribe, Slack, Notion clients
+    database/               # SQLite store
+    mcp_server.py           # MCP server (4 tools)
+    main.py                 # CLI entry point
+ docs/                       # PRD + DESIGN.md (implemented design system)
+ videos/                     # Demo captures
+ requirements.txt
+ e2e_test.py                 # Integration test (--offline / --real)
+ .mcp.json                   # MCP server config for local tools
+ README.md
+ PROBLEM.md
+ design.md                   # superseded design direction (see docs/DESIGN.md)
 ```
 
 ### 9.2 Tech Stack Summary

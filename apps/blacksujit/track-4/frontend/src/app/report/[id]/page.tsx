@@ -8,6 +8,12 @@ import Navbar from "@/components/Navbar";
 import { getReport, ReportResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
 import CountUp from "@/components/reactbits/CountUp/CountUp";
+import {
+  ShieldCheckIcon,
+  WaveformIcon,
+  CrosshairIcon,
+  ListChecksIcon,
+} from "@/components/icons";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 
@@ -36,7 +42,7 @@ function listenUrl(jobId: string, start?: number): string {
 
 function scoreColor(score: number): string {
   if (score >= 80) return "var(--cat-ok)";
-  if (score >= 60) return "var(--brand-shadow)";
+  if (score >= 60) return "var(--color-7)";
   if (score >= 40) return "var(--accent)";
   return "var(--cat-compliance)";
 }
@@ -50,6 +56,7 @@ interface EvidenceItem {
 
 function EvidenceCard({
   title,
+  Icon,
   tagClass,
   tagLabel,
   items,
@@ -57,6 +64,7 @@ function EvidenceCard({
   delay,
 }: {
   title: string;
+  Icon: (props: { size?: number; className?: string }) => React.ReactElement;
   tagClass: string;
   tagLabel: string;
   items: EvidenceItem[];
@@ -71,7 +79,12 @@ function EvidenceCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...springReveal, delay }}
     >
-      <p className="section-eyebrow">{title}</p>
+      <p className="section-eyebrow" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span className={tagClass} style={{ display: "inline-flex" }}>
+          <Icon size={15} />
+        </span>
+        {title}
+      </p>
       <ul className="evidence-list">
         {items.map((item, i) => (
           <li key={i} className="evidence-item">
@@ -149,7 +162,7 @@ export default function ReportPage() {
             <p className="section-subtitle">
               {error || "No report found for this meeting."}
             </p>
-            <Link href="/" className="btn-primary">Back to upload</Link>
+            <Link href="/" className="btn-primary">Back to library</Link>
           </motion.div>
         </div>
       </main>
@@ -315,6 +328,7 @@ export default function ReportPage() {
 
             <EvidenceCard
               title="Compliance risks"
+              Icon={ShieldCheckIcon}
               tagClass="evidence-tag-compliance"
               tagLabel="Compliance"
               items={complianceItems}
@@ -323,6 +337,7 @@ export default function ReportPage() {
             />
             <EvidenceCard
               title="Tension signals"
+              Icon={WaveformIcon}
               tagClass="evidence-tag-tension"
               tagLabel="Tension"
               items={tensionItems}
@@ -331,6 +346,7 @@ export default function ReportPage() {
             />
             <EvidenceCard
               title="Clarity issues"
+              Icon={CrosshairIcon}
               tagClass="evidence-tag-clarity"
               tagLabel="Clarity"
               items={clarityItems}
@@ -339,6 +355,7 @@ export default function ReportPage() {
             />
             <EvidenceCard
               title="Action items"
+              Icon={ListChecksIcon}
               tagClass="evidence-tag-actions"
               tagLabel="Action"
               items={actionItems}
@@ -353,7 +370,7 @@ export default function ReportPage() {
               transition={{ ...springReveal, delay: 0.8 }}
             >
               <Link href="/trends" className="btn-primary">View trends</Link>
-              <Link href="/" className="text-link">Upload another</Link>
+              <Link href="/" className="text-link">Back to library</Link>
             </motion.div>
           </motion.div>
         </div>
