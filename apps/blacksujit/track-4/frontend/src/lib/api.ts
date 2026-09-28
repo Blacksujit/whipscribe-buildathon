@@ -18,9 +18,14 @@ export interface ApiJobsResponse {
 export interface SettingsResponse {
   configured: boolean;
   api_key: string;
+  api_key_set: boolean;
+  llm_provider: string;
   llm_model: string;
+  llm_api_key_set: boolean;
   slack_webhook: string;
+  slack_webhook_set: boolean;
   notion_token: string;
+  notion_token_set: boolean;
   notion_database_id: string;
 }
 
@@ -147,18 +152,23 @@ export async function getTrends(): Promise<TrendsResponse | null> {
   }
 }
 
+export interface SettingsUpdate {
+  whipscribe_api_key?: string;
+  llm_provider?: string;
+  llm_model?: string;
+  slack_webhook?: string;
+  notion_token?: string;
+  notion_database_id?: string;
+}
+
 export async function saveSettings(
-  apiKey: string,
-  options?: { llm_model?: string; slack_webhook?: string; notion_token?: string; notion_database_id?: string }
+  update: SettingsUpdate
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch(`${API_BASE}/api/settings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        whipscribe_api_key: apiKey,
-        ...options,
-      }),
+      body: JSON.stringify(update),
     });
     const payload = await res.json();
     if (!res.ok) {
@@ -249,5 +259,18 @@ export async function getSpeakers(): Promise<SpeakersResponse | null> {
   } catch (error) {
     console.error("Failed to fetch speakers:", error);
     return null;
+  }
+}
+
+export async function exportTrendsToSlack(): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/export/trends`, { method: "POST" });
+    const payload = await res.json();
+    if (!res.ok) {
+      return { success: false, error: payload.error || `HTTP ${res.status}` };
+    }
+    return { success: true, message: payload.message };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unable to reach Flask backend" };
   }
 }

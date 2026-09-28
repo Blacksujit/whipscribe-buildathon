@@ -1,5 +1,10 @@
 # Design System: WhipScribe
 
+> Status: superseded for the implemented product. The shipped UI follows
+> `docs/DESIGN.md` (the WhipScribe visual system: lime brand, DM Serif Display
+> headings, Inter body, category colors for evidence tags). Keep this document
+> as the record of an earlier design direction.
+
 ## 1. Visual Theme & Atmosphere
 
 A restrained, editorial-calibre interface with confident asymmetric layouts and fluid spring-physics motion. The atmosphere is clinical yet warm — like a well-lit architecture studio where precision matters more than decoration. The pipeline is visible, every step accounted for, with the upload module as the first operational action rather than a marketing CTA. No AI-purple gradients, no SaaS cards, no blue accents. Whitespace carries weight. Horizontal content rows create rhythm instead of identical card grids.

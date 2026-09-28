@@ -96,14 +96,29 @@ def get_me(api_key):
 
 
 def get_session_summary(api_key, job_id):
-    """Fetch a high-level summary of a specific job."""
+    """Fetch a high-level summary of a specific job.
+
+    Falls back gracefully if the summary endpoint is unavailable for this job.
+    """
     resp = requests.get(f"{BASE_URL}/jobs/{job_id}/summary", headers=_headers(api_key))
+    if resp.status_code == 404:
+        return None
     resp.raise_for_status()
     return resp.json()
 
 
 def get_high_signal_moments(api_key, job_id):
-    """Fetch high-signal moments (quotes) from a job."""
-    resp = requests.get(f"{BASE_URL}/jobs/{job_id}/moments", headers=_headers(api_key))
+    """Fetch high-signal moments (quotes) from a job.
+
+    Uses the /clips/candidates endpoint as documented in the WhipScribe API.
+    Falls back to None if the endpoint is unavailable for this job.
+    """
+    resp = requests.get(
+        f"{BASE_URL}/jobs/{job_id}/clips/candidates",
+        headers=_headers(api_key),
+        params={"kind": "question"},
+    )
+    if resp.status_code == 404:
+        return None
     resp.raise_for_status()
     return resp.json()

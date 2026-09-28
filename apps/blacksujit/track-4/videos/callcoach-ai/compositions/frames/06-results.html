@@ -1,0 +1,97 @@
+<template>
+  <div data-hf-id="hf-j6t2" id="root" data-composition-id="06-results" data-start="42" data-duration="6" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.05), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .onscreen { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 600; color: var(--hf-ink); opacity: 0; z-index: 3; text-align: center; }
+
+      .stat-pills { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 3; opacity: 0; }
+      .pill { background: rgba(0, 194, 203, 0.12); border: 1px solid rgba(0, 194, 203, 0.3); border-radius: 50px; padding: 14px 28px; text-align: center; opacity: 0; transform: scale(0); }
+      .pill .num { font-family: 'Inter', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: var(--hf-ink); line-height: 1; }
+      .pill .label { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: var(--hf-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+      .split { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); width: 1500px; height: 480px; display: flex; gap: 20px; z-index: 2; }
+      .bcard, .acard { width: 50%; background: rgba(255,255,255,0.04); border: 2px solid; border-radius: 16px; padding: 24px; box-sizing: border-box; opacity: 0; }
+      .bcard { border-color: #EF4444; transform: translateX(-120px) scale(0.9); }
+      .acard { border-color: var(--hf-accent); transform: translateX(120px) scale(0.9); }
+      .card-title { font-family: 'Inter', system-ui, sans-serif; font-size: 20px; font-weight: 600; margin-bottom: 16px; }
+      .bcard .card-title { color: #EF4444; }
+      .acard .card-title { color: var(--hf-accent); }
+      .line { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; color: var(--hf-muted); line-height: 1.8; margin-bottom: 8px; }
+      .bcard .red-x { color: #EF4444; margin-right: 8px; }
+      .acard .green-check { color: var(--hf-accent); margin-right: 8px; }
+      .small-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; margin-top: 16px; overflow: hidden; }
+      .small-bar-fill { height: 100%; border-radius: 4px; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-hzje" class="onscreen" id="os">5 hrs/wk saved · 97% action capture · 0 violations</div>
+
+    <div data-hf-id="hf-lnkt" class="stat-pills" id="pills">
+      <div data-hf-id="hf-bblj" class="pill" id="pill1"><div data-hf-id="hf-ji62" class="num" id="num1">5</div><div data-hf-id="hf-3gxn" class="label">hrs/wk saved</div></div>
+      <div data-hf-id="hf-2npo" class="pill" id="pill2"><div data-hf-id="hf-k4gj" class="num" id="num2">97%</div><div data-hf-id="hf-a9aa" class="label">action capture</div></div>
+      <div data-hf-id="hf-3fdh" class="pill" id="pill3"><div data-hf-id="hf-h0xn" class="num" id="num3">0</div><div data-hf-id="hf-48vq" class="label">violations</div></div>
+    </div>
+
+    <div data-hf-id="hf-hgc8" class="split">
+      <div data-hf-id="hf-u3nd" class="bcard" id="beforeCard">
+        <div data-hf-id="hf-gjf2" class="card-title">Before — Manual Review</div>
+        <div data-hf-id="hf-z4wy" class="line"><span data-hf-id="hf-dcmk" class="red-x">✕</span> Missed compliance risks</div>
+        <div data-hf-id="hf-tm1q" class="line"><span data-hf-id="hf-kzb8" class="red-x">✕</span> Lost action items</div>
+        <div data-hf-id="hf-znpy" class="line"><span data-hf-id="hf-jse5" class="red-x">✕</span> Delayed coaching (2-3 days)</div>
+        <div data-hf-id="hf-hg17" class="line"><span data-hf-id="hf-k6p6" class="red-x">✕</span> 5-10 hrs/week wasted</div>
+        <div data-hf-id="hf-v211" class="small-bar"><div data-hf-id="hf-rleo" class="small-bar-fill" id="beforeBar" style="width:20%; background:#EF4444;"></div></div>
+      </div>
+      <div data-hf-id="hf-m2rj" class="acard" id="afterCard">
+        <div data-hf-id="hf-ku0i" class="card-title">After — CallCoach-AI</div>
+        <div data-hf-id="hf-g5ux" class="line"><span data-hf-id="hf-jdxy" class="green-check">✓</span> Zero missed action items</div>
+        <div data-hf-id="hf-4dgh" class="line"><span data-hf-id="hf-yji2" class="green-check">✓</span> Zero compliance violations</div>
+        <div data-hf-id="hf-3072" class="line"><span data-hf-id="hf-yxt3" class="green-check">✓</span> Instant scoring (seconds)</div>
+        <div data-hf-id="hf-ux89" class="line"><span data-hf-id="hf-zc44" class="green-check">✓</span> 5 hrs/week reclaimed</div>
+        <div data-hf-id="hf-nd5l" class="small-bar"><div data-hf-id="hf-liua" class="small-bar-fill" id="afterBar" style="width:97%; background:var(--hf-accent);"></div></div>
+      </div>
+    </div>
+
+    <script>
+      const TOTAL_DUR=6;
+      const TIMING={os:0.3,pill1:0.8,pill2:1.5,pill3:2.2,before:3.2,after:3.9,hold:4.5};
+
+      gsap.set('#os',{opacity:0,y:-20});
+      gsap.set('#pills',{opacity:0,y:-20});
+      gsap.set(['#beforeCard','#afterCard'],{opacity:0,scale:0.9});
+      gsap.set(['#pill1','#pill2','#pill3'],{opacity:0,scale:0});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["06-results"]=tl;
+
+      tl.fromTo('#os',{opacity:0,y:-20},{opacity:1,y:0,duration:0.4,ease:'power3.out'},TIMING.os);
+
+      /* Pills reveal sequentially with count-up */
+      tl.fromTo('#pill1',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.5,ease:'power3.out'},TIMING.pill1);
+      tl.fromTo('#pill2',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.5,ease:'power3.out'},TIMING.pill2);
+      tl.fromTo('#pill3',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.5,ease:'power3.out'},TIMING.pill3);
+
+      /* Before/after cards enter from opposite sides (split-tilt) */
+      tl.fromTo('#beforeCard',{opacity:0,scale:0.9,x:-120},{opacity:1,scale:1,x:0,duration:0.6,ease:'power3.out'},TIMING.before);
+      tl.fromTo('#afterCard',{opacity:0,scale:0.9,x:120},{opacity:1,scale:1,x:0,duration:0.6,ease:'power3.out'},TIMING.after);
+
+      /* Hold with subtle jitter */
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.hold){
+          const j=Math.sin(tl.time()*3)*0.3;
+          gsap.set('#pills',{x:j});
+        }
+      }},0);
+    </script>
+  </div>
+</template>

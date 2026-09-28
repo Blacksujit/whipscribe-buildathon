@@ -1,0 +1,31 @@
+CallCoach-AI — Stop Watching. Start Reading.
+Your sales calls, scored. Your reps, coached. Your team, improved.
+
+PRODUCT POSITIONING:
+CallCoach-AI is an independent product — the AI quality layer for sales conversations. It integrates with WhipScribe (third-party transcription API) and adds a multi-agent LLM evaluation engine that scores every call across four dimensions.
+
+THE PROBLEM:
+Sales managers waste 5-10 hours per week reading call transcripts. WhipScribe gives them perfect audio-to-text, but the output is just words. Managers miss compliance risks (unbacked promises, missing disclosures), lose action items (the #1 cause of deal slippage), and can't track which reps are improving. Coaching is delayed by 2-3 days and inconsistent.
+
+THE SOLUTION:
+Four specialized LLM agents as judges — ComplianceAgent, TensionAgent, ClarityAgent, ActionItemAgent — each with a sales-quality rubric. Evidence-first scoring: every issue links to exact timestamp + quote. Trend intelligence across all calls.
+
+KEY METRICS:
+- 5-10 hours/week wasted on manual review
+- 30-60 minutes per call to review
+- Score range: 60-95 (realistic for actual calls)
+- 4 quality dimensions: Action Items, Clarity, Tension, Compliance
+- Zero missed action items with auto-extraction + owner/deadline tracking
+
+DIFFERENTIATORS:
+- Evidence-first scoring with clickable timestamps
+- Multi-agent specialization (not one LLM prompt)
+- Trend intelligence across all calls
+- Built on real APIs: WhipScribe + GROQ
+- No mocks, no fake data
+
+ARCHITECTURE:
+Call Recording → WhipScribe API (ASR + diarization) → 4-Agent LLM Pipeline (GROQ) → QA Report + Dashboard
+
+TAGLINE:
+Your sales calls, scored. Your reps, coached. Your team, improved.

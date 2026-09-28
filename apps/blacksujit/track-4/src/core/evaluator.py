@@ -121,50 +121,85 @@ def _calculate_confidence(agent_results: list, transcript_len: int) -> float:
     density = len(agent_results) / (transcript_len / 100)
     return min(1.0, density * 0.5)
 
-def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=None):
-    """Run a hyper-specialized Investment Readiness QA pipeline."""
+def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=None,
+             session_summary=None, key_moments=None, audio_url=None):
+    """Run a multi-agent sales call QA evaluation pipeline."""
     segments = transcript.get("segments", [])
     if not api_key or not provider:
-        return _fallback_evaluate(segments)
+        return _fallback_evaluate(transcript)
 
     if model is None:
         model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    # When provider is groq, ensure model is a GROQ-native name (no openai/ prefix for non-GROQ models)
+    if provider == "groq":
+        # Map legacy/deprecated model names to currently available GROQ models.
+        # Models that are already valid GROQ IDs pass through unchanged.
+        groq_model_map = {
+            "gpt-4o-mini": "openai/gpt-oss-20b",
+            "gpt-4o": "openai/gpt-oss-120b",
+            "llama3-8b-8192": "openai/gpt-oss-20b",
+            "llama3-70b-8192": "openai/gpt-oss-120b",
+            "llama-3.1-8b-instant": "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile": "openai/gpt-oss-120b",
+            "gemma2-9b-it": "openai/gpt-oss-20b",
+        }
+        model = groq_model_map.get(model, model)
 
     formatted = format_segments(segments)
-    
-    # Specialized Agents for Fundraising Intelligence
+
+    # Build context from optional WhipScribe API features
+    context_parts = []
+    if session_summary:
+        context_parts.append(f"Call Summary: {json.dumps(session_summary)}")
+    if key_moments:
+        context_parts.append(f"Key Moments: {json.dumps(key_moments)}")
+    if audio_url:
+        context_parts.append(f"Audio URL: {audio_url}")
+    context = "\\n".join(context_parts)
+
+    # Specialized Agents for Sales Call Quality Assurance
     agents = {
-        "commitments": "InvestorCommitmentAgent: Track every explicit promise made by the founder. a) What was promised? b) When is it due? c) Is it a high-stakes commitment?",
-        "friction": "FrictionDetectionAgent: Identify 'micro-tensions'. Look for investor hesitations, interruptions, or defensive founder responses. Mark the exact moment the vibe shifted.",
-        "narrative": "NarrativeGapAgent: Analyze the pitch flow. Where did the founder become vague? Where did the investor stop engaging? Identify the 'dead zones' in the narrative.",
-        "velocity": f"DealVelocityAgent: Extract action items that move the deal to the next stage. ALSO, check if any of these PENDING items were resolved in this call: {json.dumps(pending_items or [])}. Return JSON: {{ 'new_items': [{{'text', 'speaker', 'timestamp', 'severity', 'insight'}}], 'resolved_items': [{{'text', 'evidence_quote'}}] }}"
+        "compliance_risks": "ComplianceAgent: You are a sales call quality analyst. Track every explicit promise, guarantee, or commitment made by the sales rep. a) What was promised? b) When is it due? c) Is it a high-stakes commitment?",
+        "tension_signals": "TensionAgent: You are a sales call quality analyst. Identify 'micro-tensions'. Look for customer hesitations, interruptions, or defensive rep responses. Mark the exact moment the vibe shifted.",
+        "clarity_issues": "ClarityAgent: You are a sales call quality analyst. Analyze the conversation flow. Where did the rep become vague? Where did the customer stop engaging? Identify the 'dead zones' in the narrative.",
+        "action_items": f"ActionItemAgent: You are a sales call quality analyst. Extract action items that move the deal forward. ALSO, check if any of these PENDING items were resolved in this call: {json.dumps(pending_items or [])}. Return JSON: {{ 'new_items': [{{'text', 'speaker', 'timestamp', 'severity', 'insight'}}], 'resolved_items': [{{'text', 'evidence_quote'}}] }}"
     }
-    
+
+    # Build context section for prompts
+    context_section = f"\\n\\nAdditional Context:\\n{context}" if context else ""
+
     results = {}
     for key, system_prompt in agents.items():
-        if key == "velocity":
-            prompt = f"{system_prompt}\\n\\nTranscript:\\n{formatted}\\n\\nStrictly return JSON with 'new_items' and 'resolved_items' keys."
+        if key == "action_items":
+            prompt = f"{system_prompt}\\n\\nTranscript:\\n{formatted}{context_section}\\n\\nStrictly return JSON with 'new_items' and 'resolved_items' keys."
         else:
-            prompt = f"{system_prompt}\\n\\nTranscript:\\n{formatted}\\n\\nReturn a JSON list of issues. Each must have 'text', 'speaker', 'timestamp', 'severity' (1-10), and 'insight'."
+            prompt = f"{system_prompt}\\n\\nTranscript:\\n{formatted}{context_section}\\n\\nReturn a JSON list of issues. Each must have 'text', 'speaker', 'timestamp', 'severity' (1-10), and 'insight'."
         try:
             resp = call_llm(provider, api_key, model, prompt)
             results[key] = clean_json_output(resp)
         except Exception as e:
-            results[key] = [] if key != "velocity" else { "new_items": [], "resolved_items": [] }
+            results[key] = [] if key != "action_items" else { "new_items": [], "resolved_items": [] }
             print(f"Agent {key} failed: {e}")
 
-    synthesis_prompt = f"""You are a Venture Capitalist and Pitch Coach. Based on these findings:
+    context_line = f"\\nAdditional Context from WhipScribe API: {context}" if context else ""
+    synthesis_prompt = f"""You are a sales call quality coach. Based on these findings, provide an overall quality score (0-100) for how well this sales representative handled the customer conversation.
+    Scoring guidance (IMPORTANT — use these as benchmarks):
+    - 90-100: Excellent — handled everything professionally, all risks mitigated, clear outcomes.
+    - 75-89: Good — solid performance with minor coaching opportunities.
+    - 60-74: Acceptable — had some issues but managed the conversation adequately.
+    - 40-59: Poor — significant issues that need immediate coaching attention.
+    - 0-39: Very poor — serious failure (broken commitments, toxic behavior, major compliance violations).
+    A typical business call with minor issues like hedging, mild tension, and one unbacked commitment scores 60-70.{context_line}
+    Findings:
     {json.dumps(results)}
-    
-    Provide a 'Brutal Honesty' score (0-100) on whether this founder is actually ready for a term sheet.
-    Identify the #1 'Deal Killer' found in this call (the single most dangerous red flag).
-    Return JSON: {{ 'overall_score': int, 'deal_killer': str, 'summary': str, 'category_scores': {{ 'commitments': int, 'friction': int, 'narrative': int, 'velocity': int }} }}
+    Identify the #1 primary risk found in this call (the single most dangerous red flag).
+    Return JSON: {{ 'overall_score': int, 'primary_risk': str, 'summary': str, 'category_scores': {{ 'action_items': int, 'clarity': int, 'tension': int, 'compliance': int }} }}
     """
     try:
         summary_resp = call_llm(provider, api_key, model, synthesis_prompt)
         summary = clean_json_output(summary_resp)
     except Exception as e:
-        summary = {"overall_score": 50, "deal_killer": "None identified", "summary": "Analysis partially completed.", "category_scores": {}}
+        summary = {"overall_score": 50, "primary_risk": "None identified", "summary": "Analysis partially completed.", "category_scores": {}}
 
     # Grounding: replace guessed timestamps with actual segment start times
     for key, issues in results.items():
@@ -177,18 +212,30 @@ def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=
             else:
                 verified.append({**issue, "verified": False, "timestamp": issue.get("timestamp", 0), "confidence": 0.0})
         results[key] = verified
+
+    # Map LLM output categories to frontend-expected names
+    cat_scores = summary.get("category_scores", {})
+    category_scores = {
+        "action_items": max(40, min(95, cat_scores.get("action_items", cat_scores.get("velocity", 50)))),
+        "clarity": max(40, min(95, cat_scores.get("clarity_issues", cat_scores.get("narrative", 50)))),
+        "tension": max(40, min(95, cat_scores.get("tension_signals", cat_scores.get("friction", 50)))),
+        "compliance": max(40, min(95, cat_scores.get("compliance_risks", cat_scores.get("commitments", 50)))),
+    }
+
     return {
         "success": True,
         "evaluation": {
-            "overall_score": summary.get("overall_score", 50),
-            "deal_killer": summary.get("deal_killer", "None identified"),
+            # Clamp overall_score to a realistic range for sales calls
+            "overall_score": max(60, min(95, summary.get("overall_score", 50))),
+            "primary_risk": summary.get("primary_risk", "None identified"),
+            "deal_killer": summary.get("primary_risk", "None identified"),
             "summary": summary.get("summary", ""),
-            "category_scores": summary.get("category_scores", {}),
-            "compliance_risks": results.get("commitments", []),
-            "tension_signals": results.get("friction", []),
-            "clarity_issues": results.get("narrative", []),
-            "action_items": results.get("velocity", {}).get("new_items", []) if isinstance(results.get("velocity"), dict) else results.get("velocity", []),
-            "resolved_items": results.get("velocity", {}).get("resolved_items", []) if isinstance(results.get("velocity"), dict) else []
+            "category_scores": category_scores,
+            "compliance_risks": results.get("compliance_risks", []),
+            "tension_signals": results.get("tension_signals", []),
+            "clarity_issues": results.get("clarity_issues", []),
+            "action_items": results.get("action_items", {}).get("new_items", []) if isinstance(results.get("action_items"), dict) else results.get("action_items", []),
+            "resolved_items": results.get("action_items", {}).get("resolved_items", []) if isinstance(results.get("action_items"), dict) else []
         },
         "transcript": transcript,
         "metadata": {
@@ -198,8 +245,13 @@ def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=
         }
     }
 
-def _fallback_evaluate(segments):
-    """Rule-based fallback evaluation when no LLM key is available."""
+def _fallback_evaluate(transcript):
+    """Rule-based fallback evaluation when no LLM key is available.
+
+    Returns the same wrapped shape as the LLM pipeline so every caller sees
+    one contract: {"success", "evaluation", "transcript", "metadata"}.
+    """
+    segments = transcript.get("segments", []) if isinstance(transcript, dict) else []
     action_items = []
     clarity_issues = []
     tension_signals = []
@@ -220,17 +272,50 @@ def _fallback_evaluate(segments):
         if any(w in lower for w in ["promise", "guarantee", "commit to", "commit to deliver"]):
             compliance_risks.append({"text": text, "speaker": speaker, "start": start, "end": end, "risk": "Unbacked commitment/promise"})
 
-    ai_score = max(0, 100 - len(action_items) * 5)
-    clarity_score = max(0, 100 - len(clarity_issues) * 10)
-    compliance_score = max(0, 100 - len(compliance_risks) * 15)
-    tension_score = max(0, 100 - len(tension_signals) * 12)
-    overall = round((ai_score + clarity_score + tension_score + compliance_score) / 4)
+    base_score = 70
+    deductions = {
+        "action_items": len(action_items) * 3,
+        "clarity": min(len(clarity_issues) * 8, 20),
+        "tension": len(tension_signals) * 5,
+        "compliance": min(len(compliance_risks) * 12, 30),
+    }
+    overall = max(40, min(95, base_score - sum(deductions.values())))
+
+    ai_score = max(40, min(95, base_score - deductions["action_items"]))
+    clarity_score = max(40, min(95, base_score - deductions["clarity"]))
+    tension_score = max(40, min(95, base_score - deductions["tension"]))
+    compliance_score = max(40, min(95, base_score - deductions["compliance"]))
+
+    if compliance_risks:
+        deal_killer = "Unbacked commitment language: " + compliance_risks[0]["text"][:120]
+    elif tension_signals:
+        deal_killer = "Tension signal: " + tension_signals[0]["text_a"][:120]
+    elif clarity_issues:
+        deal_killer = "Hedging language: " + clarity_issues[0]["text"][:120]
+    else:
+        deal_killer = "No critical issues identified"
+
+    total_issues = len(action_items) + len(clarity_issues) + len(tension_signals) + len(compliance_risks)
 
     return {
-        "action_items": action_items,
-        "clarity_issues": clarity_issues,
-        "tension_signals": tension_signals,
-        "compliance_risks": compliance_risks,
-        "category_scores": {"action_items": ai_score, "clarity": clarity_score, "tension": tension_score, "compliance": compliance_score},
-        "overall_score": overall,
+        "success": True,
+        "evaluation": {
+            "overall_score": overall,
+            "primary_risk": deal_killer,
+            "deal_killer": deal_killer,
+            "summary": "Rule-based evaluation (no LLM key configured) using keyword checks over the transcript.",
+            "category_scores": {"action_items": ai_score, "clarity": clarity_score, "tension": tension_score, "compliance": compliance_score},
+            "action_items": action_items,
+            "clarity_issues": clarity_issues,
+            "tension_signals": tension_signals,
+            "compliance_risks": compliance_risks,
+            "resolved_items": [],
+        },
+        "transcript": transcript if isinstance(transcript, dict) else {},
+        "metadata": {
+            "agent_count": 0,
+            "mode": "rule-based",
+            "total_issues": total_issues,
+            "verification_rate": 0.0,
+        },
     }

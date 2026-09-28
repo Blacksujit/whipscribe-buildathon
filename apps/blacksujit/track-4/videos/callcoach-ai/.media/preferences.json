@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "preferences": {
+    "destination": {
+      "value": "website",
+      "confirmed_in": [
+        "callcoach-ai"
+      ],
+      "updated_at": "2026-09-27T12:16:02.300Z"
+    },
+    "aspect": {
+      "value": "1920x1080",
+      "confirmed_in": [
+        "callcoach-ai"
+      ],
+      "updated_at": "2026-09-27T12:16:09.180Z"
+    },
+    "language": {
+      "value": "en",
+      "confirmed_in": [
+        "callcoach-ai"
+      ],
+      "updated_at": "2026-09-27T12:16:14.036Z"
+    },
+    "style_preset.product-launch-video": {
+      "value": "blue-professional",
+      "confirmed_in": [
+        "callcoach-ai"
+      ],
+      "updated_at": "2026-09-27T12:18:01.597Z"
+    }
+  },
+  "sightings": {}
+}

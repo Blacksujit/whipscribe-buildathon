@@ -1,0 +1,122 @@
+<template>
+  <div data-hf-id="hf-tzga" id="root" data-composition-id="01-hook" data-start="0" data-duration="6" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.08), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .play-btn { position: absolute; top: 35%; left: 50%; transform: translateX(-50%); width: 220px; height: 260px; z-index: 1; }
+      .play-btn .triangle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(25deg); border-left: 50px solid var(--hf-accent); border-top: 40px transparent; border-bottom: 40px transparent; opacity: 0; }
+      .play-btn .border { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 260px; border: 6px solid var(--hf-accent); border-radius: 16px; opacity: 0; }
+
+      .piece { position: absolute; background: var(--hf-accent); opacity: 0; border-radius: 2px; }
+
+      .glasses { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%) scale(0); display: flex; gap: 80px; z-index: 2; will-change: transform, opacity; }
+      .glasses .lens { width: 140px; height: 100px; border: 6px solid var(--hf-accent); border-radius: 50%; position: relative; }
+      .glasses .bridge { position: absolute; top: 40px; left: 50%; width: 80px; height: 6px; background: var(--hf-accent); transform: translateX(-50%); }
+
+      .report { position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(0.85); width: 760px; background: #F5F5F5; border-radius: 16px; padding: 32px; opacity: 0; box-sizing: border-box; z-index: 2; will-change: transform, opacity; }
+      .report-title { font-family: 'Inter', system-ui, sans-serif; font-size: 28px; font-weight: 600; color: #1A1A2E; margin-bottom: 20px; }
+      .overall { font-family: 'Inter', system-ui, sans-serif; font-size: 52px; font-weight: 700; color: #005f66; line-height: 1; }
+      .overall .slash { color: #1A1A2E; }
+      .bar-row { margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+      .bar-label { font-family: 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 500; color: #333333; width: 100px; }
+      .bar-track { flex: 1; height: 10px; background: rgba(0, 194, 203, 0.15); border-radius: 5px; overflow: hidden; }
+      .bar-fill { height: 100%; border-radius: 5px; }
+
+      .wordmark { position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%) scale(0); font-family: 'Inter', system-ui, sans-serif; font-size: 96px; font-weight: 700; letter-spacing: -2px; color: var(--hf-ink); z-index: 2; will-change: transform, opacity; }
+      .wordmark .teal { color: var(--hf-accent); }
+
+      .tagline { position: absolute; top: 88%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 22px; font-weight: 400; color: var(--hf-ink); opacity: 0; text-align: center; will-change: opacity, transform; }
+      .tagline .line { display: block; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-rhln" class="play-btn" id="playBtn">
+      <div data-hf-id="hf-0i05" class="triangle" id="tri"></div>
+      <div data-hf-id="hf-g15m" class="border"></div>
+    </div>
+
+    <div data-hf-id="hf-fbi2" class="glasses" id="glasses">
+      <div data-hf-id="hf-431g" class="lens"><div data-hf-id="hf-i4kv" class="bridge"></div></div>
+      <div data-hf-id="hf-n1uk" class="lens"></div>
+    </div>
+
+    <div data-hf-id="hf-o7m2" class="report" id="report">
+      <div data-hf-id="hf-qqqq" class="report-title">Overall Score</div>
+      <div data-hf-id="hf-p2yc" class="overall" id="overallScore">68<span data-hf-id="hf-l704" class="slash">/100</span></div>
+      <div data-hf-id="hf-vxho" class="bar-row"><span data-hf-id="hf-6cov" class="bar-label">Action Items</span>
+        <div data-hf-id="hf-2kxp" class="bar-track"><div data-hf-id="hf-gwld" class="bar-fill" id="bar1" style="width:75%; background:#00C2CB;"></div></div></div>
+      <div data-hf-id="hf-x17o" class="bar-row"><span data-hf-id="hf-g6hz" class="bar-label">Clarity</span>
+        <div data-hf-id="hf-dok1" class="bar-track"><div data-hf-id="hf-qk1m" class="bar-fill" id="bar2" style="width:60%; background:#5568FF;"></div></div></div>
+      <div data-hf-id="hf-vual" class="bar-row"><span data-hf-id="hf-xpd1" class="bar-label">Tension</span>
+        <div data-hf-id="hf-evh4" class="bar-track"><div data-hf-id="hf-5pzp" class="bar-fill" id="bar3" style="width:55%; background:#F59E1F;"></div></div></div>
+      <div data-hf-id="hf-w8lm" class="bar-row"><span data-hf-id="hf-ux7m" class="bar-label">Compliance</span>
+        <div data-hf-id="hf-eh63" class="bar-track"><div data-hf-id="hf-n0j1" class="bar-fill" id="bar4" style="width:40%; background:#EF4444;"></div></div></div>
+    </div>
+
+    <div data-hf-id="hf-5d03" class="wordmark" id="wordmark">Call<span data-hf-id="hf-x3xb" class="teal">Coach</span>-AI</div>
+    <div data-hf-id="hf-2z9e" class="tagline" id="tagline"><span data-hf-id="hf-1ggr" class="line">Your sales calls, scored.</span><span data-hf-id="hf-1rhv" class="line">Your reps, coached. Your team, improved.</span></div>
+
+    <script>
+      const W=1920,H=1080,TOTAL_DUR=6;
+      const TIMING={shatterAt:1.5,glassesAt:1.5,morphAt:3.0,taglineAt:4.5};
+
+      const playBtn=document.getElementById('playBtn');
+      const pieces=[];
+      for(let i=0;i<16;i++){
+        const p=document.createElement('div');
+        p.className='piece';
+        p.style.width='18px';p.style.height='18px';
+        p.style.backgroundColor='#00C2CB';
+        p.style.left='50%';p.style.top='35%';
+        playBtn.appendChild(p);
+        pieces.push(p);
+      }
+
+      gsap.set('#tri',{opacity:1});
+      gsap.set(pieces,{opacity:0});
+      gsap.set('#glasses',{opacity:0,scale:0});
+      gsap.set('#report',{opacity:0,scale:0.85});
+      gsap.set('#wordmark',{opacity:0,scale:0});
+      gsap.set('#tagline',{opacity:0,y:20});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["01-hook"]=tl;
+
+      tl.fromTo('#tri',{opacity:0,scale:0.5},{opacity:1,scale:1,duration:0.5,ease:'power3.out'},0.5);
+
+      pieces.forEach((p,i)=>{
+        const angle=(i/pieces.length)*Math.PI*2;
+        const distance=300;
+        tl.to(p,{x:Math.cos(angle)*distance,y:Math.sin(angle)*distance,opacity:1,scale:0.8,duration:0.8,ease:'power3.out'},TIMING.shatterAt);
+      });
+
+      tl.set('#glasses',{opacity:1},TIMING.glassesAt+0.3);
+      tl.fromTo('#glasses',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.8,ease:'power3.out'},TIMING.glassesAt);
+
+      tl.fromTo('#report',{opacity:0,y:30},{opacity:1,y:0,duration:0.7,ease:'power3.out'},TIMING.shatterAt+0.8);
+
+      tl.to(['#glasses','#report'],{opacity:0,scale:0.8,duration:0.3,ease:'power3.in'},TIMING.morphAt);
+      tl.fromTo('#wordmark',{opacity:0,scale:0,y:20},{opacity:1,scale:1,y:0,duration:0.8,ease:'power3.out'},TIMING.morphAt+0.1);
+      tl.to(['#bar1','#bar2','#bar3','#bar4'],{width:function(i){return ['75%','60%','55%','40%'][i];},duration:0.6,ease:'power3.out',stagger:0.15},'<+0.2');
+
+      tl.fromTo('#tagline .line',{opacity:0,y:15},{opacity:1,y:0,duration:0.5,ease:'power3.out',stagger:0.3},TIMING.taglineAt);
+
+      const wm=document.getElementById('wordmark');
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.morphAt+1){
+          gsap.set(wm,{x:Math.sin(tl.time()*2.5)*1.5});
+        }
+      }},0);
+    </script>
+  </div>
+</template>

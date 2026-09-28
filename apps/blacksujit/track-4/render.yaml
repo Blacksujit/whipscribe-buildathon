@@ -4,7 +4,22 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --timeout 300 --workers 1 --threads 4
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: LLM_PROVIDER
+        value: groq
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      # Secrets are set in the Render dashboard (sync: false keeps them out of git).
+      - key: WHIPSKRIBE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

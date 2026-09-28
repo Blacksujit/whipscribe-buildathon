@@ -18,11 +18,11 @@ import sys
 # Allow running from project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.whip_api import submit_file, submit_url, poll_job, get_transcript
-from src.evaluator import evaluate
+from src.api.whip_api import submit_file, submit_url, poll_job, get_transcript
+from src.core.evaluator import evaluate
 from src.reporter import generate_report, save_report
-from src.notion import deliver_report
-from src.compare import compare_evaluations, generate_comparison_report, save_comparison_report
+from src.api.notion import deliver_report
+from src.core.compare import compare_evaluations, generate_comparison_report, save_comparison_report
 
 
 def load_env():
@@ -40,16 +40,27 @@ def load_env():
 def get_evaluation_settings(args):
     """Determine LLM provider, model, and API key from args or env."""
     provider = args.provider or os.getenv("LLM_PROVIDER")
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
     model = args.model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    if provider == "groq":
+        api_key = os.getenv("GROQ_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+    elif provider == "anthropic":
+        api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("LLM_API_KEY")
+    elif provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("LLM_API_KEY")
+    else:
+        api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
     return provider, api_key, model
 
 
-def run_evaluation(transcript, provider, api_key, model):
+def run_evaluation(transcript, provider, api_key, model, whip_key=None, job_id=None,
+                    session_summary=None, key_moments=None, audio_url=None):
     """Run quality evaluation on a transcript, return evaluation dict."""
     if provider and api_key:
-        evaluation = evaluate(transcript, api_key=api_key, model=model, provider=provider)
-        return evaluation, "LLM"
+        result = evaluate(
+            transcript, api_key=api_key, model=model, provider=provider,
+            session_summary=session_summary, key_moments=key_moments, audio_url=audio_url
+        )
+        return result.get("evaluation", result), "LLM"
     else:
         evaluation = evaluate(transcript)
         return evaluation, "rule-based fallback"
@@ -105,7 +116,7 @@ def main():
     group.add_argument("--compare-sample", help="Comma-separated meeting names (multi-meeting analysis with sample data)")
     parser.add_argument("--language", default=None, help="ISO language code (e.g. en)")
     parser.add_argument("--output", default="report.md", help="Output report file")
-    parser.add_argument("--provider", default=None, help="LLM provider (openai/anthropic/ollama)")
+    parser.add_argument("--provider", default=None, help="LLM provider (groq/openai/anthropic/ollama)")
     parser.add_argument("--model", default=None, help="LLM model to use")
     parser.add_argument("--deliver", default=None, choices=["notion"],
                         help="Deliver the report to Notion")
@@ -119,9 +130,12 @@ def main():
     # --- Single meeting flow ---
     if not args.compare and not args.compare_sample:
         job_id = None
+        session_summary = None
+        key_moments = None
+        audio_url = None
         if args.sample:
             transcript = load_sample_transcript()
-            print("  Using sample transcript (rule-based evaluation)")
+            print("  Using sample transcript (LLM evaluation)")
         elif args.job_id:
             if not whip_key:
                 print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
@@ -131,6 +145,15 @@ def main():
             poll_job(whip_key, job_id)
             transcript = get_transcript(whip_key, job_id)
             print(f"  Transcript fetched: {len(transcript.get('segments', []))} segments")
+            # Fetch additional WhipScribe context for richer LLM evaluation
+            from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
+            session_summary = get_session_summary(whip_key, job_id)
+            key_moments = get_high_signal_moments(whip_key, job_id)
+            try:
+                audio_data = get_audio_url(whip_key, job_id)
+                audio_url = audio_data.get("url")
+            except Exception:
+                pass
         elif args.file:
             if not whip_key:
                 print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
@@ -141,6 +164,14 @@ def main():
             poll_job(whip_key, job_id)
             transcript = get_transcript(whip_key, job_id)
             print(f"  Transcript fetched: {len(transcript.get('segments', []))} segments")
+            from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
+            session_summary = get_session_summary(whip_key, job_id)
+            key_moments = get_high_signal_moments(whip_key, job_id)
+            try:
+                audio_data = get_audio_url(whip_key, job_id)
+                audio_url = audio_data.get("url")
+            except Exception:
+                pass
         elif args.url:
             if not whip_key:
                 print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
@@ -151,8 +182,22 @@ def main():
             poll_job(whip_key, job_id)
             transcript = get_transcript(whip_key, job_id)
             print(f"  Transcript fetched: {len(transcript.get('segments', []))} segments")
+            from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
+            session_summary = get_session_summary(whip_key, job_id)
+            key_moments = get_high_signal_moments(whip_key, job_id)
+            try:
+                audio_data = get_audio_url(whip_key, job_id)
+                audio_url = audio_data.get("url")
+            except Exception:
+                pass
 
-        evaluation, eval_mode = run_evaluation(transcript, provider, api_key, model)
+        evaluation, eval_mode = run_evaluation(
+            transcript, provider, api_key, model,
+            whip_key=whip_key, job_id=job_id,
+            session_summary=session_summary,
+            key_moments=key_moments, audio_url=audio_url
+        )
+
         print(f"  Evaluation complete ({eval_mode})")
 
         print("  Generating report...")

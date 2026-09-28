@@ -1,0 +1,153 @@
+<template>
+  <div data-hf-id="hf-vs9j" id="root" data-composition-id="05-trend" data-start="34" data-duration="8" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+        --card-bg: rgba(0, 194, 203, 0.06);
+        --card-border: rgba(0, 194, 203, 0.2);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.05), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .onscreen { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 600; color: var(--hf-ink); opacity: 0; z-index: 3; }
+
+      .chart { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); width: 1400px; height: 520px; z-index: 2; opacity: 0; }
+      .chart-svg { width: 100%; height: 100%; }
+      .chart-line { fill: none; stroke: var(--hf-accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .chart-fill { fill: rgba(0, 194, 203, 0.08); }
+      .chart-dots { fill: var(--hf-accent); }
+      .chart-axis { stroke: var(--hf-muted); stroke-width: 1; }
+      .chart-label { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; fill: var(--hf-muted); }
+      .chart-value { font-family: 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 700; fill: var(--hf-ink); text-anchor: middle; }
+
+      .stat-highlight { position: absolute; top: 8%; right: 8%; background: rgba(0, 194, 203, 0.12); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px 28px; text-align: center; opacity: 0; }
+      .stat-value { font-family: 'Inter', system-ui, sans-serif; font-size: 32px; font-weight: 700; color: var(--hf-accent); line-height: 1; }
+      .stat-label { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: var(--hf-muted); margin-top: 4px; }
+
+      .avatars { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); display: flex; gap: 24px; z-index: 2; opacity: 0; }
+      .avatar { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--card-border); display: flex; align-items: center; justify-content: center; font-family: 'Inter', system-ui, sans-serif; font-size: 18px; font-weight: 600; color: var(--hf-muted); opacity: 0.4; }
+      .avatar.up { opacity: 1; color: var(--hf-accent); border-color: var(--hf-accent); }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-q1kp" class="onscreen" id="os">Improvement across your entire team, week over week</div>
+
+    <div data-hf-id="hf-y7dg" class="chart" id="chart" data-layout-allow-overlap="">
+      <div data-hf-id="hf-ikwv" class="stat-highlight" id="statHighlight">
+        <div data-hf-id="hf-lveu" class="stat-value">65%</div>
+        <div data-hf-id="hf-awuu" class="stat-label">improvement in Action Items</div>
+      </div>
+      <svg data-hf-id="hf-z2qm" class="chart-svg" id="chartSvg">
+        <defs data-hf-id="hf-mh0t">
+          <lineargradient data-hf-id="hf-7ulp" id="gradFill" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop data-hf-id="hf-f75u" offset="0%" stop-color="rgba(0, 194, 203, 0.15)" />
+            <stop data-hf-id="hf-2pyj" offset="100%" stop-color="transparent" />
+          </lineargradient>
+          <filter data-hf-id="hf-49pv" id="glow">
+            <fegaussianblur data-hf-id="hf-r8al" stdDeviation="4" result="coloredBlur" />
+            <femerge data-hf-id="hf-zn2o"><femergenode data-hf-id="hf-7a4g" in="coloredBlur" /><femergenode data-hf-id="hf-cmaw" in="SourceGraphic" /></femerge>
+          </filter>
+        </defs>
+        <line data-hf-id="hf-i597" x1="80" y1="440" x2="1320" y2="440" class="chart-axis" />
+        <line data-hf-id="hf-0f4n" x1="80" y1="80" x2="80" y2="440" class="chart-axis" />
+        <g data-hf-id="hf-cv2l" id="chartDots" data-layout-allow-overlap="" />
+        <g data-hf-id="hf-c2a0" id="chartLabels" data-layout-allow-overlap="" />
+        <path data-hf-id="hf-8u84" class="chart-line" id="chartPath" />
+        <path data-hf-id="hf-8gch" class="chart-fill" id="chartFill" />
+      </svg>
+    </div>
+
+    <div data-hf-id="hf-pspe" class="avatars" id="avatars">
+      <div data-hf-id="hf-1r28" class="avatar" id="av1">SJ</div>
+      <div data-hf-id="hf-0ec6" class="avatar up" id="av2">MR</div>
+      <div data-hf-id="hf-zty9" class="avatar" id="av3">TJ</div>
+      <div data-hf-id="hf-bo09" class="avatar up" id="av4">AM</div>
+    </div>
+
+    <script>
+      const TOTAL_DUR=8;
+      const scores=[62,65,68,72,70,85];
+      const improved=[false,false,false,true,false,true];
+      const CHART_X=[150,360,570,780,990,1200];
+      const CHART_Y=[440,390,340,290,310,180];
+      const TIMING={os:0.3,chart:0.8,point:1.2};
+
+      gsap.set('#chart',{opacity:0});
+      gsap.set('#statHighlight',{opacity:0,scale:0});
+      gsap.set('#avatars',{opacity:0,y:30});
+      gsap.set(['#av1','#av2','#av3','#av4'],{scale:0.8});
+      gsap.set('.chart-dots circle',{scale:0,opacity:0});
+      gsap.set('.chart-value',{scale:0,opacity:0});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["05-trend"]=tl;
+
+      tl.fromTo('#os',{opacity:0,y:-20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.os);
+      tl.fromTo('#chart',{opacity:0,y:20},{opacity:1,y:0,duration:0.7,ease:'power3.out'},TIMING.chart);
+      tl.fromTo('#avatars',{opacity:0,y:30},{opacity:1,y:0,duration:0.6,ease:'power3.out'},TIMING.chart+1.2);
+
+      /* Points build sequentially */
+      for(let i=0;i<scores.length;i++){
+        const t=TIMING.point+(i*0.8);
+        tl.add(()=>{
+          /* Add dot */
+          const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+          dot.setAttribute('cx',CHART_X[i]);
+          dot.setAttribute('cy',CHART_Y[i]);
+          dot.setAttribute('r','8');
+          dot.setAttribute('class','chart-dots');
+          dot.setAttribute('data-layout-allow-overlap','');
+          document.getElementById('chartDots').appendChild(dot);
+          gsap.fromTo(dot,{scale:0},{scale:1,duration:0.4,ease:'power3.out'});
+
+          /* Update line path */
+          const pts=CHART_X.slice(0,i+1).map((x,j)=>x+','+CHART_Y[j]).join(' ');
+          document.getElementById('chartPath').setAttribute('d','M'+pts);
+
+          /* Value label */
+          const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+          label.setAttribute('x',CHART_X[i]);
+          label.setAttribute('y',CHART_Y[i]-24);
+          label.setAttribute('class','chart-value');
+          label.setAttribute('data-layout-allow-overlap','');
+          label.textContent=scores[i].toString();
+          document.getElementById('chartLabels').appendChild(label);
+          gsap.fromTo(label,{opacity:0,y:10},{opacity:1,y:0,duration:0.3,ease:'power3.out'});
+
+          /* Avatar state */
+          const avEl=document.getElementById('av'+(i+1));
+          if(improved[i]) gsap.to(avEl,{opacity:1,scale:1,duration:0.4,ease:'power3.out'});
+
+          /* Dot glow on improved points */
+          if(improved[i]) dot.style.filter='url(#glow)';
+        },t);
+      }
+
+      /* Fill area */
+      tl.add(()=>{
+        const fill=document.getElementById('chartFill');
+        fill.setAttribute('d','M'+CHART_X[0]+','+CHART_Y[0]+' L'+CHART_X[5]+','+CHART_Y[5]+' V440 H'+CHART_X[0]+' Z');
+        fill.setAttribute('fill','url(#gradFill)');
+        gsap.fromTo(fill,{opacity:0},{opacity:1,duration:1,ease:'power3.out'});
+      },TIMING.point+4.5);
+
+      /* Stat highlight */
+      tl.fromTo('#statHighlight',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.6,ease:'power3.out'},TIMING.point+5);
+
+      /* Hold with jitter */
+      const svgEl=document.getElementById('chartSvg');
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.point+5){
+          const j=Math.sin(tl.time()*1.5)*0.5;
+          gsap.set(svgEl,{x:j});
+        }
+      }},0);
+    </script>
+  </div>
+</template>

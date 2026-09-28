@@ -11,12 +11,12 @@ from typing import Dict, List, Optional
 def get_slack_client():
     """Get Slack webhook URL from settings or env."""
     webhook_url = os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_WEBHOOK")
-    # Try to get from store if available
+    # Try to get from the local settings store if available
     if not webhook_url:
         try:
-            import store
+            from src.database import store
             webhook_url = store.get_setting("slack_webhook")
-        except:
+        except Exception:
             pass
     return webhook_url
 

@@ -29,3 +29,9 @@ report_test.md
 # Web dashboard
 evaluations.db
 uploads/
+
+# Local server log
+backend.log
+
+# Frontend working files
+frontend/test-results/

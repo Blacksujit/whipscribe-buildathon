@@ -1,0 +1,117 @@
+<template>
+  <div data-hf-id="hf-rzdy" id="root" data-composition-id="04-evidence" data-start="24" data-duration="10" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00b8c4;
+        --hf-text: #FFFFFF;
+        --hf-text-alt: #1A1A2E;
+        --hf-muted: #606060;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.05), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .onscreen { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 600; color: var(--hf-text); opacity: 0; z-index: 3; }
+
+      .report { position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%); width: 820px; background: #F5F5F5; border-radius: 16px; padding: 36px; box-sizing: border-box; z-index: 2; }
+      .report-header { font-family: 'Inter', system-ui, sans-serif; font-size: 28px; font-weight: 600; color: var(--hf-text-alt); margin-bottom: 8px; }
+      .report-date { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: var(--hf-muted); margin-bottom: 24px; }
+
+      .progress-container { margin-bottom: 28px; }
+      .progress-label { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; font-weight: 500; color: var(--hf-text-alt); margin-bottom: 8px; }
+      .progress-bar { width: 100%; height: 10px; background: rgba(0, 194, 203, 0.15); border-radius: 5px; overflow: hidden; margin-bottom: 20px; }
+      .progress-fill { height: 100%; width: 0; background: var(--hf-accent); border-radius: 5px; }
+
+      .overall { font-family: 'Inter', system-ui, sans-serif; font-size: 52px; font-weight: 700; color: #005f66; text-align: center; margin-bottom: 28px; line-height: 1; opacity: 0; }
+
+      .category-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+      .category-name { font-family: 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 500; color: var(--hf-text-alt); width: 120px; flex-shrink: 0; }
+      .category-bar { flex: 1; height: 10px; background: rgba(0, 194, 203, 0.1); border-radius: 5px; overflow: hidden; }
+      .category-fill { height: 100%; width: 0; border-radius: 5px; }
+      .category-score { font-family: 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 600; color: var(--hf-text-alt); width: 80px; text-align: right; opacity: 0; }
+
+      .issues-title { font-family: 'Inter', system-ui, sans-serif; font-size: 18px; font-weight: 600; color: var(--hf-text-alt); margin-bottom: 16px; }
+      .issue-card { background: rgba(0, 194, 203, 0.04); border-left: 4px solid var(--hf-accent); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; opacity: 0; transform: translateY(20px); }
+      .issue-type { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+      .issue-quote { font-family: 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 400; color: #333333; line-height: 1.5; font-style: italic; margin-bottom: 6px; }
+      .issue-timestamp { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: var(--hf-accent); font-weight: 500; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-ymp0" class="onscreen" id="os">Score: 68/100 · Click to jump to any moment</div>
+
+    <div data-hf-id="hf-bw92" class="report">
+      <div data-hf-id="hf-7a6q" class="report-header">Meeting Quality Report</div>
+      <div data-hf-id="hf-u2c3" class="report-date">Sep 27, 2026 · Call ID: 7d677664…</div>
+
+      <div data-hf-id="hf-4tcz" class="progress-container">
+        <div data-hf-id="hf-dtev" class="progress-label">Overall Score</div>
+        <div data-hf-id="hf-7gch" class="progress-bar"><div data-hf-id="hf-y5br" class="progress-fill" id="mainBar"></div></div>
+      </div>
+
+      <div data-hf-id="hf-p2yc" class="overall" id="overallScore">68<span data-hf-id="hf-l704" class="slash">/100</span></div>
+
+      <div data-hf-id="hf-j9xz" class="category-row"><span data-hf-id="hf-9sal" class="category-name">Action Items</span><div data-hf-id="hf-07c8" class="category-bar"><div data-hf-id="hf-yuuv" class="category-fill" id="cat1" style="background: var(--hf-accent);"></div></div><span data-hf-id="hf-0qj4" class="category-score" id="cat1Val">75/100</span></div>
+      <div data-hf-id="hf-03rr" class="category-row"><span data-hf-id="hf-vosh" class="category-name">Clarity</span><div data-hf-id="hf-g17k" class="category-bar"><div data-hf-id="hf-tarm" class="category-fill" id="cat2" style="background: #5568FF;"></div></div><span data-hf-id="hf-exp7" class="category-score" id="cat2Val">60/100</span></div>
+      <div data-hf-id="hf-zpgq" class="category-row"><span data-hf-id="hf-khl3" class="category-name">Tension</span><div data-hf-id="hf-euah" class="category-bar"><div data-hf-id="hf-krqp" class="category-fill" id="cat3" style="background: #F59E1F;"></div></div><span data-hf-id="hf-qoxw" class="category-score" id="cat3Val">55/100</span></div>
+      <div data-hf-id="hf-o4hc" class="category-row" style="margin-bottom: 0;"><span data-hf-id="hf-n71k" class="category-name">Compliance</span><div data-hf-id="hf-f8li" class="category-bar"><div data-hf-id="hf-1ajj" class="category-fill" id="cat4" style="background: #EF4444;"></div></div><span data-hf-id="hf-w747" class="category-score" id="cat4Val">40/100</span></div>
+
+      <div data-hf-id="hf-jild" class="issues-section" id="issuesSection">
+        <div data-hf-id="hf-6r2h" class="issues-title">Top Issues with Evidence</div>
+        <div data-hf-id="hf-aosx" class="issue-card" id="issue1" style="border-left-color: #EF4444;">
+          <div data-hf-id="hf-fpcp" class="issue-type" style="color:#EF4444;">Compliance</div>
+          <div data-hf-id="hf-sylo" class="issue-quote">We'll promise to ship mobile apps in Q1 as well.</div>
+          <div data-hf-id="hf-pjc2" class="issue-timestamp">⚠ Unbacked commitment · [at 0:31](whipscribe.com/transcript/…)</div>
+        </div>
+        <div data-hf-id="hf-8q69" class="issue-card" id="issue2" style="border-left-color: #F59E1F;">
+          <div data-hf-id="hf-xwh9" class="issue-type" style="color:#F59E1F;">Tension</div>
+          <div data-hf-id="hf-7p0n" class="issue-quote">What about the $99 price point? I'm not sure about it.</div>
+          <div data-hf-id="hf-umde" class="issue-timestamp">⚠ Customer objection · [at 0:45](whipscribe.com/transcript/…)</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const TOTAL_DUR=10;
+      const TIMING={os:0.3,progress:1.0,score:2.0,b1:2.8,b2:3.8,b3:4.8,b4:5.8,issues:6.8,i1:7.5,i2:8.5};
+
+      gsap.set('#os',{opacity:0,y:-20});
+      gsap.set('#mainBar',{width:'0%'});
+      gsap.set('#overallScore',{opacity:0,scale:0.8});
+      gsap.set(['#cat1Val','#cat2Val','#cat3Val','#cat4Val'],{opacity:0});
+      gsap.set(['#issuesSection','#issue1','#issue2'],{opacity:0,y:20});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["04-evidence"]=tl;
+
+      tl.fromTo('#os',{opacity:0,y:-20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.os);
+      tl.to('#mainBar',{width:'68%',duration:0.8,ease:'power3.out'},TIMING.progress);
+
+      tl.fromTo('#overallScore',{opacity:0,scale:0.8},{opacity:1,scale:1,duration:0.4,ease:'power3.out'},TIMING.score);
+
+      tl.to('#cat1',{width:'75%',duration:0.6,ease:'power3.out'},TIMING.b1);
+      tl.to('#cat2',{width:'60%',duration:0.6,ease:'power3.out'},TIMING.b2);
+      tl.to('#cat3',{width:'55%',duration:0.6,ease:'power3.out'},TIMING.b3);
+      tl.to('#cat4',{width:'40%',duration:0.6,ease:'power3.out'},TIMING.b4);
+      tl.to(['#cat1Val','#cat2Val','#cat3Val','#cat4Val'],{opacity:1,duration:0.3,opacity:1},TIMING.b1+0.7);
+      tl.to('#cat2Val',{opacity:1},'<+0.3');
+      tl.to('#cat3Val',{opacity:1},'<+0.3');
+      tl.to('#cat4Val',{opacity:1},'<+0.3');
+
+      tl.fromTo('#issuesSection',{opacity:0,y:20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.issues);
+      tl.fromTo('#issue1',{opacity:0,x:-20},{opacity:1,x:0,duration:0.4,ease:'power3.out'},TIMING.i1);
+      tl.fromTo('#issue2',{opacity:0,x:-20},{opacity:1,x:0,duration:0.4,ease:'power3.out'},TIMING.i2);
+
+      /* Hold with subtle jitter */
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.issues+1){
+          const j=Math.sin(tl.time()*3)*0.3;
+          gsap.set('.category-bar',function(i){return {filter:'brightness('+ (1+j/100) +')'};});
+        }
+      }},0);
+    </script>
+  </div>
+</template>
