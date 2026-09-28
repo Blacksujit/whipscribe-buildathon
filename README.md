@@ -255,6 +255,10 @@ speed you up: WhipScribe, Playwright, Context7, GitHub.
 
 ## Leaderboard
 
+> **Reviews finish by Sunday 27 September 2026.** Every pull request open today
+> is scored, ranked on the board and answered with written feedback within 48
+> hours. Keep building; anything you open after that joins the next review pass.
+
 Live standings for every track and challenge: [whipscribe.com/buildathon](https://whipscribe.com/buildathon).
 You appear there as soon as your Track 0 pull request is open; your rank
 appears once reviewers have scored you. Click any name for the
