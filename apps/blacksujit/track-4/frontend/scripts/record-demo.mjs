@@ -75,7 +75,7 @@ async function main() {
         await page.waitForFunction(
           () => {
             const text = document.body.innerText || "";
-            return text.includes("transcription") || text.includes("Scoring") || text.includes("Uploading");
+            return text.includes("Transcribe") || text.includes("Score") || text.includes("Report") || !!document.querySelector(".pipeline");
           },
           { timeout: 6000 }
         );
@@ -102,7 +102,7 @@ async function main() {
   }
   await wait(1200);
 
-  for (const route of ["/trends", "/coach", "/speakers", "/settings"]) {
+  for (const route of ["/trends", "/coach", "/speakers", "/connections"]) {
     log(`visiting ${route}`);
     await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
     await wait(2600);

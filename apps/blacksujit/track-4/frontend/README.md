@@ -16,7 +16,7 @@ Design tokens and the component language come from the live whipscribe.com
 | `/trends` | Score progression chart, momentum, deal velocity, latest category scores |
 | `/coach` | Cross-meeting coaching insights, and "send summary to Slack" |
 | `/speakers` | Speaker-level issue patterns |
-| `/settings` | WhipScribe key, LLM provider/model, Slack and Notion integrations |
+| `/connections` | Integration status and one-field connects: WhipScribe, Slack, Notion, AI provider (replaces the old key-entry Settings page; `/settings` redirects here) |
 
 ## Run
 
@@ -26,7 +26,9 @@ npm install
 # .env.local
 # NEXT_PUBLIC_API_URL=http://localhost:5000
 
-npm run dev     # http://localhost:3000
+npm run dev     # build + serve on http://localhost:3000 (reliable everywhere)
+npm run dev:hmr # webpack dev server with hot reload (machines without the
+                # Application Control policy that blocks Next's native compiler)
 npm run build   # production build
 ```
 

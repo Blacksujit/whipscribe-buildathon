@@ -21,7 +21,7 @@ its speaker, timestamp and a link into the recording.*
 More screens: [trends](docs/screenshots/trends.png) |
 [coach](docs/screenshots/coach.png) |
 [speakers](docs/screenshots/speakers.png) |
-[settings](docs/screenshots/settings.png)
+[connections](docs/screenshots/connections.png)
 
 ## Design
 
@@ -157,11 +157,15 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000, upload a recording, and the flow runs end to end.
+Open http://localhost:3000, drop in a recording, and the processing pipeline
+shows each stage live (upload - transcribe - score - report) before opening the
+report.
 
-> The build scripts use Webpack (`next build --webpack`) because Turbopack's
-> native bindings are not loadable on every Windows machine (Application
-> Control policies). Webpack works everywhere.
+> `npm run dev` builds and serves the dashboard on this machine: Turbopack's
+> native bindings are blocked by an Application Control policy here, and
+> webpack's dev compiler cannot parse global CSS in that environment. On
+> unrestricted machines `npm run dev:hmr` gives the webpack dev server with
+> hot reload.
 
 ### CLI (no servers)
 
@@ -215,7 +219,8 @@ python e2e_test.py --real      # real upload + evaluation (uses credits)
 | `NOTION_TOKEN`, `NOTION_DATABASE_ID` | no | Notion delivery |
 | `FLASK_SECRET_KEY` | production | session secret |
 | `FRONTEND_URL`, `CORS_ORIGINS` | production | where the dashboard runs |
-| `UPLOAD_POLL_TIMEOUT` | no | transcription wait per upload (seconds) |
+| `UPLOAD_POLL_TIMEOUT` | no | transcription wait per file/recording upload (seconds, default 900) |
+| `UPLOAD_URL_POLL_TIMEOUT` | no | transcription wait per pasted link (seconds, default 1800) |
 | `MAX_UPLOAD_MB` | no | upload cap (default 2048) |
 | `DB_PATH` | no | SQLite path (defaults next to `app.py`) |
 
@@ -283,8 +288,10 @@ evidence-backed, trend-aware - is the product.
   not exist and were unreferenced.
 - **`tailwind.config.ts` was deleted** - Tailwind v4 ignores it without an
   `@config` directive, so it was dead configuration.
-- **The Slack webhook is no longer echoed back** by `GET /api/settings`, and
-  saving settings no longer overwrites a stored API key with the mask.
+- **The Slack webhook is no longer echoed back** by the API, and saving a
+  connection no longer overwrites a stored secret with a mask. Settings moved
+  from a key-entry form to a Connections page that validates each integration
+  (a real test message to Slack, a real database read for Notion).
 
 ---
 

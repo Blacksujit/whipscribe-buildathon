@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getCoachData, CoachDataResponse, CoachInsight, exportTrendsToSlack } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import PageHeader from "@/components/PageHeader";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
 import {
   ShieldCheckIcon,
@@ -88,14 +89,12 @@ export default function CoachPage() {
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <p className="section-eyebrow">Coach</p>
-            <h1 className="section-title">Two calls is the minimum.</h1>
-            <p className="section-subtitle">
-              {data?.message || "Score two or more calls and the coaching reads what changed between them."}
-            </p>
-            <Link href="/" className="btn-primary">Upload a call</Link>
-          </motion.div>
+          <PageHeader
+            eyebrow="Coach"
+            title="Two calls is the minimum."
+            subtitle={data?.message || "Score two or more calls and the coaching reads what changed between them."}
+            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+          />
         </div>
       </main>
     );
@@ -109,19 +108,15 @@ export default function CoachPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.1 }}
-        >
-          <p className="section-eyebrow">Coach</p>
-          <h1 className="section-title">What to fix next.</h1>
-          <p className="section-subtitle">
-            {tracking && typeof tracking.completion_rate === "number"
+        <PageHeader
+          eyebrow="Coach"
+          title="What to fix next."
+          subtitle={
+            tracking && typeof tracking.completion_rate === "number"
               ? `${tracking.resolved ?? 0} of ${tracking.total ?? 0} commitments closed (${tracking.completion_rate}%).`
-              : "Read from the calls you have scored so far."}
-          </p>
-        </motion.div>
+              : "Read from the calls you have scored so far."
+          }
+        />
 
         {insights.length > 0 && (
           <motion.div
@@ -179,7 +174,10 @@ export default function CoachPage() {
             </button>
             {shareMessage && (
               <p className={shareState === "error" ? "status-banner status-banner-error" : "status-banner status-banner-ok"}>
-                {shareState === "error" && <AlertIcon size={14} />} {shareMessage}
+                {shareState === "error" && <AlertIcon size={14} />} {shareMessage}{" "}
+                {shareState === "error" && (
+                  <Link href="/connections" className="evidence-listen">Open connections</Link>
+                )}
               </p>
             )}
           </AnimatedContent>

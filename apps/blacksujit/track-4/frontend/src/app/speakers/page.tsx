@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { getSpeakers, SpeakersResponse, SpeakerStat } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import PageHeader from "@/components/PageHeader";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
 import {
   ShieldCheckIcon,
@@ -101,14 +102,12 @@ export default function SpeakersPage() {
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <p className="section-eyebrow">Speakers</p>
-            <h1 className="section-title">Not enough calls yet.</h1>
-            <p className="section-subtitle">
-              {data?.error || "Speaker patterns appear once two or more calls are scored."}
-            </p>
-            <Link href="/" className="btn-primary">Upload a call</Link>
-          </motion.div>
+          <PageHeader
+            eyebrow="Speakers"
+            title="Not enough calls yet."
+            subtitle={data?.error || "Speaker patterns appear once two or more calls are scored."}
+            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+          />
         </div>
       </main>
     );
@@ -123,17 +122,11 @@ export default function SpeakersPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.1 }}
-        >
-          <p className="section-eyebrow">Speakers</p>
-          <h1 className="section-title">Who the issues come from.</h1>
-          <p className="section-subtitle">
-            {speakers.length} speakers across your scored calls.
-          </p>
-        </motion.div>
+        <PageHeader
+          eyebrow="Speakers"
+          title="Who the issues come from."
+          subtitle={`${speakers.length} speakers across your scored calls.`}
+        />
 
         {speakers.length > 0 && (
           <motion.div

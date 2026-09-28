@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import { getReport, ReportResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
-import CountUp from "@/components/reactbits/CountUp/CountUp";
+import ScoreRing from "@/components/charts/ScoreRing";
 import {
   ShieldCheckIcon,
   WaveformIcon,
@@ -37,14 +37,7 @@ function fmtTime(seconds?: number): string {
 }
 
 function listenUrl(jobId: string, start?: number): string {
-  return `https://whipscribe.com/transcript/${jobId}?t=${Math.floor(start || 0)}`;
-}
-
-function scoreColor(score: number): string {
-  if (score >= 80) return "var(--cat-ok)";
-  if (score >= 60) return "var(--color-7)";
-  if (score >= 40) return "var(--accent)";
-  return "var(--cat-compliance)";
+  return `https://whipscribe.com/view?id=${encodeURIComponent(jobId)}&t=${Math.floor(start || 0)}`;
 }
 
 interface EvidenceItem {
@@ -172,7 +165,6 @@ export default function ReportPage() {
   const evaluation = report.evaluation;
   const score = evaluation.overall_score;
   const categories = evaluation.category_scores || {};
-  const color = scoreColor(score);
 
   const complianceItems: EvidenceItem[] = (evaluation.compliance_risks || []).map((issue) => ({
     text: issue.text,
@@ -235,19 +227,9 @@ export default function ReportPage() {
             transition={{ ...springReveal, delay: 0.2 }}
             style={{ display: "flex", flexDirection: "column", gap: "32px" }}
           >
-            <div>
-              <p className="section-eyebrow">Overall score</p>
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.35 }}
-                style={{ display: "flex", alignItems: "baseline", gap: "4px" }}
-              >
-                <span className="report-score" style={{ color }}>
-                  <CountUp from={0} to={score} duration={2} delay={0.3} />
-                </span>
-                <span className="report-score-suffix">/100</span>
-              </motion.div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <p className="section-eyebrow" style={{ marginBottom: 0 }}>Overall score</p>
+              <ScoreRing score={score} size={168} />
             </div>
 
             <div>

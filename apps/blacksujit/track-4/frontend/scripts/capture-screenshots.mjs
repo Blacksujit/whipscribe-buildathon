@@ -25,7 +25,7 @@ async function main() {
     ["/trends", "trends"],
     ["/coach", "coach"],
     ["/speakers", "speakers"],
-    ["/settings", "settings"],
+    ["/connections", "connections"],
   ];
 
   const browser = await chromium.launch({ headless: true });

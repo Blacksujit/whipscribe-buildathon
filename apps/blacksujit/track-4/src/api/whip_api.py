@@ -26,11 +26,16 @@ def submit_file(api_key, filepath, language=None):
 
 
 def submit_url(api_key, url, language=None):
-    """Submit a URL for transcription and return the job_id."""
+    """Submit a URL for transcription and return the job_id.
+
+    WhipScribe accepts URL submits on POST /api/v1/transcribe/url (per docs).
+    Only Creative Commons-licensed YouTube URLs are currently accepted.
+    """
     payload = {"url": url}
     if language:
         payload["language"] = language
-    resp = requests.post(f"{BASE_URL}/transcribe", headers=_headers(api_key), json=payload)
+    payload["source"] = "url"
+    resp = requests.post(f"{BASE_URL}/transcribe/url", headers=_headers(api_key), json=payload)
     resp.raise_for_status()
     return resp.json()["job_id"]
 
@@ -39,6 +44,9 @@ def poll_job(api_key, job_id, timeout=300, interval=5):
     """Poll job status with robust retry for 5xx errors."""
     start_time = time.time()
     while True:
+        if (time.time() - start_time) > timeout:
+            raise TimeoutError(f"Job {job_id} timed out after {timeout}s")
+
         try:
             resp = requests.get(f"{BASE_URL}/jobs/{job_id}", headers=_headers(api_key))
             if resp.status_code in (502, 503, 504):
@@ -58,8 +66,6 @@ def poll_job(api_key, job_id, timeout=300, interval=5):
             time.sleep(interval)
             continue
 
-        if (time.time() - start_time) > timeout:
-            raise TimeoutError(f"Job {job_id} timed out after {timeout}s")
         time.sleep(interval)
 
 
