@@ -27,6 +27,30 @@ Upload a file, paste a link, or record in the browser. WhipScribe transcribes it
 7. **Connections** — manage WhipScribe API key, GROQ/LLM provider, Slack webhook, Notion integration with live validation (test Slack webhook, test Notion database read)
 8. **MCP server** (`src/mcp_server.py`) — 4 tools: `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, `export_meeting_report`
 9. **CLI** (`python -m src.main --file call.mp3`) — same pipeline without servers
+10. **Comprehensive demo script** (`demo_workflow.py`) — full workflow from upload to coaching insights with real API usage evidence
+11. **Cross-call intelligence dashboard** (`dashboard_demo.py`) — trend analysis, recurring issue clustering, action item lifecycle, speaker-level risk scoring, deal velocity metrics
+12. **Coaching recommendations engine** (`src/core/coach.py`) — prescriptive recommendations with evidence tied to specific quotes and timestamps
+
+### Demo Output (verified)
+
+```
+Meetings Analyzed: 5
+Overall Trend: stable
+Deal Velocity: Low (Score: 1.0)
+Recurring Issues: 5 clusters found
+Action Items: 5 total (40% completion rate)
+Recommendations: 3 generated
+
+Top Recurring Issues:
+1. "Also, what about the pricing model?..." (found in 5 meetings)
+2. "Actually, the engineering team isn't ready yet..." (found in 5 meetings)
+3. "We'll promise to ship mobile apps in Q1..." (found in 5 meetings)
+
+Speaker Risk Scoring:
+  SPEAKER_01: 9 issues (compliance_risks, clarity_issues)
+  SPEAKER_02: 5 issues (clarity_issues)
+  Unknown: 5 issues (tension_signals)
+```
 
 ### Architecture decisions
 

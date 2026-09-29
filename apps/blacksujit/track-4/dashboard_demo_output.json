@@ -1,0 +1,415 @@
+{
+  "meetings": [
+    {
+      "name": "Q4 Planning",
+      "date": "2026-09-26",
+      "scores": {
+        "overall": 40,
+        "action_items": 67,
+        "clarity": 54,
+        "tension": 65,
+        "compliance": 58
+      },
+      "issues": [
+        {
+          "type": "clarity_issues",
+          "text": "I think we should launch in November.",
+          "speaker": "SPEAKER_01",
+          "start": 8.3,
+          "end": 14.1,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "clarity_issues",
+          "text": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+          "speaker": "SPEAKER_02",
+          "start": 22.9,
+          "end": 31.5,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "tension_signals",
+          "text_a": "Actually, the engineering team isn't ready yet. Can we push to December?",
+          "speaker_a": "SPEAKER_00",
+          "start": 14.2,
+          "end": 22.8,
+          "text_b": "",
+          "speaker_b": "",
+          "signal": "Potential conflict or deflection"
+        },
+        {
+          "type": "compliance_risks",
+          "text": "We'll promise to ship mobile apps in Q1 as well.",
+          "speaker": "SPEAKER_01",
+          "start": 31.6,
+          "end": 39.2,
+          "risk": "Unbacked commitment/promise"
+        },
+        {
+          "type": "action_items",
+          "text": "Let me circle back with you by Friday. Thanks.",
+          "speaker": "SPEAKER_02",
+          "start": 47.9,
+          "end": 60.5,
+          "owner": "unspecified",
+          "deadline": "unspecified"
+        }
+      ]
+    },
+    {
+      "name": "Retro",
+      "date": "2026-09-27",
+      "scores": {
+        "overall": 42,
+        "action_items": 67,
+        "clarity": 62,
+        "tension": 65,
+        "compliance": 58
+      },
+      "issues": [
+        {
+          "type": "clarity_issues",
+          "text": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+          "speaker": "SPEAKER_02",
+          "start": 22.9,
+          "end": 31.5,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "tension_signals",
+          "text_a": "Actually, the engineering team isn't ready yet. Can we push to December?",
+          "speaker_a": "SPEAKER_00",
+          "start": 14.2,
+          "end": 22.8,
+          "text_b": "",
+          "speaker_b": "",
+          "signal": "Potential conflict or deflection"
+        },
+        {
+          "type": "compliance_risks",
+          "text": "We'll promise to ship mobile apps in Q1 as well.",
+          "speaker": "SPEAKER_01",
+          "start": 31.6,
+          "end": 39.2,
+          "risk": "Unbacked commitment/promise"
+        },
+        {
+          "type": "action_items",
+          "text": "I am frustrated that we missed the October deadline again.",
+          "speaker": "SPEAKER_01",
+          "start": 8.3,
+          "end": 14.1,
+          "owner": "unspecified",
+          "deadline": "unspecified"
+        }
+      ]
+    },
+    {
+      "name": "Sales Call",
+      "date": "2026-09-28",
+      "scores": {
+        "overall": 40,
+        "action_items": 67,
+        "clarity": 54,
+        "tension": 65,
+        "compliance": 58
+      },
+      "issues": [
+        {
+          "type": "clarity_issues",
+          "text": "I think we should launch in November.",
+          "speaker": "SPEAKER_01",
+          "start": 8.3,
+          "end": 14.1,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "clarity_issues",
+          "text": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+          "speaker": "SPEAKER_02",
+          "start": 22.9,
+          "end": 31.5,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "tension_signals",
+          "text_a": "Actually, the engineering team isn't ready yet. Can we push to December?",
+          "speaker_a": "SPEAKER_00",
+          "start": 14.2,
+          "end": 22.8,
+          "text_b": "",
+          "speaker_b": "",
+          "signal": "Potential conflict or deflection"
+        },
+        {
+          "type": "compliance_risks",
+          "text": "We'll promise to ship mobile apps in Q1 as well.",
+          "speaker": "SPEAKER_01",
+          "start": 31.6,
+          "end": 39.2,
+          "risk": "Unbacked commitment/promise"
+        },
+        {
+          "type": "action_items",
+          "text": "Let me circle back with you by Friday. Thanks.",
+          "speaker": "SPEAKER_02",
+          "start": 47.9,
+          "end": 60.5,
+          "owner": "unspecified",
+          "deadline": "unspecified"
+        }
+      ]
+    },
+    {
+      "name": "Team Standup",
+      "date": "2026-09-29",
+      "scores": {
+        "overall": 40,
+        "action_items": 67,
+        "clarity": 54,
+        "tension": 65,
+        "compliance": 58
+      },
+      "issues": [
+        {
+          "type": "clarity_issues",
+          "text": "I think we should launch in November.",
+          "speaker": "SPEAKER_01",
+          "start": 8.3,
+          "end": 14.1,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "clarity_issues",
+          "text": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+          "speaker": "SPEAKER_02",
+          "start": 22.9,
+          "end": 31.5,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "tension_signals",
+          "text_a": "Actually, the engineering team isn't ready yet. Can we push to December?",
+          "speaker_a": "SPEAKER_00",
+          "start": 14.2,
+          "end": 22.8,
+          "text_b": "",
+          "speaker_b": "",
+          "signal": "Potential conflict or deflection"
+        },
+        {
+          "type": "compliance_risks",
+          "text": "We'll promise to ship mobile apps in Q1 as well.",
+          "speaker": "SPEAKER_01",
+          "start": 31.6,
+          "end": 39.2,
+          "risk": "Unbacked commitment/promise"
+        },
+        {
+          "type": "action_items",
+          "text": "Let me circle back with you by Friday. Thanks.",
+          "speaker": "SPEAKER_02",
+          "start": 47.9,
+          "end": 60.5,
+          "owner": "unspecified",
+          "deadline": "unspecified"
+        }
+      ]
+    },
+    {
+      "name": "Client Review",
+      "date": "2026-09-30",
+      "scores": {
+        "overall": 40,
+        "action_items": 67,
+        "clarity": 54,
+        "tension": 65,
+        "compliance": 58
+      },
+      "issues": [
+        {
+          "type": "clarity_issues",
+          "text": "I think we should launch in November.",
+          "speaker": "SPEAKER_01",
+          "start": 8.3,
+          "end": 14.1,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "clarity_issues",
+          "text": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+          "speaker": "SPEAKER_02",
+          "start": 22.9,
+          "end": 31.5,
+          "issue": "Uncertain/hedging language"
+        },
+        {
+          "type": "tension_signals",
+          "text_a": "Actually, the engineering team isn't ready yet. Can we push to December?",
+          "speaker_a": "SPEAKER_00",
+          "start": 14.2,
+          "end": 22.8,
+          "text_b": "",
+          "speaker_b": "",
+          "signal": "Potential conflict or deflection"
+        },
+        {
+          "type": "compliance_risks",
+          "text": "We'll promise to ship mobile apps in Q1 as well.",
+          "speaker": "SPEAKER_01",
+          "start": 31.6,
+          "end": 39.2,
+          "risk": "Unbacked commitment/promise"
+        },
+        {
+          "type": "action_items",
+          "text": "Let me circle back with you by Friday. Thanks.",
+          "speaker": "SPEAKER_02",
+          "start": 47.9,
+          "end": 60.5,
+          "owner": "unspecified",
+          "deadline": "unspecified"
+        }
+      ]
+    }
+  ],
+  "trends": {
+    "overall": "stable",
+    "action_items": "stable",
+    "clarity": "stable",
+    "tension": "stable",
+    "compliance": "stable"
+  },
+  "deal_velocity": {
+    "velocity": "Low",
+    "score": 1.0,
+    "metrics": {
+      "commitment_rate": 1.0,
+      "clarity_slope": -0.8,
+      "tension_variance": 0.0
+    }
+  },
+  "recurring_clusters": [
+    {
+      "type": "clarity_issues",
+      "pattern": "Also, what about the pricing model? I'm not sure about the $99 price point.",
+      "count": 5,
+      "meetings": [
+        "Q4 Planning",
+        "Retro",
+        "Sales Call",
+        "Team Standup",
+        "Client Review"
+      ],
+      "variations": [
+        "Also, what about the pricing model? I'm not sure about the $99 price point."
+      ]
+    },
+    {
+      "type": "tension_signals",
+      "pattern": "Actually, the engineering team isn't ready yet. Can we push to December? / ",
+      "count": 5,
+      "meetings": [
+        "Q4 Planning",
+        "Retro",
+        "Sales Call",
+        "Team Standup",
+        "Client Review"
+      ],
+      "variations": [
+        "Actually, the engineering team isn't ready yet. Can we push to December? / "
+      ]
+    },
+    {
+      "type": "compliance_risks",
+      "pattern": "We'll promise to ship mobile apps in Q1 as well.",
+      "count": 5,
+      "meetings": [
+        "Q4 Planning",
+        "Retro",
+        "Sales Call",
+        "Team Standup",
+        "Client Review"
+      ],
+      "variations": [
+        "We'll promise to ship mobile apps in Q1 as well."
+      ]
+    },
+    {
+      "type": "clarity_issues",
+      "pattern": "I think we should launch in November.",
+      "count": 4,
+      "meetings": [
+        "Q4 Planning",
+        "Sales Call",
+        "Team Standup",
+        "Client Review"
+      ],
+      "variations": [
+        "I think we should launch in November."
+      ]
+    },
+    {
+      "type": "action_items",
+      "pattern": "Let me circle back with you by Friday. Thanks.",
+      "count": 4,
+      "meetings": [
+        "Q4 Planning",
+        "Sales Call",
+        "Team Standup",
+        "Client Review"
+      ],
+      "variations": [
+        "Let me circle back with you by Friday. Thanks."
+      ]
+    }
+  ],
+  "action_item_tracking": {
+    "total": 5,
+    "resolved": 2,
+    "unresolved": [
+      {
+        "text": "Let me circle back with you by Friday. Thanks.",
+        "from": "Q4 Planning",
+        "date": "2026-09-26"
+      },
+      {
+        "text": "Let me circle back with you by Friday. Thanks.",
+        "from": "Sales Call",
+        "date": "2026-09-28"
+      },
+      {
+        "text": "Let me circle back with you by Friday. Thanks.",
+        "from": "Team Standup",
+        "date": "2026-09-29"
+      }
+    ],
+    "completion_rate": 40.0
+  },
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "Recurring Issue",
+      "issue": "Recurring issue: Also, what about the pricing model? I'm not sure about the $",
+      "action": "Address this systemic issue in next team meeting. Create a specific action plan.",
+      "evidence": "Found in 5 meetings: Q4 Planning, Retro, Sales Call, Team Standup, Client Review",
+      "expected_impact": "Eliminate this recurring issue within 1 month"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Follow-through",
+      "issue": "Action item completion rate is 40.0%",
+      "action": "Implement follow-up system. Review unresolved action items weekly.",
+      "evidence": "[{'text': 'Let me circle back with you by Friday. Thanks.', 'from': 'Q4 Planning', 'date': '2026-09-26'}, {'text': 'Let me circle back with you by Friday. Thanks.', 'from': 'Sales Call', 'date': '2026-09-28'}, {'text': 'Let me circle back with you by Friday. Thanks.', 'from': 'Team Standup', 'date': '2026-09-29'}] unresolved action items",
+      "expected_impact": "Improve completion rate to 80% within 1 month"
+    },
+    {
+      "priority": "MEDIUM",
+      "category": "Deal Velocity",
+      "issue": "Deal velocity is low",
+      "action": "Review commitment patterns. Focus on clarity and action item capture.",
+      "evidence": "Velocity score: 1.0",
+      "expected_impact": "Improve deal velocity by 20% within 1 month"
+    }
+  ]
+}
