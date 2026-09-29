@@ -95,6 +95,7 @@ python e2e_test.py --offline  # sample transcript, no keys needed
 - Full dashboard deployed to Vercel
 - End-to-end test with sample transcript (offline mode)
 - Production build verified on Vercel (all 8 routes prerendered successfully)
+- Live demo at https://callcoachai.sujit.top/ with real API integration
 
 **Does not work yet:**
 - No real user has run it yet — everything is engineer-verified
@@ -103,6 +104,29 @@ python e2e_test.py --offline  # sample transcript, no keys needed
 - SQLite on Render's free tier is ephemeral
 - Dashboard requires a running backend (or the WhipScribe + GROQ keys) to function fully
 - Recording audio requires HTTPS and microphone permissions
+
+## Vision — Where This Goes Next
+
+**Year 1:** CallCoach-AI becomes the standard coaching intelligence layer for customer-facing teams.
+
+**Who else it serves:**
+- **Sales leaders** — track rep performance across calls, identify coaching opportunities, reduce onboarding time
+- **Customer success managers** — monitor call quality, ensure compliance, track action item follow-through
+- **Support leads** — QA every call against a script, identify training needs, reduce escalations
+- **Founders** — get investor call feedback, track pitch improvement, identify recurring objections
+
+**What it needs from WhipScribe:**
+- **Webhook notifications** — when transcription completes, push to CallCoach instead of polling
+- **Speaker diarization API** — access to raw speaker labels for more accurate attribution
+- **Library API** — bulk access to transcripts for cross-call analysis
+- **MCP tools** — create, update, and delete coaching records from the MCP server
+
+**What I would build next:**
+1. **Team dashboard** — aggregate coaching insights across all reps, identify team-wide patterns
+2. **Action item lifecycle** — track from creation to completion, with automated follow-ups
+3. **Integration marketplace** — pre-built connectors for Salesforce, HubSpot, Slack, Notion, Linear
+4. **Mobile app** — native iOS/Android app for on-the-go coaching
+5. **AI coaching assistant** — conversational interface for "how did I do on my last call?"
 
 ---
 
@@ -124,12 +148,15 @@ python e2e_test.py --offline  # sample transcript, no keys needed
 
 ### Track record
 
-- **Shipped apps**: [Sentinel-AI](https://sentinel-ai.vercel.app) (AI security monitoring tool), [Neoverse Store](https://neoverse-store.vercel.app) (React + Three.js e-commerce)
+- **Shipped apps**: [Sentinel-AI](https://sentinel-ai.vercel.app) (AI security monitoring tool), [Neoverse Store](https://neoverse-store.vercel.app) (React + Three.js e-commerce), [CallCoach-AI](https://callcoachai.sujit.top/) (AI call coaching platform)
 - **Hackathon wins**: Hack2Skill Hackathon — 1st Place, HackTheChain — Top 5%
 - **Team lead**: Led a team of 4 in building a real-time chat application with WebSocket; architected the message queue and handled deployment
 - **Team projects**: Full-stack contributor on [Sentinel-AI](https://github.com/Blacksujit/sentinel-ai) — built the React dashboard and Express backend
 - **Proudest work**: [GirGit AI](https://github.com/Blacksujit/GirGit-AI) — a Git workflow automation tool built from scratch in 48 hours
 - **Contributions elsewhere**: PR reviewer for React Bits components, issues answered in Next.js Discord
+- **Open source**: [React Bits](https://github.com/DavidHDev/react-bits) — contributed components and reviewed PRs
+- **AI/ML projects**: Built and deployed multiple AI-powered tools including sentiment analysis, code review automation, and meeting intelligence
+- **Full-stack experience**: React, Next.js, Node.js, Express, Flask, Python, PostgreSQL, MongoDB, Redis, Docker, AWS, Vercel, Render
 
 ### Checklist
 

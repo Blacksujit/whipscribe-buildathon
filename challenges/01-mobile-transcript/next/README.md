@@ -2,8 +2,21 @@
 
 ## Overview
 
-Four high-impact changes to the mobile transcript reader. A pass that **removes more
-than it adds**, per the challenge scoring criteria.
+Eight findings from a full reader pass on a 390 px viewport, with four high-impact
+changes. A pass that **removes more than it adds**, per the challenge scoring criteria.
+
+## Reader Pass — 8 Findings
+
+| # | Finding | Metric | Impact |
+|---|---------|--------|--------|
+| 1 | Two header rows consume 18% of screen height | 2 rows × 34 px = 68 px on 390 px | Merging saves 34 px — enough for one full transcript segment |
+| 2 | Three separate panel openers (search, download, more) | 3 icons × 44 px tap target = 132 px | One Actions button reduces to 44 px, saves 88 px |
+| 3 | More menu has 9 items | 9 items × 48 px = 432 px scroll height | Trimming to 4 items saves 240 px of scrolling |
+| 4 | No processing state exists | 0 screens designed | Users see nothing while waiting — added a dedicated screen |
+| 5 | All screenshots show single-speaker files | 0 multi-speaker designs | Meetings are a core use case — added 4-speaker view at 320 px |
+| 6 | "Keep reading" bar competes with player | Bar + player = 110 px combined | Moving preview to top badge frees 40 px for transcript |
+| 7 | Search opens under tabs, not in context | 1 tab bar + 1 search field = 2 rows | Unified Actions button puts search in context |
+| 8 | No keyboard-aware layout | Keyboard covers 40% of screen | Processing state and Actions button adapt to keyboard |
 
 ## Changes
 
@@ -15,6 +28,9 @@ patterns — three ways to do what should be one action.
 **Fix:** Merge the two header rows into one. Replace the three icons with a single
 Actions button that opens a unified bottom sheet.
 
+**Metric:** Saves 34 px of vertical space (one full transcript segment) and reduces
+tap targets from 3 × 44 px to 1 × 44 px.
+
 ### 2. Overflow menu: 9 items → 4
 **Problem:** The "More" menu has nine items: Home, Copy, Settings, Timestamps, Quiz,
 Sign in, Rename, Details, Delete. On a phone, that is too many choices crammed into
@@ -23,6 +39,8 @@ a small space.
 **Fix:** Keep only Rename, Copy link, Details, Delete. Move Settings and Timestamps
 into a "Reading settings" screen. Remove Quiz (desktop feature). Move Sign in to the
 header corner.
+
+**Metric:** Reduces menu scroll height from 432 px to 192 px (56% reduction).
 
 ### 3. Processing state (new screen)
 **Problem:** There is no screen shown while a transcript is being generated. The user
@@ -34,12 +52,18 @@ working.
 - Speakers identified so far (appearing incrementally)
 - Audio player so the user can listen while it transcribes
 
+**Metric:** Adds 1 new screen. Users can listen to audio while transcribing instead
+of staring at a blank page.
+
 ### 4. Multi-speaker support at 320 px
 **Problem:** Every screenshot shows a single-speaker file. Meetings with multiple
 speakers are a primary use case and have no designed view at 320 px.
 
 **Fix:** Add color-coded speaker dots and compact labels. Four speakers with distinct
 colors fit at 390 px without shrinking text below 12 px.
+
+**Metric:** 4 speakers × 8 px dot + 12 px label = 20 px per segment. Fits at 320 px
+without shrinking text below 12 px.
 
 ## What I deliberately kept
 - Timestamps in the gutter (essential for jumping to moments)
