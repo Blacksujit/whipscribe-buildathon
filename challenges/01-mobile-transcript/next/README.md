@@ -7,16 +7,57 @@ changes. A pass that **removes more than it adds**, per the challenge scoring cr
 
 ## Reader Pass — 8 Findings
 
-| # | Finding | Metric | Impact |
-|---|---------|--------|--------|
-| 1 | Two header rows consume 18% of screen height | 2 rows × 34 px = 68 px on 390 px | Merging saves 34 px — enough for one full transcript segment |
-| 2 | Three separate panel openers (search, download, more) | 3 icons × 44 px tap target = 132 px | One Actions button reduces to 44 px, saves 88 px |
-| 3 | More menu has 9 items | 9 items × 48 px = 432 px scroll height | Trimming to 4 items saves 240 px of scrolling |
-| 4 | No processing state exists | 0 screens designed | Users see nothing while waiting — added a dedicated screen |
-| 5 | All screenshots show single-speaker files | 0 multi-speaker designs | Meetings are a core use case — added 4-speaker view at 320 px |
-| 6 | "Keep reading" bar competes with player | Bar + player = 110 px combined | Moving preview to top badge frees 40 px for transcript |
-| 7 | Search opens under tabs, not in context | 1 tab bar + 1 search field = 2 rows | Unified Actions button puts search in context |
-| 8 | No keyboard-aware layout | Keyboard covers 40% of screen | Processing state and Actions button adapt to keyboard |
+| # | Finding | Metric | Impact | Steps to Reproduce |
+|---|---------|--------|--------|-------------------|
+| 1 | Two header rows consume 18% of screen height | 2 rows × 34 px = 68 px on 390 px | Merging saves 34 px — enough for one full transcript segment | Open any transcript on 390px viewport → measure header height |
+| 2 | Three separate panel openers (search, download, more) | 3 icons × 44 px tap target = 132 px | One Actions button reduces to 44 px, saves 88 px | Open transcript → count icons in header |
+| 3 | More menu has 9 items | 9 items × 48 px = 432 px scroll height | Trimming to 4 items saves 240 px of scrolling | Open transcript → tap More → count items |
+| 4 | No processing state exists | 0 screens designed | Users see nothing while waiting — added a dedicated screen | Upload a file → observe blank screen while processing |
+| 5 | All screenshots show single-speaker files | 0 multi-speaker designs | Meetings are a core use case — added 4-speaker view at 320 px | Open any meeting transcript → observe single-speaker layout |
+| 6 | "Keep reading" bar competes with player | Bar + player = 110 px combined | Moving preview to top badge frees 40 px for transcript | Open free preview → measure bottom bar + player height |
+| 7 | Search opens under tabs, not in context | 1 tab bar + 1 search field = 2 rows | Unified Actions button puts search in context | Open transcript → tap search → observe panel position |
+| 8 | No keyboard-aware layout | Keyboard covers 40% of screen | Processing state and Actions button adapt to keyboard | Open search → type → observe keyboard covering content |
+
+## Reader Pass — Screen by Screen
+
+| Screen | Current State | Proposed State | Change |
+|--------|---------------|----------------|--------|
+| 1. Header | Two rows (title + keep reading) | One row (title + Actions button) | Merge rows, replace 3 icons with 1 |
+| 2. Transcript | Single-speaker only | Multi-speaker with color dots | Add speaker labels |
+| 3. Search | Opens under tabs | Opens in context from Actions | Unify panel openers |
+| 4. More menu | 9 items | 4 items | Remove 5 items |
+| 5. Processing | Blank screen | Progress + speakers + audio | Add new screen |
+| 6. Player | Bottom bar + player = 110 px | Player only = 70 px | Move preview to top badge |
+| 7. Keyboard | Covers 40% of screen | Adapts to keyboard | Add keyboard-aware layout |
+| 8. Text selection | Not designed | Out of scope | Flagged as follow-up |
+
+## Test Assertions
+
+```javascript
+// 1. Header height
+assert(headerHeight <= 34, 'Header should be one row');
+
+// 2. Panel openers
+assert(panelOpeners === 1, 'Should have one Actions button');
+
+// 3. More menu items
+assert(menuItems <= 4, 'Menu should have 4 or fewer items');
+
+// 4. Processing state
+assert(processingScreen.exists, 'Processing screen should exist');
+
+// 5. Multi-speaker
+assert(speakerDots >= 4, 'Should support 4+ speakers at 320px');
+
+// 6. Bottom bar
+assert(bottomBarHeight <= 70, 'Bottom bar should be 70px or less');
+
+// 7. Search context
+assert(searchInContext, 'Search should open in context');
+
+// 8. Keyboard aware
+assert(keyboardAdapts, 'Layout should adapt to keyboard');
+```
 
 ## Changes
 
