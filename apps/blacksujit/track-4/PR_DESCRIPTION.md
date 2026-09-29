@@ -12,37 +12,34 @@ Track 4: **This PR** — CallCoach-AI x WhipScribe workflow
 
 ## What this does
 
-**CallCoach-AI** is a Track 4 entry for the WhipScribe Buildathon. It turns every founder-investor call into a scorecard: upload a recording (or paste a link, or record in-browser), WhipScribe transcribes it with speaker labels and timestamps, and four specialized AI agents score it on Compliance, Tension, Clarity, and Action Items. Every flagged quote links to the exact second in the recording.
+CallCoach-AI takes a recording and scores it like a manager would — not just "here's a summary," but *where did the pitch break, what was promised and by whom, and is the team actually improving across calls.*
 
-Across calls: deal velocity trends, momentum direction, recurring issue clusters, action-item lifecycle, speaker-level risk patterns, and coaching recommendations — all evidence-backed with timestamp links.
+Upload a file, paste a link, or record in the browser. WhipScribe transcribes it. Four agents score it (compliance, tension, clarity, action items). Every flagged quote links to the exact second. Over multiple calls, it shows whether quality is going up or down and what to fix next.
 
-### Key features shipped in this PR
+### What's in this PR
 
-1. **Dashboard** (Next.js 16, webpack) with 3-tab upload area: File upload (drag/drop, mp3/wav/m4a/mp4/mov/webm, up to 5 GB), Paste link (YouTube, TikTok, Vimeo, Google Drive, Dropbox), and Record audio (browser-based, webm, 12-hour max)
+1. **Dashboard** — upload area with 3 tabs: file (drag/drop, mp3/wav/m4a/mp4/mov/webm, up to 5 GB), paste link (YouTube, TikTok, Vimeo, Drive, Dropbox), record audio (browser, webm, 12-hour cap). 3-tab upload area with file drag/drop, paste link, and browser recording
 2. **Processing pipeline** — visual stage indicators (Uploading → Transcribing → Scoring → Report) with live progress
-3. **Per-call report** — overall score, four category scores with evidence dossier, every flagged quote with speaker + timestamp + 30-second context, primary risk, and a "Listen to this moment" link
-4. **Trends page** — deal velocity over time, momentum direction, category score breakdown across all calls
-5. **Coach page** — prescriptive recommendations tied to exact quotes and timestamps, recurring issue clusters
-6. **Speakers page** — speaker-level risk scoring, attribution of issues to specific participants, high-risk alerts
-7. **Connections page** — manage WhipScribe API key, GROQ/LLM provider, Slack webhook, and Notion integration with live validation (test Slack webhook, test Notion database read)
-8. **MCP server** (`src/mcp_server.py`) exposing four tools: `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, `export_meeting_report`
-9. **CLI** (`python -m src.main --file call.mp3`) for the same pipeline without servers
+3. **Per-call report** — overall score, 4 category scores with evidence, every flagged quote with speaker + timestamp + 30-second context, primary risk, "Listen to this moment" link
+4. **Trends** — deal velocity over time, momentum direction, category breakdown across calls
+5. **Coach** — prescriptive recommendations tied to exact quotes and timestamps, recurring issue clusters
+6. **Speakers** — speaker-level risk scoring, attribution of issues to specific participants, high-risk alerts
+7. **Connections** — manage WhipScribe API key, GROQ/LLM provider, Slack webhook, Notion integration with live validation (test Slack webhook, test Notion database read)
+8. **MCP server** (`src/mcp_server.py`) — 4 tools: `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, `export_meeting_report`
+9. **CLI** (`python -m src.main --file call.mp3`) — same pipeline without servers
 
 ### Architecture decisions
 
-- **Frontend**: Next.js 16 with React Bits animations (BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp), vanilla CSS (Tailwind removed for lighter build footprint), webpack compiler (Turbopack native binaries blocked by Windows App Control — see SWC fix below)
+- **Frontend**: Next.js 16, React Bits animations (BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp), vanilla CSS (Tailwind removed — lighter build, follows WhipScribe design tokens extracted from the live site via Playwright)
 - **Backend**: Flask JSON API on port 5000, SQLite for persistence, gunicorn for production
-- **LLM**: GROQ `openai/gpt-oss-120b` for agent scoring, with rule-based fallback when no LLM key is configured
-- **Deployment**: Frontend deployed to Vercel at https://callcoach-ai-dashboard.vercel.app · Backend configured for Render (`render.yaml`)
+- **LLM**: GROQ `openai/gpt-oss-120b` for scoring, rule-based fallback when no LLM key is configured
+- **Deployment**: Frontend on Vercel, backend configured for Render (`render.yaml`)
 
-### SWC native binary fix
+### What went wrong and how I fixed it
 
-This machine runs Windows with an Application Control policy that blocks `next-swc.win32-x64-msvc.node`. The fix:
-
-1. Added `@next/swc-wasm-nodejs` as a `devDependency` — Next.js falls back to WASM bindings automatically
-2. Scripts use `next dev --webpack` / `next build --webpack` to force the webpack compiler (bypasses Turbopack's stricter SWC requirement)
-3. `cross-env NODE_OPTIONS=--max-old-space-size=2048` to handle WASM's higher memory footprint
-4. `NEXT_TELEMETRY_DISABLED=1` in `.env.local`
+1. **Windows App Control blocks Next's native SWC binary** — `next-swc.win32-x64-msvc.node` gets blocked by the machine's Application Control policy. Fixed by adding `@next/swc-wasm-nodejs` (WASM fallback), using `--webpack` flag to force the webpack compiler, and `cross-env NODE_OPTIONS=--max-old-space-size=2048` for the WASM memory overhead.
+2. **404 on Vercel deploy** — the Vercel project had no root directory set and no framework detected, so it was serving from the repo root where there's no frontend. Fixed by adding the Next.js build config to `vercel.json` and setting the root directory to `frontend/` in the Vercel dashboard.
+3. **Memory allocation** — WASM SWC needs more heap. `NODE_OPTIONS=--max-old-space-size=4096` failed with "paging file is too small" on this machine; `2048` works.
 
 ---
 
@@ -134,9 +131,7 @@ python e2e_test.py --offline  # sample transcript, no keys needed
 - **Proudest work**: [GirGit AI](https://github.com/Blacksujit/GirGit-AI) — a Git workflow automation tool built from scratch in 48 hours
 - **Contributions elsewhere**: PR reviewer for React Bits components, issues answered in Next.js Discord
 
----
-
-## Checklist
+### Checklist
 
 Tick what is true of this PR:
 
@@ -179,7 +174,7 @@ Tick what is true of this PR:
 - [x] I have reviewed others' pull requests or answered their issues, and can point to it (React Bits contributions)
 - [x] I have shipped work alongside a team, and can say what I did and what they did
 - [x] I have won a hackathon (link the entry and the result)
-- [x] I have led a team, and can say what I decided and what I delegated
+- [x] I have led a team, and can say what I decided and what they did
 
 ### Self-drive
 
