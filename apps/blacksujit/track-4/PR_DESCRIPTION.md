@@ -25,6 +25,39 @@ Upload a file, paste a link, or record in the browser. WhipScribe transcribes it
 
 4.) **💻CLI :** Process any recordings , calls , audios , investor meetings , without leaving your terminal , completely offline , supports local , LLM's for API enabled features   via Ollama .
 
+5.) **⚡ Real-Time Coaching (NEW - Key Differentiator):** Live coaching during calls — not just post-call analysis. Analyzes speech as it happens and provides real-time prompts to the rep. Features:
+   - Real-time sentiment analysis
+   - Live compliance risk detection
+   - Instant action item extraction
+   - Live coaching prompts during calls
+   - WebSocket server for real-time communication
+   - Live coaching dashboard with real-time prompts
+
+6.) **🔗 CRM Integration (NEW):** Automatically sync call analysis to CRM systems:
+   - Salesforce integration (create tasks, update opportunities, coaching notes)
+   - HubSpot integration (create tasks, update contacts, engagements)
+   - Automatic task creation from action items
+   - Coaching notes synced to contact records
+
+7.) **📧 Automated Follow-Up Emails (NEW):** Generate and send follow-up emails based on call analysis:
+   - Automatic email generation from action items
+   - Compliance risk summaries
+   - Scheduled follow-up emails
+   - Email tracking and analytics
+
+8.) **📊 Team Performance Benchmarking (NEW):** Compare reps against each other:
+   - Team-wide score aggregation
+   - Rep rankings and comparisons
+   - Top performer identification
+   - Coaching needs assessment
+   - Team trend analysis
+
+9.) **🎯 Custom Scoring Rubrics (NEW):** Let teams define their own scoring criteria:
+   - Custom category weights
+   - Multiple rubric support (Standard, Sales, Support, Compliance Heavy)
+   - Rubric validation and persistence
+   - Weighted score calculation
+
 ### Architecture decisions
 
 <img width="1686" height="1615" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/8025da36-3afc-4b67-b814-fb7e81c7a7c0" />
