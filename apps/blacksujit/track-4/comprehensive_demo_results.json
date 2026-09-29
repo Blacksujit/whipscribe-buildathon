@@ -1,0 +1,49 @@
+{
+  "realtime_coaching": {
+    "status": true,
+    "segments_analyzed": 5,
+    "coaching_prompts": 6,
+    "action_items": 3,
+    "compliance_risks": 2
+  },
+  "post_call_analysis": {
+    "status": true,
+    "overall_score": 0,
+    "categories": [],
+    "evidence_count": 0
+  },
+  "cross_call_intelligence": {
+    "status": true,
+    "meetings_analyzed": 5,
+    "trends": {
+      "overall": "stable",
+      "action_items": "stable",
+      "clarity": "stable",
+      "tension": "stable",
+      "compliance": "stable"
+    },
+    "recurring_clusters": 5,
+    "action_item_completion": 40.0
+  },
+  "crm_integration": {
+    "status": true,
+    "tasks_created": 0,
+    "notes_created": 1
+  },
+  "followup_emails": {
+    "status": true,
+    "email_generated": true,
+    "action_items_included": 0
+  },
+  "team_benchmarking": {
+    "status": true,
+    "team_size": 4,
+    "top_performers": 3,
+    "needs_coaching": 3
+  },
+  "custom_rubrics": {
+    "status": true,
+    "rubrics_available": 5,
+    "custom_rubric_created": true
+  }
+}
