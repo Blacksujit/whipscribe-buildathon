@@ -175,6 +175,13 @@ export default function Home() {
     <main className="site-shell">
       <Navbar />
 
+      {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+        <div className="status-banner status-banner-info" style={{ margin: 0, borderRadius: 0 }}>
+          <strong>Demo mode:</strong> Showing sample scoring data. Connect your WhipScribe API key at
+          <a href="/connections" style={{ marginLeft: 8 }}>Connections</a> to score real calls.
+        </div>
+      )}
+
       <section className="d-hero-v2">
         <div className="d-hero-v2-inner">
           <div className="d-hero-v2-copy">
