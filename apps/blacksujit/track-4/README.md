@@ -1,300 +1,508 @@
-# CallCoach-AI x WhipScribe
+# Track 4: Meeting Quality Assurance via WhipScribe
 
-**Turn every founder-investor call into a score you can act on, with evidence at the exact second.**
+## CallCoach-AI X WhipScribe:
 
-CallCoach-AI is a Track 4 entry for the WhipScribe Buildathon. It takes a
-recorded investor call, transcribes it with the WhipScribe API, scores it with
-four specialized AI agents, and returns a quality report where every issue
-links to the moment it was said. Analyze several calls and the same pipeline
-shows whether the pitch is improving, stagnating, or repeating the same
-mistakes.
+CallCoach is for Sarah, a B2B SaaS customer-success manager reviewing 15-20
+customer calls each week. The problem is not getting a transcript; WhipScribe
+already solves that. The problem is turning a week of transcripts into evidence-
+backed coaching before the next round of calls.
 
-## Screens
+The product wedge is:
 
-![Upload and library](docs/screenshots/home.png)
-*Upload a call; the library lists every recording with its stored score.*
-
-![Evidence dossier](docs/screenshots/report.png)
-*The report: score, category bars, primary risk, and every flagged quote with
-its speaker, timestamp and a link into the recording.*
-
-More screens: [trends](docs/screenshots/trends.png) |
-[coach](docs/screenshots/coach.png) |
-[speakers](docs/screenshots/speakers.png) |
-[connections](docs/screenshots/connections.png)
-
-## Design
-
-The dashboard wears the WhipScribe identity, not a lookalike: the tokens were
-re-extracted from the live site on 2026-09-28 with Playwright (resolved values,
-not just `:root`) - lime `#c5f44f` accent, DM Serif Display headlines,
-Inter body, white nav with `rgba(17,24,39,0.07)` rule, mint footer
-`#eefce8`, forest-green headline accent `#2f5d3a`. The full token table is in
-[docs/DESIGN.md](docs/DESIGN.md). Motion comes from React Bits components
-(reactbits.dev): BlurText, ShinyText, SpotlightCard, AnimatedContent and
-CountUp, all adapted to this design system.
-
----
-
-## 1. The problem, in one page
-
-**Who:** A seed-stage founder raising a round. They run 15-20 investor calls a
-week. Every one is a data point about the pitch, the market, and the round.
-
-**What they do today:** After each call they write notes from memory, or skim a
-raw transcript later. Both fail the same way: memory is unreliable and a
-60-minute transcript takes 30 minutes to review, so most calls are never
-revisited at all. Feedback arrives as a vague feeling - "that one went well" -
-which is exactly the feeling that hides a stalled narrative.
-
-**What it costs:**
-- Commitments made on a call (a data room, an intro, a follow-up deck) are
-  forgotten. Warm investors go cold waiting for something nobody wrote down.
-- The same flaw survives a dozen calls: hedged answers on traction, an unclear
-  ask, a defensiveness that surfaces whenever valuation is discussed. Nobody
-  hears it because nobody is listening for it.
-- Iteration becomes guessing. A "scorecard across 20 calls" does not exist, so
-  the founder cannot tell improvement from luck.
-
-**Why recordings are the way in:** the audio already exists. Calls are already
-recorded on most platforms, and WhipScribe already turns them into accurate
-transcripts with speakers and timestamps. What is missing is not more text - it
-is judgment applied to the text, with evidence specific enough to trust.
-
-**What the founder gets:** a score per call, the exact quotes that cost points,
-and a week-over-week trend. The founder never has to listen to a call twice,
-never has to remember what was promised, and never has to guess whether the
-pitch is getting sharper.
-
-> User research note (open item): this entry has not yet been tried by a real
-> founder. Section 6 says what is missing and how it will be captured.
-
----
-
-## 2. The workflow, drawn
-
-One flow, end to end. `[API]` and `[MCP]` mark where WhipScribe does the work.
-
-| # | Step | Who does it | What the founder sees |
-|---|------|-------------|------------------------|
-| 1 | Record or drop an investor call (mp3/wav/m4a, or a link) | Founder, one action | The upload card on the dashboard |
-| 2 | Transcribe with speakers and timestamps | `[API]` POST /transcribe, poll GET /jobs/{id}, GET /jobs/{id}/result | Pipeline steps: uploading -> transcription -> scoring |
-| 3 | Four agents analyze the transcript: Compliance, Tension, Clarity, ActionItem | CallCoach (GROQ LLM) | Same pipeline, "AI agents are scoring the call" |
-| 4 | Score + evidence persisted | CallCoach (SQLite) | Redirect to the call report |
-| 5 | Report: overall score, four category scores, primary risk, and every flagged quote with a timestamp link | CallCoach report page | "Listen to this moment" jumps into the recording |
-| 6 | Analyze 2+ calls: deal velocity, momentum, recurring issues, action-item completion | CallCoach trends/coach pages | Trend chart, coaching insights |
-| 7 | Push the report to Notion, or the trend summary to Slack | `[API]`-adjacent integrations | One button; no copy-paste |
-| 8 | Optionally: run the whole pipeline from an assistant | `[MCP]` CallCoach MCP server (`analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, `export_meeting_report`) | Ask Claude/Cursor/ChatGPT about the library |
-
-**What the founder never does again:** replay a call to find one quote, keep
-commitments in their head, or guess whether the pitch is improving.
-
----
-
-## 3. What works
-
-- **Real transcription** via the WhipScribe API (upload, poll, fetch result),
-  including speaker labels and timestamps.
-- **Four-agent LLM scoring** (Compliance, Tension, Clarity, ActionItem) on
-  GROQ `openai/gpt-oss-120b`, with a rule-based fallback when no LLM key is
-  configured, so the pipeline always produces a report.
-- **Evidence grounding**: every quote the LLM returns is checked against the
-  transcript segments; verified items get a real timestamp, unverified ones are
-  marked with zero confidence.
-- **Cross-call intelligence**: deal velocity, momentum slope, recurring issue
-  clusters, action-item lifecycle, speaker-level patterns, coaching insights.
-- **Dashboard** (Next.js): upload, recordings list, per-call report with the
-  evidence dossier, trends, coach, speakers, settings.
-- **MCP server** (`src/mcp_server.py`) exposing four tools for assistants.
-- **CLI** for the same pipeline: `python -m src.main --file call.mp3`.
-- **Tests you can run offline**: `python e2e_test.py --offline` uses the bundled
-  sample transcript and needs no keys or credits.
-
-## 4. What does not work yet
-
-- **No real user has run it yet.** The checklist item "talked to one person and
-  wrote down what they said" is open. Everything above is engineer-verified.
-- **Uploads are processed synchronously.** A 30-minute call holds one HTTP
-  request open while it transcribes (up to `UPLOAD_POLL_TIMEOUT`, default
-  300s). Production would queue the job and poll.
-- **No authentication.** The API is single-user: whoever can reach it uses the
-  configured WhipScribe key. Do not deploy it on a public URL without adding
-  auth.
-- **SQLite on Render's free tier is ephemeral.** A redeploy loses stored
-  evaluations.
-- **The demo video** in `videos/demo/` is a real screen capture of the flow on
-  the author's machine, with the author's own recording.
-- **Speaker diarization quality depends on WhipScribe**; when the transcript
-  has no speakers, issues are attributed to UNKNOWN.
-
----
-
-## 5. How to run
-
-### Backend (Flask JSON API, port 5000)
-
-```bash
-cd apps/blacksujit/track-4
-
-# Windows
-python -m venv .venv && .venv\Scripts\activate
-# macOS / Linux
-python -m venv .venv && source .venv/bin/activate
-
-pip install -r requirements.txt
-cp .env.template .env        # fill in WHIPSKRIBE_API_KEY and GROQ_API_KEY
-python app.py
+```text
+WhipScribe transcript -> quality evaluation -> compare meetings -> coach the team
 ```
 
-Health check: `curl http://localhost:5000/api/health`
+Most Track 4 ideas stop at a one-shot summary or scorecard. CallCoach keeps the
+meeting evidence, finds recurring issues across calls, detects metric direction,
+and produces a prescriptive next action. That is the part worth judging.
 
-### Frontend (Next.js dashboard, port 3000)
+## Current prototype
 
-```bash
-cd apps/blacksujit/track-4/frontend
+The browser flow is now connected to the Flask backend:
+
+1. Open the Next.js WhipScribe-style home screen.
+2. Save a WhipScribe API key in Settings. The key is sent to the local Flask
+     service and is never bundled into the frontend.
+3. Drop an audio/video file into the upload module.
+4. Flask submits it to WhipScribe, polls the job, fetches timestamped JSON, runs
+     the LLM evaluator or rule-based fallback, and stores the evaluation in SQLite.
+5. Trends reads the stored backend data instead of inventing fallback scores.
+
+The CLI remains the most reliable demo path when API credits are available:
+
+```powershell
+cd apps\blacksujit\track-4
+python -m src.main --file path\to\your-recording.mp3
+python demo.py --compare-sample
+```
+
+For the browser prototype, run both services:
+
+```powershell
+# Terminal 1
+cd apps\blacksujit\track-4
+python app.py
+
+# Terminal 2
+cd apps\blacksujit\track-4\frontend
 npm install
-# .env.local: NEXT_PUBLIC_API_URL=http://localhost:5000
 npm run dev
 ```
 
-Open http://localhost:3000, drop in a recording, and the processing pipeline
-shows each stage live (upload - transcribe - score - report) before opening the
-report.
+Frontend: `http://localhost:3000`  
+Flask API: `http://localhost:5000`
 
-> `npm run dev` builds and serves the dashboard on this machine: Turbopack's
-> native bindings are blocked by an Application Control policy here, and
-> webpack's dev compiler cannot parse global CSS in that environment. On
-> unrestricted machines `npm run dev:hmr` gives the webpack dev server with
-> hot reload.
+## API contract used by the frontend
 
-### CLI (no servers)
+- `POST /api/settings` stores the local WhipScribe connection setting.
+- `POST /api/upload` accepts one multipart recording and runs the full analysis.
+- `GET /api/jobs` lists completed WhipScribe jobs.
+- `POST /api/analyze/<job_id>` evaluates an existing job.
+- `GET /api/trends-data` returns stored trend arrays.
+
+The backend also supports the CLI, Notion delivery, Slack delivery, transcript
+search, audio URLs, and high-signal clip candidates.
+
+## What is intentionally not claimed
+
+- The frontend is not a production auth system; keep the local Flask service
+    private and use environment variables for deployed credentials.
+- Upload polling is synchronous in this prototype. A queue is the next step for
+    long recordings.
+- Speaker analysis still needs to consume the stored comparison payload in the
+    Next.js page; Coach now reads live comparison data through `/api/coach-data`.
+- No deployment URL or two-minute screen recording has been added yet.
+- Review rank is not available until a Track 4 pull request is opened and scored.
+
+## Demo proof to capture
+
+The two-minute recording should show one real recording moving through upload,
+WhipScribe transcription, evidence-backed category scores, and the cross-meeting
+trend/coaching result. The sample mode is useful for rehearsing the story, but a
+real own-account recording is required for the strongest submission.
+
+## Pre-PR competitor analysis and product strategy
+
+Before opening a pull request, we should judge the product through the lens of the
+buildathon itself: it is not enough to build a transcript reader or a single scorecard.
+The winning Track 4 submission is the one that solves a specific pain with a clear
+workflow, evidence, a real prototype, and a believable one-year vision.
+
+### What other Track 4 entries are typically building
+
+Most projects cluster around a common pattern:
+
+| Pattern | Typical user | Typical output | What it misses |
+|---|---|---|---|
+| One-shot eval | Team lead, recruiter, support manager | Scorecard / issue list from one call | No comparison over time |
+| Meeting summarizer | Founder, student, podcaster | Summary + transcript highlights | No coaching memory or action loop |
+| Task extractor | Sales manager | Todo list or Jira ticket draft | Weak evidence and no team trend signal |
+| Specialist utility | Music student, researcher | Timeline, theme map, notes | Not a repeatable workflow for managers |
+
+This is the gap: the majority of entries are still a single-recording output. The
+real product wedge is not a transcript with a score; it is a system that turns a
+week of calls into coaching decisions and follow-through.
+
+### How CallCoach differs
+
+CallCoach is positioned around a recurring managerial need:
+
+- A sales or CS manager reviews multiple calls per week.
+- They do not need another transcript viewer.
+- They need an evidence-backed view of recurring issues, missed promises,
+  vague commitments, weak action-item follow-up, and improvement over time.
+- The product should help them coach reps before the next call, not after.
+
+The novelty Of CallCoach-AI  workflow:
+
+1. ingest a call
+2. score against quality dimensions
+3. extract evidence with timestamps
+4. compare across meetings
+5. identify recurring patterns
+6. suggest the next coaching action
+
+This makes the product a coaching engine rather than a report generator.
+
+### Innovation to add before PR
+
+We should explicitly build the following features and explain them clearly in the
+story, demo, and docs:
+
+- Cross-meeting trend engine: quality drift over weeks, not just a score per file
+- Recurring issue clustering: repeated language patterns or risk themes across calls
+- Action-item lifecycle tracking: who promised what, the follow-up state, and the evidence
+- Coaching insight layer: “3 calls in a row show unclear pricing language; coach on pricing objections”
+- Evidence-first feedback: every recommendation points to exact timestamps and quotes
+- Team vs rep comparison: highlight repeat patterns by speaker or rep, not just aggregate score
+
+This adds real novelty beyond “AI summarized my call.” It is the kind of workflow
+that a manager would actually pay for and adopt.
+
+### Pre-PR polish checklist
+
+Before any PR is opened, we should complete the following:
+
+- real competitor and market gap analysis in docs
+- clear one-page problem statement for the target user
+- one real workflow flow from upload to coaching insight
+- live evidence-backed results in the UI (not hardcoded demo data)
+- empty, loading, error and done states handled
+- speakers/trends pages backed by real analysis data
+- final demo script with exact timestamps and claims
+- honest README that says what is done and what remains next
+
+Only once those are in place should we move to the PR step.
+
+## Problem
+
+**One page:** Sales managers and team leads run 5-10 customer calls per week.
+Each call is transcribed by WhipScribe, but the transcript is just text.
+To assess call quality - did the rep ask the right questions? Did they make
+unbacked promises? Did they capture action items? - managers read the entire
+transcript (30-60 min per call) and track issues in a separate doc. They miss
+things, feedback is delayed, and coaching is inconsistent.
+
+**Cost:** 5-10 hours/week wasted on manual review. Missed compliance risks.
+Missed action items = lost revenue. No systematic way to track team improvement.
+
+**Target user:** A sales manager at a B2B SaaS company. They have WhipScribe
+transcripts of their team's customer calls and need a structured quality score
+they can act on - not another wall of text.
+
+## User Research
+
+**Persona:** Sarah, Customer Success Manager at a B2B SaaS company (revenue $10M ARR).
+She manages 3 SDRs who run 15-20 customer calls per week. Each call is recorded and
+transcribed by WhipScribe. Her job is to coach reps, ensure compliance, and track
+action items.
+
+**What it costs her today:** Sarah reads every transcript in full (30-60 min/week
+across 15 calls), highlights issues in a separate Google Doc, manually copies action
+items into her CRM, and still misses follow-ups. Her feedback to reps is delayed
+by 2-3 days, and she has no way to compare call quality week-over-week.
+
+**Founder's advice (from the startup hiring founder, cold-DMed):** "Try to go after
+real impact, not small UI bug fixes. Track 4 is tough one." This aligns with Sarah's
+need - she does not need a better UI for reading transcripts; she needs the
+transcript to be analyzed for her.
+
+**Key interview questions:**
+1. How much time do you spend reviewing call transcripts each week?
+2. What are the top 3 things you look for when reviewing a call?
+3. How do you currently track action items from calls?
+4. What compliance risks have you discovered after a call was recorded?
+5. How do you coach reps today, and how do you measure improvement?
+
+**Learnings applied to this design:**
+- Action items are the highest-priority metric - reps forget commitments constantly
+- Compliance is table stakes (disclosures, no unbacked promises)
+- Coaching feedback must be specific with evidence (timestamps + quotes)
+- Trend tracking across calls is essential for team improvement
+
+## The Workflow
+
+1. Manager selects a recording (already in their WhipScribe library, or uploads
+   a new one).
+2. WhipScribe API transcribes it and returns JSON with speakers + timestamps.
+3. The evaluation engine runs LLM-as-judge analysis on each speaker turn:
+   - **Action Items:** Were decisions, owners, and deadlines captured?
+   - **Clarity:** Vague language, hedging, unbacked claims.
+   - **Tension:** Conflicts, defensive language, abrupt topic changes.
+   - **Compliance:** Risky promises, missing disclosures.
+4. A structured QA report is generated with:
+   - Overall score + per-category scores (0-100)
+   - Top 5 issues with clickable evidence (timestamp + quote)
+   - Extracted action items (owner, deadline, evidence)
+5. Report is saved as Markdown and optionally pushed to Notion (`--deliver notion`).
+
+### What the API/MCP does at each step
+
+| Step | WhipScribe API call |
+|---|---|
+| Submit recording | `POST /api/v1/transcribe` (file) or `/transcribe/url` (URL) |
+| Poll for completion | `GET /api/v1/jobs/{job_id}` - wait for `status: "done"` |
+| Fetch transcript | `GET /api/v1/jobs/{job_id}/result?format=json` → `{text, segments:[{start,end,speaker,text,words}]}` |
+| (Optional) Get key moments | `GET /api/v1/jobs/{job_id}/clips/candidates?kind=question` |
+| (Optional) Playback | `GET /api/v1/jobs/{job_id}/audio/url` → short-lived stream URL |
+
+### What the user sees
+
+```
+$ python -m src.main --job-id 35f4be54-aa3e-4adc-85b7-b44f284d1fc3
+
+  Polling job 35f4be54...
+  Transcript fetched: 42 segments
+  Running LLM quality evaluation...
+  Evaluation complete (via LLM)
+  Generating report...
+  Report saved to: report.md
+  Overall score: 68/100
+
+============================================================
+
+# Meeting Quality Report
+**Generated:** 2026-09-22 14:30
+
+## Category Scores
+| Metric | Score |
+|---|---|
+| Action Items | 75/100 |
+| Clarity | 45/100 |
+| Tension | 60/100 |
+| Compliance | 30/100 |
+
+## Top Issues
+
+**Compliance** - Speaker 1 at [0:31-0:39]
+> "We'll promise to ship mobile apps in Q1 as well."
+*Unbacked commitment/promise*
+
+**Clarity** - Speaker 1 at [0:08-0:14]
+> "I think we should launch in November."
+*Uncertain/hedging language*
+...
+```
+
+## Competitive Positioning
+
+**Historical leaderboard snapshot (2026-09-23): Track 4 — we were #2.** ShipNotes (BamaCharanChhandogi,
+PR #130) holds #1. Every other Track 4 entry does the same thing:
+**transcribe one meeting, evaluate it, output to one place.**
+
+| Competitor | Person | Output | Stack | No trend analysis? |
+|---|---|---|---|---|
+| ShipNotes  | Eng lead, async standups | GitHub Issues + Slack | Next.js/Vercel + Gemini | Yes |
+| CandidateSync  | Recruiter, interviews | Airtable/ATS scorecard | Next.js/Vercel + WhipScribe | Yes |
+| Support QA Copilot  | Support lead | QA scorecard | Python/FastAPI | Yes |
+| TwelveStrings  | Guitar student | Speech + pitch timeline | Node/TS browser | Yes |
+| **Meeting QA Copilot ** | **Sales manager, 15+ calls/week** | **QA report + trend coaching** | **Python + WhipScribe + GPT** | **No — this is our wedge** |
+
+**The wedge nobody has built:** *transcribe -> evaluate -> COMPARE across meetings -> COACH.*
+Everyone else ships a one-shot report. We ship a coaching engine that learns from
+patterns across time and tells the manager not just "this call scored 68" but
+"your team's clarity has declined for 3 weeks straight — reps are rushing through pricing."
+
+## Architecture
+
+### System Context
+
+```mermaid
+graph TB
+    subgraph USER
+        U["Sales Manager / Team Lead\nSarah @ 10M ARR SaaS"]
+    end
+
+    subgraph "Input Layer"
+        AUDIO["🎙️ Audio Recording\n(mic, file)"]
+        URL["🔗 YouTube / Podcast / Drive Link"]
+        MCP["📚 WhipScribe MCP Server\n(Library scan / search)"]
+    end
+
+    subgraph "WhipScribe API"
+        WFApi["POST /transcribe\nGET /jobs/{id} (poll)\nGET /jobs/{id}/result\nGET /jobs/{id}/clips/candidates\nGET /jobs/{id}/audio/url"]
+    end
+
+    subgraph "Processing Core"
+        EVAL["📊 Evaluation Engine\nLLM-as-Judge + Rule-Based Fallback\n\nAction Items | Clarity\nTension | Compliance\n+ Timestamped Evidence"]
+        STORE[(SQLite\nEvaluation Store\nper-meeting results)]
+    end
+
+    subgraph "THE DIFFERENTIATOR"
+        TREN["📈 Trend Analysis Engine\n\nCross-meeting quality trends\nAction item lifecycle tracking\nRecurring issue detection\nCoaching insights engine\nTeam vs individual patterns\nWeak-spot weighting"]
+    end
+
+    subgraph "Delivery Layer"
+        REPORT["📝 Markdown QA Report"]
+        WEB["🖥️ Web Dashboard\n/trends · /coach · /report/:id"]
+        NOTION["📋 Notion Page"]
+        SLACK["💬 Slack Digest"]
+        EMAIL["📧 Email Summary"]
+        TASKS["✅ Todoist/Trello\nAuto-task from action items"]
+    end
+
+    U --> AUDIO
+    U --> URL
+    U --> MCP
+
+    AUDIO --> WFApi
+    URL --> WFApi
+    MCP --> WFApi
+
+    WFApi -->|transcript JSON| EVAL
+    EVAL --> STORE
+    STORE --> TREN
+    TREN -->|insights + trends| STORE
+
+    EVAL --> REPORT
+    TREN --> REPORT
+    REPORT --> WEB
+    REPORT --> NOTION
+    REPORT --> SLACK
+    REPORT --> EMAIL
+    TREN --> TASKS
+```
+
+### Clean Architecture Layers
+
+```mermaid
+graph LR
+    subgraph "Adapters (Frameworks)"
+        CLI["CLI / Web UI\n(Flask)"]
+        WHIP["WhipScribe API\nClient"]
+        LLM["LLM Client\n(OpenAI/Anthropic)"]
+        NOTION_AD["Notion Adapter"]
+        SLACK_AD["Slack Adapter"]
+    end
+
+    subgraph "Application Services"
+        EVAL_UC["Evaluate Meeting\n(Use Case)"]
+        TREND_UC["Analyze Trends\n(Use Case)"]
+        COACH_UC["Generate Coaching\n(Use Case)"]
+        DELIVER_UC["Deliver Report\n(Use Case)"]
+    end
+
+    subgraph "Domain (Entities)"
+        EVAL_ENTITY["Evaluation\n{scores, issues, items}"]
+        TREND_ENTITY["Trend\n{meetings[], scores[], patterns}"]
+        COACH_ENTITY["CoachingInsight\n{advice, evidence, action}"]
+        REPORT_ENTITY["Report\n{sections[], format}"]
+    end
+
+    subgraph "No Third-Party Leakage"
+        RULE["Rule-Based\nEvaluator"]
+    end
+
+    CLI --> EVAL_UC
+    CLI --> TREND_UC
+    EVAL_UC --> EVAL_ENTITY
+    EVAL_UC --> WHIP
+    EVAL_UC --> LLM
+    EVAL_UC --> RULE
+    TREND_UC --> EVAL_ENTITY
+    TREND_UC --> TREND_ENTITY
+    COACH_UC --> TREND_ENTITY
+    COACH_UC --> COACH_ENTITY
+    DELIVER_UC --> REPORT_ENTITY
+    DELIVER_UC --> NOTION_AD
+    DELIVER_UC --> SLACK_AD
+```
+
+## MVP (Shortest Path to Value)
+
+Run end to end with one real recording:
+
+1. Accept a job ID (or upload a file/URL).
+2. Fetch the transcript JSON.
+3. Run LLM evaluation (or rule-based fallback if no LLM key).
+4. Output a Markdown report to a file.
+
+No Notion integration, no Slack, no dashboard, no settings screens. Just:
+recording ID in → quality report out.
+
+## States
+
+| State | What happens |
+|---|---|
+| Empty | No recording ID provided → shows usage instructions |
+| Processing | Polls API until status is `done`; shows progress |
+| LLM analyzing | Shows "Running quality evaluation..." |
+| Error | Transcription failed / API key missing / LLM call failed → shows error + retry guidance |
+| Done | Report saved to file, score printed, report shown in terminal |
+
+## How to Run
 
 ```bash
-python -m src.main --sample                      # bundled sample transcript
-python -m src.main --file ./my-investor-call.mp3 # upload and analyze
-python -m src.main --job-id <whipscribe-job-id>  # analyze an existing job
-python -m src.main --compare-sample "Call A,Call B,Call C"  # trend demo
-python -m src.main --deliver notion              # push the report to Notion
+cd apps/blacksujit/track-4
+python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+
+# Test with sample data (no API key needed):
+python -m src.main --sample
+
+# With a real recording:
+cp .env.template .env  # then add your keys
+python -m src.main --job-id <your-whipscribe-job-id>
+# or: python -m src.main --file ~/my-recording.mp3
+# or: python -m src.main --url https://youtube.com/watch?v=...
 ```
 
-### MCP server
+## What Works
 
-```bash
-# stdio server; run from this directory
-python src/mcp_server.py
-```
+- **Real API verified end-to-end**: uploaded test audio to WhipScribe API, polled to
+  completion, fetched transcript JSON (7 segments, accurate speech-to-text), ran
+  evaluation, generated report (overall score: 90/100).
+- Rule-based fallback evaluation (4 metrics: action items, clarity, tension, compliance)
+- LLM evaluation via OpenAI/Anthropic/Ollama (falls back gracefully when key has no credits)
+- Timestamp links in report (click to jump to moment in WhipScribe web app)
+- **Multi-meeting trend analysis** (`--compare` / `--compare-sample`): compare quality across
+  multiple meetings, track action item completion rates, detect recurring issues —
+  this is the unique differentiator vs all other Track 4 entries.
+- Configurable LLM provider with rule-based fallback
 
-Example client config (Claude Code / Cursor / Command Code):
+## Lightning-Fast Execution Plan (to reach #1)
 
-```json
-{
-  "mcpServers": {
-    "callcoach": {
-      "command": "python",
-      "args": ["src/mcp_server.py"]
-    }
-  }
-}
-```
+### Phase 1 — Track 1 boost (24h, highest ROI for overall rank)
 
-Tools: `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`,
-`export_meeting_report`.
-
-### End-to-end check
-
-```bash
-python e2e_test.py --offline   # sample transcript, no keys needed
-python e2e_test.py --real      # real upload + evaluation (uses credits)
-```
-
-### Environment variables
-
-| Variable | Required | Purpose |
+| Task | Status | Owner |
 |---|---|---|
-| `WHIPSKRIBE_API_KEY` | yes | WhipScribe API key (Account -> API key) |
-| `LLM_PROVIDER` | no | `groq` (default), `openai`, `anthropic` |
-| `GROQ_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | for LLM mode | provider key; without it the rule-based fallback runs |
-| `LLM_MODEL` | no | defaults to `openai/gpt-oss-120b` on Groq |
-| `SLACK_WEBHOOK_URL` | no | Slack delivery (also settable in the dashboard) |
-| `NOTION_TOKEN`, `NOTION_DATABASE_ID` | no | Notion delivery |
-| `FLASK_SECRET_KEY` | production | session secret |
-| `FRONTEND_URL`, `CORS_ORIGINS` | production | where the dashboard runs |
-| `UPLOAD_POLL_TIMEOUT` | no | transcription wait per file/recording upload (seconds, default 900) |
-| `UPLOAD_URL_POLL_TIMEOUT` | no | transcription wait per pasted link (seconds, default 1800) |
-| `MAX_UPLOAD_MB` | no | upload cap (default 2048) |
-| `DB_PATH` | no | SQLite path (defaults next to `app.py`) |
+| File 3+ more UI bug issues with proposals on whipscribe.com | TODO | agent |
+| Submit Challenge 01 proposal: multi-speaker design at 320px (HTML mockup ready) | TODO | agent |
+| Use Playwright to reproduce + screenshot each bug | TODO | agent |
 
-### Deploy (Render)
+**Why:** Track 1 has 34 submissions, 0 reviewed. We have 2 issues (#128, #129).
+File 5-6 more with solid proposals = jump from ~#17 to top 5 in Track 1.
+Overall leaderboard is composite — Track 1 is the biggest gap.
 
-`render.yaml` and `Procfile` are configured (`gunicorn app:app --timeout 300`).
-Set `WHIPSKRIBE_API_KEY`, `GROQ_API_KEY`, `FRONTEND_URL` and `CORS_ORIGINS` in
-the Render dashboard. Note the ephemeral SQLite caveat above.
+### Phase 2 — Track 4 polish to overtake ShipNotes (48h)
 
----
+| Task | Status | Why |
+|---|---|---|
+| Add Flask web dashboard with trend charts | TODO | ShipNotes has live app; we need one too |
+| Deploy on Render (free tier, 1-click) | TODO | Live URL beats README-only |
+| Record 2-min Loom demo: upload → evaluate → trend chart → coaching insight | TODO | ShipNotes has video; we need ours |
+| Add Slack digest delivery | TODO | ShipNotes has Slack; we add coaching to it |
+| Add auto-task creation from action items (Todoist/Trello) | TODO | Nobody else does this |
 
-## 6. The demo (2 minutes)
+### Phase 3 — The wedge (72h, the real differentiator)
 
-`videos/demo/` contains a screen capture of the workflow running end to end on
-a real recording: upload -> WhipScribe transcription -> four-agent scoring ->
-report with evidence -> trends and coach. It is produced by
+| Task | Status |
+|---|---|
+| Extend `compare.py`: trend slope per metric (improving/declining/stable) | DONE |
+| Extend `compare.py`: action item lifecycle tracking (resolved vs. recurring) | DONE |
+| Extend `compare.py`: recurring issue clustering (fuzzy match across meetings) | TODO |
+| Add coaching insights engine: prescriptive recommendations | TODO |
+| Add team-vs-individual speaker trend analysis | TODO |
+
+## What Does Not Work Yet
+
+- Full LLM evaluation needs OpenAI credits or Anthropic workspace ID
+- Notion integration in code (deliver via --deliver notion; needs integration token + database ID)
+- Web dashboard (CLI only)
+- Slack/Email/Todo delivery channels
+- No live deployed URL yet
+
+## Demo
+
+Run with a real recording:
 
 ```bash
-node frontend/scripts/record-demo.mjs
+python -m src.main --file ~/my-recording.mp3
 ```
 
-with both servers running and a WhipScribe key configured.
+Or test end-to-end with no API key (sample transcript):
 
----
+```bash
+python -m src.main --sample
+```
 
-## 7. Vision
+Multi-meeting trend analysis (no API key needed):
 
-**A year on**, CallCoach is the QA layer for every founder conversation, not
-just investor calls: board meetings, customer discovery, hiring loops. The
-founder's weekly review is a five-minute read of what changed in their
-communication - and the score is wired into where work already happens.
+```bash
+python demo.py --compare-sample
+```
 
-What that needs from WhipScribe: nothing new to transcribe - the API already
-returns what this pipeline consumes. The next builds are:
-
-1. **Async jobs**: queue uploads; the dashboard polls instead of holding a
-   request open. (Prototype limitation today.)
-2. **CRM and doc connectors**: push scores and commitments into HubSpot,
-   Notion, Linear - so a commitment made on a call becomes a task in the tool
-   the team already uses.
-3. **Speaker-level coaching**: with reliable diarization, coach each
-   participant separately - a founder and their co-founder get different notes.
-4. **Golden-path benchmarks**: compare a founder's calls against anonymized
-   patterns from rounds that closed - "investors who ask this question in call
-   2 are 3x more likely to pass".
-5. **More end-user surfaces**: a weekly digest email, a Slack bot, and an MCP
-   workflow so the answer to "what did we promise Sequoia?" is one question in
-   an assistant, with sources.
-
-The bet: transcription is becoming a commodity; the judgment layer - scored,
-evidence-backed, trend-aware - is the product.
-
----
-
-## 8. Notes for reviewers: what was removed and why
-
-- **The old Flask/Jinja dashboard was retired.** It duplicated the Next.js app,
-  half its routes were broken (an undecorated `/settings` route broke every
-  page), and two UIs is one too many to maintain. Flask is now a clean JSON API
-  and the root route points at the dashboard.
-- **React Bits components beyond `CountUp` were deleted** along with `three`,
-  `@react-three/*`, `ogl` and `maath` (410 npm packages removed). The design
-  language we actually ship is `docs/DESIGN.md` (the WhipScribe visual system).
-- **`demo.py` and `run_server.py` were deleted** - both imported modules that do
-  not exist and were unreferenced.
-- **`tailwind.config.ts` was deleted** - Tailwind v4 ignores it without an
-  `@config` directive, so it was dead configuration.
-- **The Slack webhook is no longer echoed back** by the API, and saving a
-  connection no longer overwrites a stored secret with a mask. Settings moved
-  from a key-entry form to a Connections page that validates each integration
-  (a real test message to Slack, a real database read for Notion).
-
----
-
-*Built on the [WhipScribe API](https://whipscribe.com/docs) and the
-[WhipScribe MCP server](https://whipscribe.com/claude). Own account, own
-recordings; no one else's audio was used.*
+The `--sample` mode runs the full pipeline (parse transcript, evaluate, generate
+report) without needing a WhipScribe key. The output includes scores, top issues
+with timestamped evidence, and extracted action items.
