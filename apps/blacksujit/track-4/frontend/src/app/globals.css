@@ -1808,6 +1808,28 @@ p, .body {
   border: 0;
 }
 
+/* === Demo mode banner === */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 24px;
+  max-width: 1080px;
+  padding: 10px 16px;
+  background: rgba(0, 194, 203, 0.08);
+  border: 1px solid rgba(0, 194, 203, 0.3);
+  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--coach-cyan);
+  font-weight: 500;
+}
+
+.demo-banner__icon {
+  font-size: 15px;
+}
+
 /* === Responsive === */
 @media (max-width: 760px) {
   .hero-grid {
