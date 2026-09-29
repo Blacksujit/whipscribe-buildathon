@@ -67,14 +67,14 @@
       "type": "http",
       "url": "https://www.designmd.com/api/mcp",
       "headers": {
-        "Authorization": "Bearer 2smLerWSwo9bZRqQZsh+zRkL/Voof7lpWtBPlWTRByQ="
+        "Authorization": "Bearer ${DESIGNMD_TOKEN}"
       }
     },
     "originkit": {
       "type": "http",
       "url": "https://mcp.originkit.dev/mcp",
       "headers": {
-        "Authorization": "Bearer cmp_live_p3P2UnnmgwOyhSkGPMUPnC08rp8x9gYQ"
+        "Authorization": "Bearer ${ORIGINKIT_TOKEN}"
       }
     }
   }

@@ -58,7 +58,7 @@ def generate_report(evaluation, transcript, job_id=None):
 
             audio_link = ""
             if job_id:
-                audio_link = f" at [{fmt_time(start)} - {fmt_time(end)}](https://whipscribe.com/transcript/{job_id}?t={int(start)})"
+                audio_link = f" at [{fmt_time(start)} - {fmt_time(end)}](https://whipscribe.com/view?id={job_id}&t={int(start)})"
 
             lines.append(f"**{label}** - {speaker}{audio_link}")
             lines.append(f"> {text}")
@@ -79,7 +79,7 @@ def generate_report(evaluation, transcript, job_id=None):
             deadline = item.get("deadline", "unspecified")
             audio_link = ""
             if job_id:
-                audio_link = f" ([at {fmt_time(start)}](https://whipscribe.com/transcript/{job_id}?t={int(start)}))"
+                audio_link = f" ([at {fmt_time(start)}](https://whipscribe.com/view?id={job_id}&t={int(start)}))"
             lines.append(f"- **Owner:** {owner} **Deadline:** {deadline}{audio_link}")
             lines.append(f"  {speaker}: \"{text}\"")
     else:

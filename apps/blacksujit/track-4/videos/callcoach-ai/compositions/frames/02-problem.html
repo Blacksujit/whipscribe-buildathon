@@ -1,0 +1,103 @@
+<template>
+  <div data-hf-id="hf-jh4b" id="root" data-composition-id="02-problem" data-start="6" data-duration="8" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.05), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .onscreen { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 28px; font-weight: 600; color: var(--hf-ink); text-align: center; opacity: 0; z-index: 3; }
+
+      .transcript-wall { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); width: 1200px; height: 580px; overflow: hidden; z-index: 1; }
+      .transcript-block { position: absolute; font-family: 'Inter', system-ui, sans-serif; font-size: 15px; font-weight: 400; line-height: 1.6; color: rgba(255,255,255,0.22); overflow: hidden; }
+
+      .warning { position: absolute; font-family: 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; z-index: 2; }
+      .warning.x { color: #EF4444; }
+      .warning.tri { color: #F59E1F; }
+
+      .manager { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); z-index: 2; }
+      .manager .head { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.3); margin: 0 auto; }
+      .manager .body { width: 90px; height: 100px; background: rgba(255,255,255,0.12); margin: 0 auto; }
+
+      .clock { position: absolute; bottom: 20%; right: 12%; text-align: center; z-index: 2; }
+      .clock .hours { font-family: 'Inter', system-ui, sans-serif; font-size: 56px; font-weight: 700; color: var(--hf-ink); line-height: 1; }
+      .clock .label { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 500; color: var(--hf-accent); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px; display: block; }
+      .clock .days { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; color: var(--hf-muted); white-space: nowrap; margin-top: 4px; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-uqxm" class="onscreen" id="onscreen">5 hrs/week wasted on manual review</div>
+
+    <div data-hf-id="hf-1s95" class="transcript-wall" id="wall" data-layout-allow-overlap=""></div>
+
+    <div data-hf-id="hf-27nh" class="warning x" id="warn1" style="top: 30%; left: 25%;"><span data-hf-id="hf-o6c3">⚠</span> Unbacked promise</div>
+    <div data-hf-id="hf-5ptf" class="warning x" id="warn2" style="top: 55%; left: 70%;"><span data-hf-id="hf-zi43">⚠</span> Missing deadline</div>
+    <div data-hf-id="hf-va7v" class="warning tri" id="warn3" style="top: 40%; left: 15%;"><span data-hf-id="hf-oxkw">!</span> Vague commitment</div>
+
+    <div data-hf-id="hf-z4l0" class="manager" id="manager"><div data-hf-id="hf-z992" class="head"></div><div data-hf-id="hf-2t3w" class="body"></div></div>
+
+    <div data-hf-id="hf-3z8i" class="clock" id="clock">
+      <div data-hf-id="hf-w471" class="hours" id="hours">0h+</div>
+      <div data-hf-id="hf-ot9l" class="label">wasted per week</div>
+      <div data-hf-id="hf-55ma" class="days" id="days">Mon Tue Wed</div>
+    </div>
+
+    <script>
+      const W=1920,H=1080,TOTAL_DUR=8;
+      const TIMING={textAt:0.3,wallStart:0.8,warnStart:1.8,managerAt:2.8,clockAt:4.0};
+
+      const wall=document.getElementById('wall');
+      const texts=["SPEAKER_01: We'll ship mobile apps in Q1.\nLet me circle back by Friday.\nLaunch in November.","SPEAKER_02: Engineering isn't ready.\nPush to December?\n$99 price point?","SPEAKER_00: Budget constraints noted.\nTimeline concerns.\nStill not sure."];
+      texts.forEach((text,i)=>{
+        const b=document.createElement('div');
+        b.className='transcript-block';
+        b.textContent=text;
+        b.style.left=(20+i*30)+'px';
+        b.style.top=(20+i*120)+'px';
+        b.style.transform='rotate('+(i*3-3)+'deg)';
+        wall.appendChild(b);
+      });
+
+      gsap.set('#onscreen',{opacity:0,y:-20});
+      gsap.set('#warn1,#warn2,#warn3',{opacity:0});
+      gsap.set('#manager',{opacity:0,y:40});
+      gsap.set('#clock',{opacity:0,scale:0});
+      gsap.set('.transcript-block',{opacity:0});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["02-problem"]=tl;
+
+      tl.fromTo('#onscreen',{opacity:0,y:-20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.textAt);
+      tl.fromTo('.transcript-block',{opacity:0,x:-30},{opacity:0.22,x:0,duration:1.2,stagger:0.15,ease:'power3.out'},TIMING.wallStart);
+
+      tl.fromTo(['#warn1','#warn2'],{opacity:0,scale:1.3},{opacity:0.7,scale:1,duration:0.3,ease:'power3.out',stagger:0.15},TIMING.warnStart+0.3);
+      tl.to('#warn1,#warn2',{opacity:0,duration:0.4,ease:'power3.in'},TIMING.warnStart+0.7);
+      tl.fromTo('#warn3',{opacity:0,scale:1.3},{opacity:0.7,scale:1,duration:0.3,ease:'power3.out'},TIMING.warnStart+0.5);
+      tl.to('#warn3',{opacity:0,duration:0.4,ease:'power3.in'},TIMING.warnStart+0.9);
+
+      tl.fromTo('#manager',{opacity:0,y:30},{opacity:0.4,y:0,duration:0.6,ease:'power3.out'},TIMING.managerAt);
+
+      const hoursEl=document.getElementById('hours');
+      const obj={val:0};
+      tl.to(obj,{val:5,duration:0.8,ease:'power3.out',onUpdate:function(){hoursEl.textContent=Math.round(obj.val)+'h+';}},TIMING.clockAt);
+      tl.fromTo('#clock',{opacity:0,scale:0},{opacity:1,scale:1,duration:0.5,ease:'power3.out'},TIMING.clockAt);
+      tl.fromTo('#days',{opacity:0},{opacity:1,duration:0.3,ease:'power3.out'},'<+0.3');
+
+      /* Subtle jitter on transcript wall during hold */
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.managerAt+0.5){
+          document.querySelectorAll('.transcript-block').forEach((b,i)=>{
+            b.style.transform='translate('+Math.sin(tl.time()*2+i)*0.5+'px,'+Math.cos(tl.time()*1.5+i)*0.3+'px) rotate('+(i*3-3)+'deg)';
+          });
+        }
+      }},0);
+    </script>
+  </div>
+</template>

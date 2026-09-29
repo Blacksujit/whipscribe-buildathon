@@ -1,0 +1,12 @@
+[demo] 2026-09-28T15:10:05.553Z starting; base=http://localhost:3000 mode=upload D:\Whisp-scribe\whipscribe-buildathon\apps\blacksujit\track-4\src\test_speech.wav
+[demo] 2026-09-28T15:10:05.887Z opening http://localhost:3000
+[demo] 2026-09-28T15:10:14.349Z uploading test_speech.wav
+[demo] 2026-09-28T15:10:14.511Z upload accepted the file (attempt 1)
+[demo] 2026-09-28T15:10:14.512Z waiting for the report page (transcription + scoring)
+[demo] 2026-09-28T15:11:02.962Z report page: http://localhost:3000/report/dd1efe69-4624-42bf-9ce3-5a1c515ca5f3
+[demo] 2026-09-28T15:11:02.966Z scrolling through the evidence dossier
+[demo] 2026-09-28T15:11:09.803Z visiting /trends
+[demo] 2026-09-28T15:11:16.853Z visiting /coach
+[demo] 2026-09-28T15:11:24.375Z visiting /speakers
+[demo] 2026-09-28T15:11:31.688Z visiting /settings
+[demo] 2026-09-28T15:11:39.451Z saved D:\Whisp-scribe\whipscribe-buildathon\apps\blacksujit\track-4\videos\demo\callcoach-demo-2026-09-28T15-11-37.webm

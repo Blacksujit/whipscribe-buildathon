@@ -5,7 +5,7 @@ coaching insights and performance tracking.
 
 Architecture:
   - Depends ONLY on the evaluation data contract (dict shape).
-  - Does NOT import whip_api, reporter, or notion — no external dependencies.
+  - Does NOT import whip_api, reporter, or notion  no external dependencies.
   - Functions are pure: same input always produces same output.
   - Designed to be callable both from CLI and web service.
 
@@ -27,6 +27,19 @@ from typing import Any
 from difflib import SequenceMatcher
 import numpy as np
 
+
+def _core_eval(eval_data: dict) -> dict:
+    """Return the inner evaluation dict whether the input is wrapped or flat.
+
+    Accepts either {"success": ..., "evaluation": {...}} (LLM pipeline output)
+    or a bare evaluation dict (rows already unwrapped by the store / callers).
+    """
+    if not isinstance(eval_data, dict):
+        return {}
+    inner = eval_data.get("evaluation")
+    return inner if isinstance(inner, dict) else eval_data
+
+
 def _calculate_deal_velocity(evaluations: list[dict]) -> dict[str, Any]:
     """
     Calculates Deal Velocity using a grounded mathematical model:
@@ -36,11 +49,11 @@ def _calculate_deal_velocity(evaluations: list[dict]) -> dict[str, Any]:
         return {"velocity": "N/A", "score": 0, "trend": "Stable"}
 
     # 1. Commitment Rate: Action items per meeting
-    total_items = sum(len(e.get("evaluation", {}).get("action_items", [])) for e in evaluations)
+    total_items = sum(len(_core_eval(e).get("action_items", [])) for e in evaluations)
     commitment_rate = total_items / len(evaluations)
 
     # 2. Clarity Slope: Linear regression of clarity scores
-    clarity_scores = [e.get("evaluation", {}).get("category_scores", {}).get("clarity", 50) for e in evaluations]
+    clarity_scores = [_core_eval(e).get("category_scores", {}).get("clarity", 50) for e in evaluations]
     if len(clarity_scores) > 1:
         x = np.arange(len(clarity_scores))
         slope = np.polyfit(x, clarity_scores, 1)[0]
@@ -48,7 +61,7 @@ def _calculate_deal_velocity(evaluations: list[dict]) -> dict[str, Any]:
         slope = 0
 
     # 3. Tension Variance: Stability of emotional state
-    tension_scores = [e.get("evaluation", {}).get("category_scores", {}).get("tension", 50) for e in evaluations]
+    tension_scores = [_core_eval(e).get("category_scores", {}).get("tension", 50) for e in evaluations]
     variance = np.var(tension_scores) if len(tension_scores) > 1 else 0
 
     # Calculate Final Velocity
@@ -84,12 +97,13 @@ def compare_evaluations(
 
     meetings: list[dict[str, Any]] = []
     for i, (eval_data, name) in enumerate(zip(evaluations, names)):
-        scores = eval_data.get("category_scores", {}) if "category_scores" in eval_data else eval_data.get("evaluation", {}).get("category_scores", {})
+        core = _core_eval(eval_data)
+        scores = core.get("category_scores", {})
         meeting = {
             "name": name,
             "date": dates[i],
             "scores": {
-                "overall": int(eval_data.get("overall_score", 0) or 0) if "overall_score" in eval_data else int(eval_data.get("evaluation", {}).get("overall_score", 0) or 0),
+                "overall": int(core.get("overall_score", 0) or 0),
                 "action_items": int(scores.get("action_items", 0) or 0),
                 "clarity": int(scores.get("clarity", 0) or 0),
                 "tension": int(scores.get("tension", 0) or 0),
@@ -136,7 +150,7 @@ def compare_evaluations(
 def _collect_all_issues(eval_data: dict[str, Any]) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     # Support both raw evaluation and wrapped evaluation
-    data = eval_data.get("evaluation", eval_data)
+    data = _core_eval(eval_data)
     for issue_type in ("clarity_issues", "tension_signals", "compliance_risks", "action_items"):
         for item in data.get(issue_type, []):
             issue = {"type": issue_type}
@@ -216,7 +230,9 @@ def _track_action_items(meetings: list[dict]) -> dict[str, Any]:
                 break
         if is_resolved: resolved += 1
         else: unresolved.append(item)
-    return {"resolved": resolved, "unresolved": unresolved}
+    total = len(all_items)
+    completion_rate = round((resolved / total) * 100, 1) if total else 0.0
+    return {"total": total, "resolved": resolved, "unresolved": unresolved, "completion_rate": completion_rate}
 
 def _generate_insights(meetings, trends, common_issues, action_tracking, recurring_clusters) -> list[str]:
     insights = []
@@ -230,7 +246,7 @@ def _generate_insights(meetings, trends, common_issues, action_tracking, recurri
 def _analyze_speaker_patterns(evaluations: list[dict], names: list[str]) -> dict[str, Any]:
     speaker_stats = {}
     for eval_data in evaluations:
-        data = eval_data.get("evaluation", eval_data)
+        data = _core_eval(eval_data)
         for issue_type in ("clarity_issues", "tension_signals", "compliance_risks"):
             for issue in data.get(issue_type, []):
                 speaker = issue.get("speaker", "Unknown")

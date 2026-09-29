@@ -1,102 +1,51 @@
-# CallCoach AI - Meeting Quality Assurance
+# CallCoach-AI x WhipScribe dashboard
 
-Modern Next.js + TypeScript frontend for Meeting Quality Assurance built on WhipScribe transcripts.
+The Next.js 16 (App Router, React 19) frontend for CallCoach-AI. It talks to
+the Flask JSON API in the parent directory.
 
-## Tech Stack
-
-- **Next.js 16** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling with WhipScribe-inspired design tokens
-- **React 19** - Latest React features
-
-## Design System
-
-The UI is designed to match WhipScribe's visual language:
-
-- **Color Palette**: Professional blue (#007AFF) as primary, clean neutrals
-- **Typography**: Inter font family, clear hierarchy
-- **Components**: Cards, badges, buttons following WhipScribe patterns
-- **Layout**: Centered content, responsive design
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ installed
-- WhipScribe API key (optional for demo)
-
-### Installation
-
-```bash
-cd frontend
-npm install
-```
-
-### Development
-
-```bash
-npm run dev
-```
-
-Visit http://localhost:3000
-
-### Build
-
-```bash
-npm run build
-npm start
-```
+Design tokens and the component language come from the live whipscribe.com
+(re-extracted 2026-09-28; see `../docs/DESIGN.md`), with React Bits components
+(BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp) for motion.
 
 ## Pages
 
-- **/** - Landing page with value proposition and input modes
-- **/trends** - Quality trend analysis across meetings
-- **/speakers** - Individual speaker performance
-- **/coach** - Prescriptive coaching insights
-- **/settings** - API and AI configuration
+| Route | Purpose |
+|---|---|
+| `/` | Upload a recording; recent recordings list with stored scores |
+| `/report/[id]` | One call: score, category bars, primary risk, and the evidence dossier (compliance, tension, clarity, action items) with timestamp links into the recording |
+| `/trends` | Score progression chart, momentum, deal velocity, latest category scores |
+| `/coach` | Cross-meeting coaching insights, and "send summary to Slack" |
+| `/speakers` | Speaker-level issue patterns |
+| `/connections` | Integration status and one-field connects: WhipScribe, Slack, Notion, AI provider (replaces the old key-entry Settings page; `/settings` redirects here) |
 
-## Architecture
+## Run
 
-### Frontend (Next.js)
-- Pages in `src/app/`
-- Components in `src/components/`
-- Global styles in `src/app/globals.css`
+```bash
+npm install
 
-### Backend (Flask)
-- Python Flask app in `../app.py`
-- API endpoints for:
-  - Job listing
-  - Transcript analysis
-  - Evaluation storage
-  - Trend comparison
+# .env.local
+# NEXT_PUBLIC_API_URL=http://localhost:5000
 
-### Integration
-
-The Next.js frontend will connect to the Flask backend via REST API:
-
-```typescript
-// Example API call
-const response = await fetch('http://localhost:5000/api/jobs', {
-  headers: {
-    'Authorization': `Bearer ${apiKey}`
-  }
-});
+npm run dev     # build + serve on http://localhost:3000 (reliable everywhere)
+npm run dev:hmr # webpack dev server with hot reload (machines without the
+                # Application Control policy that blocks Next's native compiler)
+npm run build   # production build
 ```
 
-## Next Steps
+The Flask API must be running (`python app.py` in the parent directory), or the
+pages show their error states.
 
-1. **API Integration**: Connect Next.js pages to Flask backend
-2. **State Management**: Add React Context or Zustand for global state
-3. **Real-time Updates**: WebSocket for progress updates
-4. **Authentication**: Secure API key handling
-5. **Deployment**: Deploy to Vercel (frontend) + Render (backend)
+## Demo capture
 
-## Design Philosophy
+```bash
+node scripts/record-demo.mjs   # records the walkthrough to ../videos/demo/
+```
 
-Following WhipScribe's design principles:
+## Notes
 
-- **Minimal, functional** - No decorative elements
-- **Clear hierarchy** - Typography and spacing guide the eye
-- **Privacy-first** - Subtle security messaging
-- **User-centric** - Clear CTAs and flows
-- **Professional** - Enterprise-appropriate aesthetics
+- Build and dev scripts use Webpack (`next build --webpack`). Turbopack's
+  native bindings are blocked by Application Control policies on some Windows
+  machines; webpack builds everywhere.
+- Styling follows `../docs/DESIGN.md` - the WhipScribe visual system (lime
+  brand, DM Serif Display headings, Inter body) with category colors reserved
+  for evidence tags.

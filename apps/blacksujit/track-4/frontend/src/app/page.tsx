@@ -1,284 +1,384 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import { uploadRecording } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import BlurText from "@/components/reactbits/BlurText/BlurText";
+import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
+import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import { type PipelineStage } from "@/components/ProcessingPipeline";
+import UploadArea from "@/components/UploadArea";
+import {
+  ShieldCheckIcon,
+  WaveformIcon,
+  CrosshairIcon,
+  ListChecksIcon,
+  InboxIcon,
+  StarIcon,
+  ClockIcon,
+  GlobeIcon,
+  MicIcon,
+} from "@/components/icons";
+import { startUpload, startUrlUpload, getUploadStatus, getJobsWithScores, Job } from "@/lib/api";
 
-const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 
-const demoFiles = [
-  { number: "1", title: "Q3 earnings call", meta: "Sarah Chen · CFO", duration: "42m", language: "EN" },
-  { number: "2", title: "Northstar renewal", meta: "John Miller · Account exec", duration: "28m", language: "EN" },
-  { number: "3", title: "Product research interviews", meta: "6 speakers · Field study", duration: "1h 04m", language: "EN" },
+const agentPipeline = [
+  {
+    name: "ComplianceAgent",
+    role: "Catches promises the product cannot keep.",
+    category: "compliance",
+    Icon: ShieldCheckIcon,
+  },
+  {
+    name: "TensionAgent",
+    role: "Marks where the investor hesitated, and what was said right before.",
+    category: "tension",
+    Icon: WaveformIcon,
+  },
+  {
+    name: "ClarityAgent",
+    role: "Flags vague answers and hedged numbers.",
+    category: "clarity",
+    Icon: CrosshairIcon,
+  },
+  {
+    name: "ActionItemAgent",
+    role: "Writes down what was promised, by whom, and by when.",
+    category: "actions",
+    Icon: ListChecksIcon,
+  },
 ];
 
-const useCases = [
-  ["Research intelligence", "You ran the interviews and now need findings, not a word dump."],
-  ["Media intelligence", "Find the real mention in long-form audio before the news cycle moves on."],
-  ["Competitive intelligence", "Read exactly what a competitor announced, with the moment to prove it."],
-  ["Sales intelligence", "Read back a demo in two minutes instead of relistening for forty-five."],
-];
+const StarRating = ({ size = 16 }: { size?: number }) =>
+  Array.from({ length: 5 }).map((_, i) => (
+    <StarIcon key={i} size={size} />
+  ));
+
+function fmtDuration(seconds?: number | null) {
+  if (!seconds || seconds <= 0) return "--";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor(seconds / 60) % 60;
+  const s = Math.round(seconds % 60);
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
+  return `${m}m ${String(s).padStart(2, "0")}s`;
+}
 
 export default function Home() {
   const router = useRouter();
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "transcribing" | "analyzing" | "done" | "error">("idle");
-  const [uploadMessage, setUploadMessage] = useState("");
+  const [stage, setStage] = useState<PipelineStage | "idle">("idle");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [uploadScore, setUploadScore] = useState<number | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [recordings, setRecordings] = useState<Array<Job & { score?: number | null }>>([]);
+  const [recordingsLoading, setRecordingsLoading] = useState(true);
 
-  const pipelinePhases = [
-    { key: "uploading", label: "Uploading" },
-    { key: "transcribing", label: "Transcribing" },
-    { key: "analyzing", label: "Analyzing" },
-    { key: "done", label: "Complete" },
-  ] as const;
+  useEffect(() => {
+    async function loadRecordings() {
+      const result = await getJobsWithScores("");
+      setRecordings(result.jobs || []);
+      setRecordingsLoading(false);
+    }
+    loadRecordings();
+  }, []);
 
-  const activePhaseIndex = pipelinePhases.findIndex((p) => p.key === uploadState);
-  async function handleUpload(file: File | undefined) {
-    if (!file) return;
-    setUploadState("uploading");
-    setUploadMessage("Uploading and analyzing your recording...");
+  function handleReset() {
+    setStage("idle");
+    setStatusMessage("");
+    setUploadScore(null);
+    setFileName("");
+  }
 
-    // Phase transitions while the API call is in-flight
-    const t1 = setTimeout(() => setUploadState("transcribing"), 1500);
-    const t2 = setTimeout(() => setUploadState("analyzing"), 5000);
+  async function runPipeline(jobId: string, displayName: string) {
+    setStage("transcribing");
+    for (let attempt = 0; attempt < 1100; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const status = await getUploadStatus(jobId);
+      if (!status) continue;
 
-    try {
-      const result = await uploadRecording(file);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      if (!result.success) {
-        setUploadState("error");
-        setUploadMessage(result.error || "The recording could not be analyzed.");
+      if (status.stage === "done") {
+        setUploadScore(typeof status.score === "number" ? status.score : null);
+        setStatusMessage(status.message || "Report ready - opening it now.");
+        setStage("done");
+        setRecordings((current) => [
+          {
+            job_id: jobId,
+            filename: displayName,
+            duration: 0,
+            status: "done",
+            created_at: new Date().toISOString(),
+            score: status.score ?? null,
+          },
+          ...current,
+        ]);
+        setTimeout(() => router.push(`/report/${jobId}`), 1500);
         return;
       }
-      setUploadState("done");
-      setUploadMessage(`Analysis complete · score ${result.score}/100`);
-      router.push(`/report/${result.job_id}`);
-    } catch (err) {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      setUploadState("error");
-      setUploadMessage("Something went wrong. Please try again.");
+
+      if (status.stage === "error" || !status.success) {
+        setStage("error");
+        setStatusMessage(status.error || status.message || "Processing failed.");
+        return;
+      }
+
+      setStage(status.stage === "scoring" ? "scoring" : "transcribing");
+      setStatusMessage(status.message || "");
     }
+
+    setStage("error");
+    setStatusMessage("This is taking longer than expected. Check the library in a minute.");
+  }
+
+  async function handleUpload(file: File | Blob, name?: string) {
+    if (!file) return;
+    const displayName = name || (file as File).name || "recording";
+    setFileName(displayName);
+    setUploadScore(null);
+    setStatusMessage("");
+    setStage("uploading");
+
+    const started = await startUpload(file, displayName);
+    if (!started.success || !started.job_id) {
+      setStage("error");
+      setStatusMessage(started.error || "Upload failed.");
+      return;
+    }
+
+    const jobId = started.job_id;
+    setStage(started.stage === "scoring" ? "scoring" : "transcribing");
+    runPipeline(jobId, displayName);
+  }
+
+  async function handleUrlUpload(url: string) {
+    setFileName(url);
+    setUploadScore(null);
+    setStatusMessage("");
+    setStage("uploading");
+
+    const started = await startUrlUpload(url);
+    if (!started.success || !started.job_id) {
+      setStage("error");
+      setStatusMessage(started.error || "Could not start transcription from that link.");
+      return;
+    }
+
+    const jobId = started.job_id;
+    setStage(started.stage === "scoring" ? "scoring" : "transcribing");
+    runPipeline(jobId, url);
   }
 
   return (
     <PageTransition>
     <main className="site-shell">
       <Navbar />
-      <section className="hero section-wide">
-        <div className="hero-copy">
-          <p className="hero-kicker">whipscribe <span>BETA</span></p>
-          <h1>Stop watching.<br />Start reading.</h1>
-          <p className="hero-lede">Audio and video intelligence. Encrypted, diarized, yours.</p>
-          <div className="hero-props"><span>Private</span><span>Fast</span><span>Cheaper</span></div>
-        </div>
-        {/* Upload */}
-        <div className="upload-panel">
-          <div className="upload-tabs" role="tablist" aria-label="Transcription input">
-            <button className="upload-tab active" role="tab">File upload</button>
-            <button className="upload-tab" role="tab">Paste link</button>
-            <button className="upload-tab" role="tab">Record audio</button>
-          </div>
-          <div className="upload-body">
-            <p className="section-eyebrow">Upload your audio</p>
-            <p className="upload-price">First transcript <strong>$0.99</strong> · no account needed</p>
-            <label className={`dropzone ${uploadState}`}>
-              <input type="file" className="sr-only" accept="audio/*,video/*" onChange={(event) => handleUpload(event.target.files?.[0])} />
-              <span className="upload-icon" aria-hidden="true">{uploadState === "done" ? "✓" : "↑"}</span>
-              <strong>
-              {uploadState === "uploading" ? "Uploading..." : uploadState === "transcribing" ? "Transcribing..." : uploadState === "analyzing" ? "Analyzing..." : uploadState === "done" ? "Recording analyzed" : "Upload a file"}
-            </strong>
-              <span>{uploadMessage || "Click to upload or drop a file and start transcribing"}</span>
-              <small>mp3 · mp4 · m4a · wav · webm · up to 5 GB / 12 h file</small>
-            </label>
 
-            {["uploading", "transcribing", "analyzing", "done"].includes(uploadState) && (
-              <motion.div
-                className="pipeline-status"
-                initial={{ opacity: 0, y: 8 }}
+      <section className="d-hero-v2">
+        <div className="d-hero-v2-inner">
+          <div className="d-hero-v2-copy">
+            <h1 className="d-hero-v2-h1 d-hero-v2-h1-sm" style={{ display: "block" }}>
+              <BlurText
+                text="Every investor call, scored."
+                animateBy="words"
+                delay={90}
+                block
+                className="blur-headline"
+              />
+              <motion.span
+                className="accent-italic"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={springHover}
+                transition={{ ...springReveal, delay: 0.7 }}
+                style={{ display: "inline-block", marginTop: 6 }}
               >
-                <div className="pipeline-steps">
-                  {pipelinePhases.map((phase, i) => {
-                    const isDone = i < activePhaseIndex;
-                    const isActive = i === activePhaseIndex;
-                    const stepClass = "pipeline-step " + (isDone ? "done" : isActive ? "active" : "pending");
-                    return (
-                      <motion.span
-                        key={phase.key}
-                        className={stepClass}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: i <= activePhaseIndex ? 1 : 0.5, x: 0 }}
-                        transition={{ ...springHover, delay: i * 0.15 }}
-                        style={{
-                          color: isDone ? "var(--color-ok)" : isActive ? "var(--color-brand)" : "var(--color-muted)",
-                        }}
-                      >
-                        <span className="pipeline-dot" />
-                        {phase.label}
-                      </motion.span>
-                    );
-                  })}
-                </div>
-                <div className="pipeline-progress">
-                  <motion.div
-                    className="pipeline-progress-bar"
-                    style={{ width: `${((activePhaseIndex + 1) / pipelinePhases.length) * 100}%` }}
-                    initial={{ width: "0%" }}
-                    animate={{ width: `${((activePhaseIndex + 1) / pipelinePhases.length) * 100}%` }}
-                    transition={{ duration: 0.6, ease: "easeOut", delay: activePhaseIndex * 0.2 }}
-                  />
-                </div>
-              </motion.div>
-            )}
+                with the quotes to prove it.
+              </motion.span>
+            </h1>
 
-            <div className="upload-notes">
+            <motion.p
+              className="d-hero-v2-sub"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.4 }}
+            >
+              Drop in a recording. Four agents read the transcript, score the call,
+              and point at the exact seconds that mattered.
+            </motion.p>
+          </div>
+
+          <UploadArea
+            stage={stage}
+            statusMessage={statusMessage}
+            fileName={fileName}
+            uploadScore={uploadScore}
+            onUploadFile={handleUpload}
+            onUploadUrl={handleUrlUpload}
+            onReset={handleReset}
+          />
+
+          <motion.div
+            className="d-hero-trust"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springReveal, delay: 0.6 }}
+          >
+            <span className="d-hero-trust-item">
+              <span className="d-hero-trust-stars" aria-hidden="true">
+                <StarRating size={15} />
+              </span>
               <span>Privacy-first · never trained on your audio</span>
+            </span>
+            <span className="d-hero-trust-item">
+              <span className="d-hero-trust-icon" aria-hidden="true">
+                <ClockIcon size={15} />
+              </span>
               <span>Results in minutes · usually seconds</span>
+            </span>
+            <span className="d-hero-trust-item">
+              <span className="d-hero-trust-icon" aria-hidden="true">
+                <GlobeIcon size={15} />
+              </span>
               <span>100+ languages · auto-detect</span>
+            </span>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* The four agents */}
+      <section className="section">
+        <div className="container-wide">
+          <AnimatedContent>
+            <p className="section-label">The score</p>
+            <h2>Four readers, one score.</h2>
+            <p className="body-muted">
+              Each agent watches for one kind of problem, so nothing slips past the summary.
+            </p>
+          </AnimatedContent>
+
+          <div className="d-intel-grid">
+            {agentPipeline.map((agent, i) => (
+              <AnimatedContent key={agent.name} delay={i * 0.08}>
+                <SpotlightCard className={`agent-card agent-card-${agent.category}`}>
+                  <span className="agent-card-icon" aria-hidden="true">
+                    <agent.Icon size={20} />
+                  </span>
+                  <h3>{agent.name}</h3>
+                  <p>{agent.role}</p>
+                </SpotlightCard>
+              </AnimatedContent>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Library */}
+      <section className="section container-wide">
+        <AnimatedContent>
+          <p className="section-label">Library</p>
+          <h2>Your calls.</h2>
+          <p className="body-muted">Every recording you have scored, newest first.</p>
+        </AnimatedContent>
+
+        {recordingsLoading && (
+          <div className="library-row-skeleton card" aria-hidden="true">
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+          </div>
+        )}
+
+        {!recordingsLoading && recordings.length === 0 && (
+          <div className="library-card card empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <InboxIcon size={28} />
+            </span>
+            <p className="section-subtitle">
+              No recordings yet. Drop one above and the score will appear here.
+            </p>
+            <Link href="/connections" className="btn-primary">Connect your tools</Link>
+          </div>
+        )}
+
+        {!recordingsLoading && recordings.length > 0 && (
+          <ul className="recordings-list">
+            {recordings.slice(0, 8).map((job, index) => (
+              <li key={job.job_id} className="recordings-list-item">
+                <Link className="library-row" href={`/report/${job.job_id}`}>
+                  <span className="library-row-num" aria-hidden="true">{index + 1}</span>
+                  <span className="library-row-icon" aria-hidden="true">
+                    <MicIcon size={16} />
+                  </span>
+                  <span className="library-row-main">
+                    <span className="library-row-title">{job.filename || `Call ${job.job_id.slice(0, 8)}`}</span>
+                    <span className="library-row-lang">EN</span>
+                  </span>
+                  <span className="library-row-duration" aria-hidden="true">
+                    {fmtDuration(job.duration)}
+                  </span>
+                  <span className="library-row-score" aria-hidden="true">
+                    {typeof job.score === "number" ? `${job.score}/100` : "Not scored"}
+                  </span>
+                  <span className="library-open" aria-hidden="true">
+                    Open
+                    <svg
+                      className="library-open-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Footer */}
+      <footer className="site-footer">
+        <div className="container-wide">
+          <div className="footer-brand">
+            <strong className="brand-lockup">
+              <span className="nav-logo-dot" aria-hidden="true">C</span>
+              <span>CallCoach-AI</span>
+              <span className="brand-x-suffix">x WhipScribe</span>
+            </strong>
+            <p className="footer-tagline">Score the call. Fix the next one.</p>
+          </div>
+
+          <div className="footer-links">
+            <div>
+              <strong>Product</strong>
+              <Link href="/">Home</Link>
+              <Link href="/trends">Trends</Link>
+              <Link href="/coach">Coach</Link>
+              <Link href="/speakers">Speakers</Link>
+            </div>
+            <div>
+              <strong>Setup</strong>
+              <Link href="/connections">Connections</Link>
+              <a href="https://whipscribe.com/docs" target="_blank" rel="noopener noreferrer">WhipScribe API docs</a>
+              <a href="https://whipscribe.com/claude" target="_blank" rel="noopener noreferrer">WhipScribe MCP</a>
             </div>
           </div>
+
+          <p className="footer-legal">
+            CallCoach-AI x WhipScribe - transcription by <a href="https://whipscribe.com">WhipScribe</a>, scoring by Groq.
+            Your recordings stay on your account.
+          </p>
         </div>
-      </section>
-      {/* Proof Strip */}
-      <section className="proof-strip section-wide">
-        <motion.span whileHover={{ x: 4 }} transition={springHover}>Private — transcribed on our own servers, never sent to Big AI.</motion.span>
-        <motion.span whileHover={{ x: 4 }} transition={{ ...springHover, delay: 0.1 }}>Fast — an hour of audio back in about 2 minutes.</motion.span>
-        <motion.span whileHover={{ x: 4 }} transition={{ ...springHover, delay: 0.2 }}>Cheaper — 1,000 minutes for $8.</motion.span>
-      </section>
-      {/* Demo */}
-      <section className="section-wide demo-section">
-        <div className="section-heading">
-          <p className="section-eyebrow">Demo files</p>
-          <h2>Try a transcript before you sign up.</h2>
-          <p>These are demo files anyone can try.</p>
-        </div>
-        <div className="demo-list">
-          {demoFiles.map((file) => (
-            <motion.div key={file.title} whileHover={{ x: 8 }} transition={springHover}>
-              <Link className="demo-row" href="/trends">
-                <span className="demo-number">{file.number}</span>
-                <span className="demo-thumb" aria-hidden="true" />
-                <span className="demo-details">
-                  <strong>{file.title}</strong>
-                  <small>{file.meta}</small>
-                </span>
-                <span className="demo-language">{file.language}</span>
-                <span className="demo-duration">{file.duration}</span>
-                <span className="demo-open">Open <span aria-hidden="true">→</span></span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-        <Link className="text-link" href="/trends">Open the Q3 earnings call sample transcript <span>→</span></Link>
-      </section>
-      {/* Evidence */}
-      <section className="evidence-section section-wide">
-        <div className="section-heading centered">
-          <p className="section-eyebrow">Every recording, one searchable library</p>
-          <h2>Ask a question.<br />Get the exact second it was said.</h2>
-          <p>Search speaks across every file. Every answer carries its evidence: the speaker, the recording, and the timestamp.</p>
-        </div>
-        <div className="evidence-demo">
-          <div className="evidence-search">
-            <span aria-hidden="true">⌕</span>
-            <span>when did we turn cash-flow positive?</span>
-          </div>
-          <div className="evidence-answer">
-            <p className="quote">“Operating cash flow turned positive for the first time this year.”</p>
-            <p className="evidence-meta">
-              <span>Evidence</span>
-              <span>Sarah · CFO</span>
-              <span>Q3 earnings call</span>
-              <span>00:07:02</span>
-            </p>
-            <button className="play-link">▶ click to hear it</button>
-          </div>
-        </div>
-        <div className="media-types">
-          <span>Meetings</span><span>Lectures</span><span>Podcasts</span><span>Interviews</span><span>Voice notes</span><span>Videos</span>
-        </div>
-      </section>
-      {/* Use Cases */}
-      <section className="use-case-section section-wide">
-        <div className="section-heading">
-          <p className="section-eyebrow">Who it&apos;s for</p>
-          <h2>Not everyone needs the same thing from an audio.</h2>
-          <p>Pick the scenario that sounds like your day.</p>
-        </div>
-        <div className="use-case-grid">
-          {useCases.map(([title, copy]) => (
-            <motion.div key={title} whileHover={{ x: 8 }} transition={springHover}>
-              <Link className="use-case" href="/trends">
-                <strong>{title}</strong>
-                <p>{copy}</p>
-                <span>Explore <span aria-hidden="true">→</span></span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-      {/* Tools */}
-      <section className="tools-section section-wide">
-        <div className="section-heading">
-          <p className="section-eyebrow">More ways to transcribe</p>
-          <h2>Use WhipScribe where your work already happens.</h2>
-        </div>
-        <div className="tools-grid">
-          {["Claude Desktop", "Chrome extension", "Connect your storage", "Business API"].map((name) => (
-            <motion.div key={name} whileHover={{ x: 4 }} transition={springHover}>
-              <Link href="/settings">
-                <strong>{name}</strong>
-                <span>Transcribe inside Claude.</span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-      {/* Bulk */}
-      <section className="bulk-section section-wide">
-        <div>
-          <p className="section-eyebrow">Bulk transcription</p>
-          <h2>A folder in.<br />A folder of transcripts out.</h2>
-        </div>
-        <div>
-          <p>Pick a whole folder. Every interview, episode, and meeting becomes a transcript, filed into a folder with the same name.</p>
-          <Link className="btn-primary" href="/settings">Transcribe a folder <span>→</span></Link>
-        </div>
-      </section>
-      {/* Footer */}
-      <footer className="site-footer section-wide">
-        <div className="footer-brand">
-          <strong>whipscribe <span>BETA</span></strong>
-          <p>Audio &amp; video intelligence.<br />Encrypted, diarized, yours.</p>
-        </div>
-        <div className="footer-links">
-          <div><strong>Product</strong>
-            <Link href="/">Transcribe</Link>
-            <Link href="/settings">Pricing</Link>
-            <Link href="/trends">Use cases</Link>
-          </div>
-          <div><strong>Resources</strong>
-            <Link href="/trends">Blog</Link>
-            <Link href="/settings">Developer API</Link>
-            <Link href="/settings">Connectors</Link>
-          </div>
-          <div><strong>Company</strong>
-            <Link href="/settings">Contact sales</Link>
-            <Link href="/settings">Security</Link>
-            <Link href="/settings">Privacy</Link>
-          </div>
-        </div>
-        <p className="footer-legal">© Neugence Technology Pvt. Ltd. · WhipScribe is open source · <Link href="/settings">Terms</Link> · <Link href="/settings">Privacy</Link></p>
       </footer>
     </main>
-  </PageTransition>
+    </PageTransition>
   );
 }

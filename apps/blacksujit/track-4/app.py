@@ -1,45 +1,87 @@
-"""Flask web dashboard for Meeting Quality Assurance.
+"""CallCoach-AI Flask API.
 
-This dashboard analyzes call recordings from WhipScribe to provide
-quality insights, trend analysis, and coaching recommendations.
+JSON API behind the Next.js dashboard. The server-rendered Jinja dashboard
+was retired in favor of the Next.js app in `frontend/` (see README).
 
 Routes:
-  /                    - Landing page (API key setup + analyze all)
-  /report/<job_id>     - Single meeting quality report
-  /trends              - Multi-meeting trend dashboard
-  /coach               - Coaching insights from trend analysis
-  /speakers            - Speaker performance analysis
-  /settings            - API key + LLM provider configuration
+  /                          Service info (points at the dashboard URL)
+  /api/health                Health check
+  /api/connections           GET integration status (whipscribe/slack/notion/llm)
+  /api/connections/slack     POST connect (validates with a test message) / DELETE
+  /api/connections/slack/test POST send a test message
+  /api/connections/notion    POST connect (validates the database) / DELETE
+  /api/connections/notion/test POST send a test page
+  /api/connections/whipscribe/test POST verify the WhipScribe key
+  /api/jobs                  GET WhipScribe jobs, enriched with stored scores
+  /api/report/<job_id>       GET one stored report (transcript + evaluation)
+  /api/speakers              GET speaker-level issue analysis
+  /api/analyze/<job_id>      POST evaluate one existing job
+  /api/analyze-all           POST evaluate every finished job on the account
+  /api/upload                POST upload a file; returns immediately, processes in a thread
+  /api/upload/status/<id>    GET live stage of an upload (transcribing/scoring/done/error)
+  /api/trends-data           GET cross-meeting trend metrics for charts
+  /api/coach-data            GET prescriptive coaching insights
+  /api/export/notion         POST push a report to Notion
+  /api/export/slack          POST push a report to Slack
+  /api/export/trends         POST push the trend summary to Slack
 """
 
 import json
 import os
+import re
 import sys
+import threading
+import time
+import uuid
+
+import requests
 from dotenv import load_dotenv
 load_dotenv()
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
-# Import existing core modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from src.api.whip_api import (
-    list_jobs, get_transcript, poll_job, submit_file, get_me,
-    get_session_summary, get_high_signal_moments,
+    list_jobs, get_transcript, poll_job, submit_file, submit_url, get_audio_url, get_me,
+)
+from src.api.notion import NOTION_API, deliver_report
+from src.api.slack import (
+    deliver_qa_report_to_slack,
+    deliver_trend_summary_to_slack,
+    send_to_slack,
 )
 from src.core.evaluator import evaluate
-from src.core.compare import compare_evaluations, generate_comparison_report
-from src.api.notion import deliver_report
+from src.core.compare import compare_evaluations
 from src.database import store
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-me")
+MASK = "********"
 
-# Enable CORS for Next.js frontend
-CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
-
-UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(PROJECT_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+UPLOAD_POLL_TIMEOUT = int(os.environ.get("UPLOAD_POLL_TIMEOUT", "900"))
+UPLOAD_URL_POLL_TIMEOUT = int(os.environ.get("UPLOAD_URL_POLL_TIMEOUT", "1800"))
+
+# Create tables at import time so gunicorn / production servers work too.
+store.init_db()
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24).hex()
+app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_UPLOAD_MB", "2048")) * 1024 * 1024
+
+_cors_origins = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if origin.strip()
+]
+CORS(app, origins=_cors_origins)
 
 
 def get_api_key():
@@ -53,7 +95,6 @@ def get_eval_settings():
     provider = os.environ.get("LLM_PROVIDER") or store.get_setting("llm_provider")
     model = os.environ.get("LLM_MODEL") or store.get_setting("llm_model") or "gpt-4o-mini"
 
-    # Resolve API key based on provider
     api_key = None
     if provider == "groq":
         api_key = os.environ.get("GROQ_API_KEY") or store.get_setting("groq_api_key")
@@ -64,7 +105,6 @@ def get_eval_settings():
     else:
         api_key = os.environ.get("LLM_API_KEY") or store.get_setting("llm_api_key")
 
-    # Override model based on provider defaults
     if provider == "groq" and not os.environ.get("LLM_MODEL"):
         model = "openai/gpt-oss-120b"
     elif provider == "anthropic" and not os.environ.get("LLM_MODEL"):
@@ -73,188 +113,413 @@ def get_eval_settings():
     return provider, api_key, model
 
 
-def get_slack_webhook():
-    """Get Slack webhook URL from env or DB."""
-    return os.environ.get("SLACK_WEBHOOK_URL") or store.get_setting("slack_webhook")
+def _core_eval(evaluation):
+    """Return the inner evaluation dict (LLM pipeline output is wrapped)."""
+    if not isinstance(evaluation, dict):
+        return {}
+    inner = evaluation.get("evaluation")
+    return inner if isinstance(inner, dict) else evaluation
+
+
+def _stored_eval_dicts(evaluations):
+    """Normalize stored rows into compare.py inputs."""
+    eval_dicts = []
+    names = []
+    for item in evaluations:
+        raw = item["evaluation"]
+        eval_json = json.loads(raw) if isinstance(raw, str) else raw
+        core = _core_eval(eval_json)
+        eval_dicts.append({
+            "overall_score": core.get("overall_score", 0),
+            "category_scores": core.get("category_scores", {}),
+            "action_items": core.get("action_items", []),
+            "clarity_issues": core.get("clarity_issues", []),
+            "tension_signals": core.get("tension_signals", []),
+            "compliance_risks": core.get("compliance_risks", []),
+        })
+        names.append(item.get("meeting_name") or item["job_id"][:8])
+    return eval_dicts, names
+
+
+def _stored_setting(name):
+    """Return a setting value that is not blank, else None."""
+    value = store.get_setting(name)
+    if value is None:
+        return None
+    value = str(value).strip()
+    return value or None
+
+
+# ---------------------------------------------------------------- connections
+
+def _slack_connection():
+    stored = _stored_setting("slack_webhook")
+    env = (os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("SLACK_WEBHOOK") or "").strip() or None
+    return {
+        "connected": bool(stored or env),
+        "source": "stored" if stored else ("env" if env else None),
+    }
+
+
+def _notion_connection():
+    stored_token = _stored_setting("notion_token")
+    env_token = (os.environ.get("NOTION_TOKEN") or "").strip() or None
+    database = _stored_setting("notion_database_id") or (os.environ.get("NOTION_DATABASE_ID") or "").strip() or None
+    token = stored_token or env_token
+    return {
+        "connected": bool(token and database),
+        "source": "stored" if stored_token else ("env" if env_token else None),
+        "database_id": database,
+        "token_set": bool(token),
+    }
+
+
+def _notion_headers(token):
+    return {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28",
+    }
+
+
+def _notion_database_id(value):
+    """Accept a raw UUID (dashed or not) or a full Notion URL and return the id."""
+    if not value:
+        return None
+    value = value.strip().split("?")[0].rstrip("/")
+    match = re.search(r"([0-9a-fA-F]{32})", value.replace("-", ""))
+    if not match:
+        return None
+    raw = match.group(1)
+    return f"{raw[0:8]}-{raw[8:12]}-{raw[12:16]}-{raw[16:20]}-{raw[20:32]}"
+
+
+@app.route("/api/connections")
+def api_connections():
+    """Integration status. Secrets are never returned, only booleans and sources."""
+    api_key = get_api_key()
+    whip_env = bool(os.environ.get("WHIPSKRIBE_API_KEY"))
+    whip_stored = bool(_stored_setting("whipscribe_api_key"))
+    provider, llm_key, model = get_eval_settings()
+    return jsonify({
+        "whipscribe": {
+            "connected": bool(api_key),
+            "source": "env" if whip_env else ("stored" if whip_stored else None),
+        },
+        "slack": _slack_connection(),
+        "notion": _notion_connection(),
+        "llm": {
+            "provider": provider or None,
+            "model": model,
+            "key_set": bool(llm_key),
+        },
+    })
+
+
+@app.route("/api/connections/whipscribe/test", methods=["POST"])
+def api_connections_whipscribe_test():
+    """Verify the configured WhipScribe key with a real API call."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No WhipScribe key configured on the server."}), 400
+    try:
+        me = get_me(api_key)
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"WhipScribe rejected the key: {exc}"}), 502
+    if isinstance(me, dict):
+        label = me.get("email") or me.get("name") or me.get("plan") or "account verified"
+    else:
+        label = "account verified"
+    return jsonify({"success": True, "message": f"WhipScribe says hello - {label}."})
+
+
+@app.route("/api/connections/slack", methods=["POST", "DELETE"])
+def api_connections_slack():
+    """Connect Slack by validating an incoming webhook with a test message."""
+    if request.method == "DELETE":
+        store.save_setting("slack_webhook", "")
+        return jsonify({"success": True, "message": "Slack disconnected."})
+
+    payload = request.get_json(silent=True) or {}
+    webhook = str(payload.get("webhook_url", "")).strip()
+    if not webhook:
+        return jsonify({"success": False, "error": "Paste the Slack incoming webhook URL."}), 400
+    if not webhook.startswith("https://hooks.slack.com/"):
+        return jsonify({"success": False, "error": "That is not a Slack incoming webhook URL (it starts with https://hooks.slack.com/)."}), 400
+
+    message = {
+        "text": "CallCoach-AI is connected. Scores and trend summaries will land in this channel.",
+    }
+    if not send_to_slack(webhook, message):
+        return jsonify({"success": False, "error": "Slack did not accept the test message. Check the webhook and try again."}), 502
+
+    store.save_setting("slack_webhook", webhook)
+    return jsonify({"success": True, "message": "Connected - test message delivered to Slack."})
+
+
+@app.route("/api/connections/slack/test", methods=["POST"])
+def api_connections_slack_test():
+    """Send a test message through the configured Slack webhook."""
+    webhook = _stored_setting("slack_webhook") or os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("SLACK_WEBHOOK")
+    if not webhook:
+        return jsonify({"success": False, "error": "Slack is not connected yet."}), 400
+    if not send_to_slack(webhook, {"text": "Test from CallCoach-AI - delivery is working."}):
+        return jsonify({"success": False, "error": "Slack did not accept the message."}), 502
+    return jsonify({"success": True, "message": "Test message delivered."})
+
+
+@app.route("/api/connections/notion", methods=["POST", "DELETE"])
+def api_connections_notion():
+    """Connect Notion by validating the integration token against the database."""
+    if request.method == "DELETE":
+        store.save_setting("notion_token", "")
+        store.save_setting("notion_database_id", "")
+        return jsonify({"success": True, "message": "Notion disconnected."})
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("token", "")).strip() or _stored_setting("notion_token") or os.environ.get("NOTION_TOKEN")
+    database = str(payload.get("database", "")).strip()
+    database_id = _notion_database_id(database) or _stored_setting("notion_database_id")
+    if not token:
+        return jsonify({"success": False, "error": "Paste the Notion integration token."}), 400
+    if not database_id:
+        return jsonify({"success": False, "error": "Paste the database link from Notion (Share -> Copy link)."}), 400
+
+    try:
+        resp = requests.get(f"{NOTION_API}/databases/{database_id}", headers=_notion_headers(token), timeout=20)
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"Could not reach Notion: {exc}"}), 502
+    if resp.status_code == 404:
+        return jsonify({"success": False, "error": "Notion cannot see that database. Share it with your integration first."}), 404
+    if resp.status_code >= 400:
+        return jsonify({"success": False, "error": f"Notion rejected the token (HTTP {resp.status_code})."}), 502
+
+    title = ""
+    try:
+        parts = resp.json().get("title", [])
+        title = "".join(p.get("plain_text", "") for p in parts)
+    except Exception:
+        title = ""
+
+    store.save_setting("notion_token", token)
+    store.save_setting("notion_database_id", database_id)
+    label = f" - {title}" if title else ""
+    return jsonify({"success": True, "message": f"Connected to the Notion database{label}."})
+
+
+@app.route("/api/connections/notion/test", methods=["POST"])
+def api_connections_notion_test():
+    """Write a small test page into the connected Notion database."""
+    token = _stored_setting("notion_token") or os.environ.get("NOTION_TOKEN")
+    database_id = _stored_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID")
+    if not token or not database_id:
+        return jsonify({"success": False, "error": "Notion is not connected yet."}), 400
+    try:
+        result = deliver_report(
+            "# CallCoach-AI test page\n\nIf you can read this, report delivery works.",
+            "test-page",
+            {"overall_score": 0},
+            notion_token=token,
+            database_id=database_id,
+        )
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"Notion delivery failed: {exc}"}), 502
+    return jsonify({"success": True, "message": "Test page created in Notion.", "page_url": result.get("page_url")})
+
+
+# -------------------------------------------------------------------- uploads
+
+UPLOAD_JOBS = {}
+UPLOAD_LOCK = threading.Lock()
+
+
+def _set_upload_state(job_id, **fields):
+    with UPLOAD_LOCK:
+        state = UPLOAD_JOBS.setdefault(job_id, {})
+        state.update(fields)
+        state["updated_at"] = time.time()
+
+
+def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT):
+    """Background worker: transcribe, score, store. Updates the live stage."""
+    try:
+        _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the recording.")
+        poll_job(api_key, job_id, timeout=poll_timeout)
+        transcript = get_transcript(api_key, job_id)
+        _set_upload_state(job_id, stage="scoring", message="Four agents are reading the transcript.")
+
+        pending_items = store.get_unresolved_action_items()
+        provider, llm_key, model = get_eval_settings()
+        evaluation = evaluate(
+            transcript, api_key=llm_key, model=model,
+            provider=provider, pending_items=pending_items,
+        )
+        store.save_evaluation(job_id, transcript, evaluation)
+
+        core = _core_eval(evaluation)
+        for item in core.get("resolved_items", []):
+            store.resolve_action_item(item.get("text", ""), job_id=job_id)
+
+        _set_upload_state(
+            job_id,
+            stage="done",
+            message="Report ready.",
+            score=core.get("overall_score", 0),
+            segments=len(transcript.get("segments", [])),
+        )
+    except Exception as exc:
+        _set_upload_state(job_id, stage="error", message=str(exc))
+
+
+@app.errorhandler(413)
+def too_large(error):
+    return jsonify({"success": False, "error": "Upload exceeds the configured size limit"}), 413
 
 
 @app.route("/")
-def index():
-    """Landing page: show account info, job list, and analyze-all button."""
-    api_key = get_api_key()
-    
-    # Check if we have sample data even without API key
-    stored_evaluations = store.get_all_evaluations()
-    has_sample_data = len(stored_evaluations) > 0
-    
-    # If no API key and no sample data, redirect to settings
-    if not api_key and not has_sample_data:
-        return redirect(url_for("settings"))
-
-    # Get account info
-    account = None
-    if api_key:
-        try:
-            account = get_me(api_key)
-        except Exception as e:
-            # Don't show error on initial load, just continue with sample data
-            account = None
-
-    # Get all jobs on the account
-    jobs = []
-    if api_key:
-        try:
-            all_jobs = list_jobs(api_key, limit=100)
-            
-            # Handle different response formats
-            if isinstance(all_jobs, str):
-                # API returned error string - log it but don't crash
-                print(f"API Error: {all_jobs}")
-                all_jobs = []
-            elif isinstance(all_jobs, dict):
-                # API might return {jobs: [...]} or similar structure
-                all_jobs = all_jobs.get("jobs", [])
-            
-            # Filter to done jobs only
-            if isinstance(all_jobs, list):
-                for job in all_jobs:
-                    if isinstance(job, dict) and job.get("status") == "done":
-                        jobs.append({
-                            "job_id": job.get("job_id"),
-                            "filename": job.get("filename", "unknown"),
-                            "language": job.get("language", "?"),
-                            "duration": job.get("audio_duration_seconds", 0),
-                            "created_at": job.get("created_at", ""),
-                        })
-        except Exception as e:
-            # Don't crash on API errors, just continue with sample data
-            print(f"Error listing jobs: {e}")
-            jobs = []
-
-    # Check which evaluations are stored
-    stored = store.get_all_evaluations()
-    stored_ids = {e["job_id"] for e in stored}
-
-    return render_template("index.html", account=account, jobs=jobs, stored_ids=stored_ids)
+def root():
+    """Service info. The product UI is the Next.js dashboard."""
+    return jsonify({
+        "service": "CallCoach-AI",
+        "status": "ok",
+        "dashboard": FRONTEND_URL,
+        "health": "/api/health",
+    })
 
 
-@app.route("/analyze-all")
-def analyze_all():
-    """Analyze ALL meetings on the account at once.
+@app.route("/api/health")
+def api_health():
+    """Health check endpoint for testing."""
+    return jsonify({"status": "ok", "message": "Flask backend is running"})
 
-    This pulls every job, evaluates each, stores results, and redirects
-    to the trends dashboard for comprehensive team analysis.
+
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    """Accept the file, submit it to WhipScribe and return at once.
+
+    Processing (transcription + four-agent scoring) runs in a background
+    thread; the dashboard watches /api/upload/status/<job_id> for stages.
     """
     api_key = get_api_key()
     if not api_key:
-        flash("Please set your API key in Settings first.", "error")
-        return redirect(url_for("settings"))
+        return jsonify({"success": False, "error": "No WhipScribe API key configured"}), 401
 
-    provider, llm_key, model = get_eval_settings()
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "No file selected"}), 400
+
+    filename = secure_filename(file.filename) or f"upload-{uuid.uuid4().hex}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    file.save(filepath)
+
+    try:
+        job_id = submit_file(api_key, filepath)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 502
+    finally:
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
+
+    _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the recording.", filename=filename)
+    threading.Thread(target=_process_upload, args=(api_key, job_id), daemon=True).start()
+
+    return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"}), 202
+
+
+@app.route("/api/upload/status/<job_id>")
+def api_upload_status(job_id):
+    """Live stage of an upload: transcribing -> scoring -> done (or error)."""
+    with UPLOAD_LOCK:
+        state = dict(UPLOAD_JOBS.get(job_id) or {})
+
+    if not state:
+        stored = store.get_evaluation(job_id)
+        if stored:
+            core = stored["evaluation"]
+            return jsonify({
+                "success": True,
+                "stage": "done",
+                "message": "Report ready.",
+                "score": core.get("overall_score", 0),
+            })
+        return jsonify({"success": False, "stage": "unknown", "error": "Unknown job."}), 404
+
+    return jsonify({"success": state.get("stage") != "error", **state})
+
+
+@app.route("/api/upload/url", methods=["POST"])
+def api_upload_url():
+    """Submit a paste-link to WhipScribe and return at once.
+
+    WhipScribe fetches the media from the URL; processing (transcription +
+    four-agent scoring) runs in a background thread and the dashboard polls
+    /api/upload/status/<job_id> for stages.
+    """
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No WhipScribe API key configured"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    url = str(payload.get("url", "")).strip()
+    if not url:
+        return jsonify({"success": False, "error": "Paste a link to a recording."}), 400
+
+    try:
+        job_id = submit_url(api_key, url)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 502
+
+    _set_upload_state(job_id, stage="transcribing", message="WhipScribe is fetching and transcribing the link.", url=url)
+    threading.Thread(
+        target=_process_upload,
+        args=(api_key, job_id),
+        kwargs={"poll_timeout": UPLOAD_URL_POLL_TIMEOUT},
+        daemon=True,
+    ).start()
+
+    return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"}), 202
+
+
+@app.route("/api/jobs")
+def api_jobs():
+    """Return jobs as JSON for the Next.js frontend."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"jobs": [], "success": False, "error": "No API key configured"}), 401
 
     try:
         all_jobs = list_jobs(api_key, limit=100)
-        done_jobs = [j for j in all_jobs if j.get("status") == "done"]
+        jobs = []
+
+        if isinstance(all_jobs, str):
+            return jsonify({"jobs": [], "success": False, "error": all_jobs}), 500
+        elif isinstance(all_jobs, dict):
+            all_jobs = all_jobs.get("jobs", [])
+
+        if isinstance(all_jobs, list):
+            for job in all_jobs:
+                if isinstance(job, dict) and job.get("status") == "done":
+                    stored_eval = store.get_evaluation(job.get("job_id"))
+                    score = None
+                    if stored_eval:
+                        eval_json = stored_eval.get("evaluation", {})
+                        if isinstance(eval_json, str):
+                            eval_json = json.loads(eval_json)
+                        score = _core_eval(eval_json).get("overall_score")
+                    jobs.append({
+                        "job_id": job.get("job_id"),
+                        "filename": job.get("filename", "unknown"),
+                        "status": job.get("status"),
+                        "duration": job.get("audio_duration_seconds", 0),
+                        "created_at": job.get("created_at", ""),
+                        "score": score,
+                    })
+
+        return jsonify({"jobs": jobs, "success": True})
     except Exception as e:
-        flash(f"Error listing jobs: {e}", "error")
-        return redirect(url_for("index"))
-
-    evaluated = 0
-    errors = 0
-    for job in done_jobs[:20]:  # Cap at 20 to avoid timeouts
-        job_id = job.get("job_id")
-        if not job_id:
-            continue
-        try:
-            transcript = get_transcript(api_key, job_id)
-            if not transcript.get("speech_detected", True):
-                continue
-            if len(transcript.get("segments", [])) < 2:
-                continue
-
-            evaluation = evaluate(
-                transcript,
-                api_key=llm_key,
-                model=model,
-                provider=provider,
-            )
-            store.save_evaluation(job_id, transcript, evaluation)
-            
-            # Auto-deliver to Slack if configured
-            slack_result = deliver_qa_report_to_slack(evaluation, transcript, job_id)
-            if slack_result:
-                print(f"  Slack: {slack_result}")
-            
-            evaluated += 1
-        except Exception as e:
-            errors += 1
-
-    flash(f"Analyzed {evaluated} meetings ({errors} errors).", "success")
-    return redirect(url_for("trends"))
-
-
-@app.route("/analyze/<job_id>")
-def analyze_single(job_id):
-    """Analyze a single meeting by job ID."""
-    api_key = get_api_key()
-    if not api_key:
-        return redirect(url_for("settings"))
-
-    provider, llm_key, model = get_eval_settings()
-
-    try:
-        transcript = get_transcript(api_key, job_id)
-    except Exception as e:
-        flash(f"Error fetching transcript: {e}", "error")
-        return redirect(url_for("index"))
-
-    evaluation = evaluate(
-        transcript,
-        api_key=llm_key,
-        model=model,
-        provider=provider,
-    )
-    store.save_evaluation(job_id, transcript, evaluation)
-    
-    # Auto-deliver to Slack if configured
-    slack_result = deliver_qa_report_to_slack(evaluation, transcript, job_id)
-    if slack_result:
-        flash(f"Report delivered to Slack: {slack_result}", "success")
-
-    return redirect(url_for("report", job_id=job_id))
-
-
-@app.route("/report/<job_id>")
-def report(job_id):
-    """Show a single meeting's QA report."""
-    result = store.get_evaluation(job_id)
-    if result is None:
-        flash("No evaluation found. Analyze first.", "error")
-        return redirect(url_for("index"))
-
-    transcript = result["transcript"]
-    evaluation = result["evaluation"]
-    report_md = generate_report(evaluation, transcript, job_id)
-
-    # Check if audio URL is available
-    audio_url = None
-    api_key = get_api_key()
-    if api_key:
-        try:
-            from src.whip_api import get_audio_url
-            audio_data = get_audio_url(api_key, job_id)
-            audio_url = audio_data.get("url")
-        except Exception:
-            pass
-
-    return render_template(
-        "report.html",
-        job_id=job_id,
-        transcript=transcript,
-        evaluation=evaluation,
-        report_md=report_md,
-        audio_url=audio_url,
-    )
+        return jsonify({"jobs": [], "success": False, "error": str(e)}), 500
 
 
 @app.route("/api/report/<job_id>")
@@ -266,12 +531,11 @@ def api_report(job_id):
 
     transcript = result["transcript"]
     evaluation = result["evaluation"]
-    
+
     audio_url = None
     api_key = get_api_key()
     if api_key:
         try:
-            from src.whip_api import get_audio_url
             audio_data = get_audio_url(api_key, job_id)
             audio_url = audio_data.get("url")
         except Exception:
@@ -282,7 +546,7 @@ def api_report(job_id):
         "job_id": job_id,
         "transcript": transcript,
         "evaluation": evaluation,
-        "audio_url": audio_url
+        "audio_url": audio_url,
     })
 
 
@@ -293,24 +557,9 @@ def api_speakers():
     if len(evaluations) < 2:
         return jsonify({"success": False, "error": "Need at least 2 analyzed meetings for speaker analysis."}), 400
 
-    eval_dicts = []
-    names = []
-    for e in evaluations:
-        eval_json = json.loads(e["evaluation"]) if isinstance(e["evaluation"], str) else e["evaluation"]
-        core = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
-        eval_dicts.append({
-            "overall_score": core.get("overall_score", 0),
-            "category_scores": core.get("category_scores", {}),
-            "action_items": core.get("action_items", []),
-            "clarity_issues": core.get("clarity_issues", []),
-            "tension_signals": core.get("tension_signals", []),
-            "compliance_risks": core.get("compliance_risks", []),
-        })
-        names.append(e.get("meeting_name") or e["job_id"][:8])
-
-    from src.core.compare import compare_evaluations
+    eval_dicts, names = _stored_eval_dicts(evaluations)
     comparisons = compare_evaluations(eval_dicts, names)
-    
+
     speaker_analysis = comparisons.get("speaker_analysis", {})
     speakers_list = [
         {
@@ -329,440 +578,7 @@ def api_speakers():
         "top_contributors": speakers_list[:5],
     })
 
-@app.route("/trends")
-def trends():
-    """Multi-meeting trend dashboard.
 
-    Shows quality trends across all stored meetings with slope analysis
-    and coaching insights.
-    """
-    evaluations = store.get_all_evaluations()
-    if len(evaluations) < 2:
-        flash("Need at least 2 analyzed meetings for trends. Analyze more meetings.", "info")
-        return redirect(url_for("index"))
-
-    # Build evaluation dicts for compare.py
-    eval_dicts = []
-    names = []
-    for e in evaluations:
-        eval_dicts.append({
-            "overall_score": e["overall_score"],
-            "category_scores": {
-                "action_items": e["action_items"],
-                "clarity": e["clarity"],
-                "tension": e["tension"],
-                "compliance": e["compliance"],
-            },
-            "action_items": [],
-            "clarity_issues": [],
-            "tension_signals": [],
-            "compliance_risks": [],
-        })
-        names.append(e["meeting_name"] or e["job_id"][:8])
-
-    comparisons = compare_evaluations(eval_dicts, names)
-    report = generate_comparison_report(comparisons)
-
-    return render_template(
-        "trends.html",
-        meetings=evaluations,
-        comparisons=comparisons,
-        report=report,
-    )
-
-
-@app.route("/speakers")
-def speakers():
-    """Speaker performance analysis page.
-    
-    NEW FEATURE: Shows which speakers contribute to quality issues,
-    identifies high-risk speakers, and tracks individual performance.
-    """
-    evaluations = store.get_all_evaluations()
-    if len(evaluations) < 2:
-        flash("Need at least 2 analyzed meetings for speaker analysis.", "info")
-        return redirect(url_for("index"))
-
-    eval_dicts = []
-    names = []
-    for e in evaluations:
-        eval_dicts.append({
-            "overall_score": e["overall_score"],
-            "category_scores": {
-                "action_items": e["action_items"],
-                "clarity": e["clarity"],
-                "tension": e["tension"],
-                "compliance": e["compliance"],
-            },
-            "action_items": e.get("action_items_list", []),
-            "clarity_issues": e.get("clarity_issues_list", []),
-            "tension_signals": e.get("tension_signals_list", []),
-            "compliance_risks": e.get("compliance_risks_list", []),
-        })
-        names.append(e["meeting_name"] or e["job_id"][:8])
-
-    comparisons = compare_evaluations(eval_dicts, names)
-    speaker_analysis = comparisons.get("speaker_analysis", {})
-
-    return render_template(
-        "speakers.html",
-        speaker_analysis=speaker_analysis,
-        comparisons=comparisons,
-    )
-
-
-@app.route("/trends/slack")
-def trends_to_slack():
-    """Deliver trend summary to Slack."""
-    evaluations = store.get_all_evaluations()
-    if len(evaluations) < 2:
-        flash("Need at least 2 analyzed meetings for trends.", "error")
-        return redirect(url_for("index"))
-
-    eval_dicts = []
-    names = []
-    for e in evaluations:
-        eval_dicts.append({
-            "overall_score": e["overall_score"],
-            "category_scores": {
-                "action_items": e["action_items"],
-                "clarity": e["clarity"],
-                "tension": e["tension"],
-                "compliance": e["compliance"],
-            },
-            "action_items": [],
-            "clarity_issues": [],
-            "tension_signals": [],
-            "compliance_risks": [],
-        })
-        names.append(e["meeting_name"] or e["job_id"][:8])
-
-    comparisons = compare_evaluations(eval_dicts, names)
-    slack_result = deliver_trend_summary_to_slack(comparisons)
-    
-    if slack_result:
-        flash(f"Trend summary delivered to Slack: {slack_result}", "success")
-    else:
-        flash("Slack delivery failed. Check webhook configuration.", "error")
-    
-    return redirect(url_for("trends"))
-
-
-@app.route("/coach")
-def coach():
-    """Coaching insights page — prescriptive advice from trends."""
-    evaluations = store.get_all_evaluations()
-    if len(evaluations) < 2:
-        flash("Need at least 2 analyzed meetings for coaching.", "info")
-        return redirect(url_for("index"))
-
-    eval_dicts = []
-    names = []
-    for e in evaluations:
-        eval_dicts.append({
-            "overall_score": e["overall_score"],
-            "category_scores": {
-                "action_items": e["action_items"],
-                "clarity": e["clarity"],
-                "tension": e["tension"],
-                "compliance": e["compliance"],
-            },
-            "action_items": [],
-            "clarity_issues": [],
-            "tension_signals": [],
-            "compliance_risks": [],
-        })
-        names.append(e["meeting_name"] or e["job_id"][:8])
-
-    comparisons = compare_evaluations(eval_dicts, names)
-
-    # Generate coaching insights
-    insights = _generate_coaching_insights(comparisons, evaluations)
-
-    return render_template("coach.html", insights=insights, comparisons=comparisons)
-
-
-def _generate_coaching_insights(comparisons, evaluations):
-    """Generate prescriptive coaching insights from trend data.
-
-    Goes beyond what compare.py does — adds actionable recommendations.
-    """
-    insights = []
-    trends = comparisons.get("trends", {})
-    meetings = comparisons.get("meetings", [])
-    action_tracking = comparisons.get("action_item_tracking", {})
-
-    # Trend direction insights with prescriptive advice
-    for metric in ["overall", "action_items", "clarity", "tension", "compliance"]:
-        trend = trends.get(metric, "stable")
-        if trend == "declining":
-            advice = {
-                "overall": "Overall meeting quality is declining. Review the root causes in clarity, tension, and compliance.",
-                "clarity": "Clarity scores are dropping — reps may be rushing or unprepared. Recommend pre-meeting prep sheets.",
-                "tension": "Tension is rising — conflict or defensive language is increasing. Consider a facilitator training session.",
-                "compliance": "Compliance risks are rising — someone is making unbacked promises. Add a pre-call compliance checklist.",
-                "action_items": "Action items are worsening — fewer items are being captured. Coach reps on closing with clear ownership.",
-            }
-            insights.append({
-                "type": "trend_declining",
-                "metric": metric,
-                "message": comparisons["insights"][0] if comparisons["insights"] else "",
-                "advice": advice.get(metric, "Investigate and address."),
-                "scores": [m["scores"][metric] for m in meetings],
-            })
-        elif trend == "improving":
-            insights.append({
-                "type": "trend_improving",
-                "metric": metric,
-                "message": "Quality is improving — identify what worked and reinforce it.",
-                "advice": f"Keep the practices from {meetings[-1]['name']} — they're helping.",
-                "scores": [m["scores"][metric] for m in meetings],
-            })
-
-    # Action item tracking insights
-    resolved = action_tracking.get("resolved", 0)
-    unresolved_list = action_tracking.get("unresolved", [])
-    total_items = resolved + len(unresolved_list)
-    if total_items > 0:
-        rate = round((resolved / total_items) * 100)
-        if rate < 50:
-            insights.append({
-                "type": "action_items_warning",
-                "metric": "action_items",
-                "message": f"Action item completion rate is {rate}% — too low.",
-                "advice": "Reps are forgetting to close out tasks. Add a follow-up ritual within 24 hours of each meeting.",
-                "scores": [],
-            })
-        elif rate < 100:
-            insights.append({
-                "type": "action_items_ok",
-                "metric": "action_items",
-                "message": f"Action item completion rate is {rate}% — good progress.",
-                "advice": "Keep the current system and push toward 100% closure.",
-                "scores": [],
-            })
-
-    # Recurring compliance insights
-    common = comparisons.get("common_issues", [])
-    compliance_recurring = [i for i in common if i["type"] == "compliance_risks"]
-    if compliance_recurring:
-        insights.append({
-            "type": "compliance_recurring",
-            "metric": "compliance",
-            "message": f"{len(compliance_recurring)} compliance risk type(s) recur across meetings.",
-            "advice": "Create a team playbook entry for each recurring risk and review before each call.",
-            "scores": [],
-        })
-
-    return insights
-
-
-@app.route("/api/upload", methods=["POST"])
-def upload():
-    """Handle file upload — submit to WhipScribe API."""
-    api_key = get_api_key()
-    if not api_key:
-        return jsonify({"success": False, "error": "API key not configured"}), 401
-
-    file = request.files.get("file")
-    if not file or not file.filename:
-        return jsonify({"success": False, "error": "No file selected"}), 400
-
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    file.save(filepath)
-    try:
-        from src.api.whip_api import submit_file, poll_job, get_transcript as fetch_transcript
-        from src.core.evaluator import evaluate
-        from src.database import store
-        
-        job_id = submit_file(api_key, filepath)
-        
-        # Logic for async processing in a production environment.
-        # Here we poll synchronously for the demo flow.
-        poll_job(api_key, job_id, timeout=300)
-        transcript = fetch_transcript(api_key, job_id)
-        
-        # THE CLOSING LOOP: Get unresolved promises from previous calls
-        pending_items = store.get_unresolved_action_items()
-        
-        provider, llm_key, model = get_eval_settings()
-        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider, pending_items=pending_items)
-        
-        store.save_evaluation(job_id, transcript, evaluation)
-        
-        # Update DB: Mark resolved items as delivered
-        resolved = evaluation.get("evaluation", {}).get("resolved_items", [])
-        for item in resolved:
-            store.resolve_action_item(item.get("text", ""))
-        
-        return jsonify({"success": True, "job_id": job_id, "score": evaluation.get("evaluation", {}).get("overall_score")}), 200
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-def settings():
-    """Settings page: API key + LLM provider + Slack configuration."""
-    if request.method == "POST":
-        api_key = request.form.get("whipscribe_api_key", "").strip()
-        llm_provider = request.form.get("llm_provider", "")
-        llm_api_key = request.form.get("llm_api_key", "").strip()
-        llm_model = request.form.get("llm_model", "gpt-4o-mini")
-        slack_webhook = request.form.get("slack_webhook", "").strip()
-
-        if api_key:
-            store.save_setting("whipscribe_api_key", api_key)
-        if llm_provider:
-            store.save_setting("llm_provider", llm_provider)
-        if llm_api_key:
-            store.save_setting("llm_api_key", llm_api_key)
-        if llm_model:
-            store.save_setting("llm_model", llm_model)
-        if slack_webhook:
-            store.save_setting("slack_webhook", slack_webhook)
-
-        flash("Settings saved. Note: for production, use environment variables instead.", "success")
-        return redirect(url_for("settings"))
-
-    # Load existing settings
-    existing = {
-        "whipscribe_api_key": store.get_setting("whipscribe_api_key") or "",
-        "llm_provider": store.get_setting("llm_provider") or os.environ.get("LLM_PROVIDER", ""),
-        "llm_api_key": store.get_setting("llm_api_key") or "",
-        "llm_model": store.get_setting("llm_model") or os.environ.get("LLM_MODEL", "gpt-4o-mini"),
-        "slack_webhook": store.get_setting("slack_webhook") or os.environ.get("SLACK_WEBHOOK_URL", ""),
-    }
-
-    return render_template("settings.html", settings=existing)
-
-
-@app.route("/api/health")
-def api_health():
-    """Health check endpoint for testing."""
-    return jsonify({"status": "ok", "message": "Flask backend is running"})
-
-
-@app.route("/api/settings", methods=["GET", "POST"])
-def api_settings():
-    """Read or save frontend connection settings without exposing secrets in responses."""
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or {}
-        api_key = str(payload.get("whipscribe_api_key", "")).strip()
-        if not api_key:
-            return jsonify({"success": False, "error": "WhipScribe API key is required"}), 400
-        
-        store.save_setting("whipscribe_api_key", api_key)
-        if "llm_model" in payload: store.save_setting("llm_model", payload["llm_model"])
-        if "slack_webhook" in payload: store.save_setting("slack_webhook", payload["slack_webhook"])
-        if "notion_token" in payload: store.save_setting("notion_token", payload["notion_token"])
-        if "notion_database_id" in payload: store.save_setting("notion_database_id", payload["notion_database_id"])
-        
-        return jsonify({"success": True})
-
-    return jsonify({
-        "configured": bool(os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key")),
-        "api_key": "********",
-        "llm_model": store.get_setting("llm_model") or os.environ.get("LLM_MODEL", "gpt-4o-mini"),
-        "slack_webhook": store.get_setting("slack_webhook") or os.environ.get("SLACK_WEBHOOK_URL", ""),
-        "notion_token": store.get_setting("notion_token") or os.environ.get("NOTION_TOKEN", ""),
-        "notion_database_id": store.get_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID", "")
-    })
-
-
-@app.route("/api/export/notion", methods=["POST"])
-def api_export_notion():
-    """Export a report to Notion."""
-    job_id = request.json.get("job_id")
-    if not job_id:
-        return jsonify({"success": False, "error": "Missing job_id"}), 400
-
-    eval_data = store.get_evaluation(job_id)
-    if not eval_data:
-        return jsonify({"success": False, "error": "Evaluation not found"}), 404
-
-    try:
-        # Convert eval data to simple MD for Notion
-        report_md = f"# Meeting QA Report: {job_id}\n\n"
-        report_md += f"Overall Score: {eval_data['evaluation'].get('overall_score', 'N/A')}\n\n"
-        report_md += "## Key Insights\n"
-        for cat, score in eval_data['evaluation'].get('category_scores', {}).items():
-            report_md += f"- {cat}: {score}\n"
-
-        notion_token = store.get_setting("notion_token") or os.environ.get("NOTION_TOKEN")
-        notion_db_id = store.get_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID")
-
-        result = deliver_report(
-            report_md=report_md,
-            job_id=job_id,
-            scores=eval_data['evaluation'],
-            notion_token=notion_token,
-            database_id=notion_db_id
-        )
-        return jsonify({"success": True, "page_url": result.get("page_url")})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-@app.route("/api/export/slack", methods=["POST"])
-def api_export_slack():
-    """Deliver a report to Slack."""
-    job_id = request.json.get("job_id")
-    if not job_id:
-        return jsonify({"success": False, "error": "Missing job_id"}), 400
-
-    eval_data = store.get_evaluation(job_id)
-    if not eval_data:
-        return jsonify({"success": False, "error": "Evaluation not found"}), 404
-
-    try:
-        slack_result = deliver_qa_report_to_slack(
-            eval_data['evaluation'], 
-            eval_data['transcript'], 
-            job_id
-        )
-        if slack_result:
-            return jsonify({"success": True, "message": slack_result})
-        return jsonify({"success": False, "error": "Slack delivery failed"}), 500
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/jobs")
-def api_jobs():
-    """Return jobs as JSON for Next.js frontend."""
-    api_key = get_api_key()
-    if not api_key:
-        return jsonify({"jobs": [], "success": False, "error": "No API key configured"}), 401
-    
-    try:
-        all_jobs = list_jobs(api_key, limit=100)
-        jobs = []
-        
-        # Handle different response formats
-        if isinstance(all_jobs, str):
-            return jsonify({"jobs": [], "success": False, "error": all_jobs}), 500
-        elif isinstance(all_jobs, dict):
-            all_jobs = all_jobs.get("jobs", [])
-        
-        # Filter to done jobs only
-        if isinstance(all_jobs, list):
-            for job in all_jobs:
-                if isinstance(job, dict) and job.get("status") == "done":
-                    # Enrich job with stored evaluation score if available
-                    stored_eval = store.get_evaluation(job.get("job_id"))
-                    score = None
-                    if stored_eval:
-                        eval_json = stored_eval.get("evaluation", {})
-                        if isinstance(eval_json, str):
-                            eval_json = json.loads(eval_json)
-                        score = eval_json.get("overall_score")
-                    jobs.append({
-                        "job_id": job.get("job_id"),
-                        "filename": job.get("filename", "unknown"),
-                        "status": job.get("status"),
-                        "duration": job.get("audio_duration_seconds", 0),
-                        "created_at": job.get("created_at", ""),
-                        "score": score,
-                    })
-        
-        return jsonify({"jobs": jobs, "success": True})
-    except Exception as e:
-        return jsonify({"jobs": [], "success": False, "error": str(e)}), 500
 @app.route("/api/analyze/<job_id>", methods=["POST"])
 def api_analyze(job_id):
     """API endpoint: analyze a single meeting and return JSON."""
@@ -778,7 +594,7 @@ def api_analyze(job_id):
         return jsonify({
             "success": True,
             "job_id": job_id,
-            "score": evaluation.get("overall_score", 0),
+            "score": _core_eval(evaluation).get("overall_score", 0),
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -816,84 +632,70 @@ def api_analyze_all():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/api/upload", methods=["POST"])
-def api_upload():
-    """Upload one recording from the Next.js drop zone and analyze it."""
-    api_key = get_api_key()
-    if not api_key:
-        return jsonify({"success": False, "error": "No WhipScribe API key configured"}), 401
-
-    uploaded = request.files.get("file")
-    if not uploaded or not uploaded.filename:
-        return jsonify({"success": False, "error": "Choose an audio or video file"}), 400
-
-    filename = secure_filename(uploaded.filename)
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    uploaded.save(filepath)
-
-    try:
-        job_id = submit_file(api_key, filepath)
-        poll_job(api_key, job_id, timeout=300)
-        transcript = get_transcript(api_key, job_id)
-        provider, llm_key, model = get_eval_settings()
-        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
-        store.save_evaluation(job_id, transcript, evaluation)
-        return jsonify({
-            "success": True,
-            "job_id": job_id,
-            "score": evaluation.get("overall_score", 0),
-            "segments": len(transcript.get("segments", [])),
-        })
-    except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 502
-    finally:
-        try:
-            os.remove(filepath)
-        except OSError:
-            pass
-
-
 @app.route("/api/trends-data")
 def trends_data():
-    """JSON endpoint for Chart.js to render trend charts."""
+    """JSON endpoint for the score progression and momentum charts."""
     from src.core.metrics import calculate_deal_velocity, calculate_momentum_slope
-    import json
+
     evaluations = store.get_all_evaluations()
     if not evaluations:
         return jsonify({"labels": [], "overall": [], "velocity": 0, "momentum": "stable"})
 
-    # Sort by created_at for chronological slope calculation
     sorted_evals = sorted(evaluations, key=lambda e: e["created_at"])
-    
+
     parsed_evals = []
     for e in sorted_evals:
         try:
-            # The 'evaluation' column is a JSON string
             eval_json = json.loads(e["evaluation"])
-            # Handle both the wrapper { 'evaluation': { ... } } and the direct { ... }
-            core_eval = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
+            core_eval = _core_eval(eval_json)
             parsed_evals.append({
                 "meeting_name": e["meeting_name"] or e["job_id"][:8],
                 "overall_score": core_eval.get("overall_score", 0),
-                "core": core_eval
+                "core": core_eval,
+                "created_at": e.get("created_at") or "",
             })
         except (json.JSONDecodeError, TypeError):
             continue
 
     labels = [p["meeting_name"] for p in parsed_evals]
     scores = [p["overall_score"] or 0 for p in parsed_evals]
-    
-    # Calculate real mathematical metrics
+
     velocity = calculate_deal_velocity([p["core"] for p in parsed_evals])
     slope = calculate_momentum_slope(scores)
     momentum = "increasing" if slope > 0.5 else "decreasing" if slope < -0.5 else "stable"
+
+    category_scores = {"action_items": 0, "clarity": 0, "tension": 0, "compliance": 0}
+    for p in reversed(parsed_evals):
+        cat = p.get("core", {}).get("category_scores", {})
+        if not isinstance(cat, dict) or not cat:
+            continue
+        if "action_items" in cat:
+            mapped = {
+                "action_items": int(cat.get("action_items", 0) or 0),
+                "clarity": int(cat.get("clarity", 0) or 0),
+                "tension": int(cat.get("tension", 0) or 0),
+                "compliance": int(cat.get("compliance", 0) or 0),
+            }
+        elif "commitments" in cat:
+            mapped = {
+                "action_items": int(cat.get("commitments", 0) or 0),
+                "clarity": int(cat.get("narrative", 0) or 0),
+                "tension": int(cat.get("friction", 0) or 0),
+                "compliance": int(cat.get("velocity", 0) or 0),
+            }
+        else:
+            continue
+        if any(v > 0 for v in mapped.values()):
+            category_scores = mapped
+            break
 
     return jsonify({
         "labels": labels,
         "overall": scores,
         "velocity": round(velocity, 1),
         "momentum": momentum,
-        "slope": round(slope, 2)
+        "slope": round(slope, 2),
+        "category_scores": category_scores,
     })
 
 
@@ -904,21 +706,7 @@ def coach_data():
     if len(evaluations) < 2:
         return jsonify({"ready": False, "insights": [], "message": "Analyze at least two meetings first."})
 
-    eval_dicts = []
-    names = []
-    for item in evaluations:
-        eval_json = json.loads(item["evaluation"]) if isinstance(item["evaluation"], str) else item["evaluation"]
-        core = eval_json.get("evaluation", eval_json) if isinstance(eval_json, dict) else {}
-        eval_dicts.append({
-            "overall_score": core.get("overall_score", 0),
-            "category_scores": core.get("category_scores", {}),
-            "action_items": core.get("action_items", []),
-            "clarity_issues": core.get("clarity_issues", []),
-            "tension_signals": core.get("tension_signals", []),
-            "compliance_risks": core.get("compliance_risks", []),
-        })
-        names.append(item.get("meeting_name") or item["job_id"][:8])
-
+    eval_dicts, names = _stored_eval_dicts(evaluations)
     comparisons = compare_evaluations(eval_dicts, names)
     return jsonify({
         "ready": True,
@@ -928,6 +716,156 @@ def coach_data():
     })
 
 
+def _generate_coaching_insights(comparisons, evaluations):
+    """Generate prescriptive coaching insights from trend data."""
+    insights = []
+    trends = comparisons.get("trends", {})
+    meetings = comparisons.get("meetings", [])
+    action_tracking = comparisons.get("action_item_tracking", {})
+
+    for metric in ["overall", "action_items", "clarity", "tension", "compliance"]:
+        trend = trends.get(metric, "stable")
+        if trend == "declining":
+            advice = {
+                "overall": "Overall call quality is declining. Review the root causes in clarity, tension, and compliance.",
+                "clarity": "Clarity scores are dropping - the pitch may be rushed or unprepared. Recommend a pre-call prep sheet.",
+                "tension": "Tension is rising - hesitation or defensive language is increasing. Review the flagged moments before the next call.",
+                "compliance": "Compliance risks are rising - unbacked promises are being made. Add a pre-call commitments checklist.",
+                "action_items": "Action items are worsening - fewer items are being captured. Close every call with clear owners.",
+            }
+            insights.append({
+                "type": "trend_declining",
+                "metric": metric,
+                "message": comparisons["insights"][0] if comparisons["insights"] else "",
+                "advice": advice.get(metric, "Investigate and address."),
+                "scores": [m["scores"][metric] for m in meetings],
+            })
+        elif trend == "improving":
+            insights.append({
+                "type": "trend_improving",
+                "metric": metric,
+                "message": "Quality is improving - identify what worked and reinforce it.",
+                "advice": f"Keep the practices from {meetings[-1]['name']} - they are helping.",
+                "scores": [m["scores"][metric] for m in meetings],
+            })
+
+    resolved = action_tracking.get("resolved", 0)
+    unresolved_list = action_tracking.get("unresolved", [])
+    total_items = resolved + len(unresolved_list)
+    if total_items > 0:
+        rate = round((resolved / total_items) * 100)
+        if rate < 50:
+            insights.append({
+                "type": "action_items_warning",
+                "metric": "action_items",
+                "message": f"Action item completion rate is {rate}% - too low.",
+                "advice": "Commitments are not being closed out. Add a follow-up ritual within 24 hours of each call.",
+                "scores": [],
+            })
+        elif rate < 100:
+            insights.append({
+                "type": "action_items_ok",
+                "metric": "action_items",
+                "message": f"Action item completion rate is {rate}% - good progress.",
+                "advice": "Keep the current system and push toward 100% closure.",
+                "scores": [],
+            })
+
+    common = comparisons.get("common_issues", [])
+    compliance_recurring = [i for i in common if i["type"] == "compliance_risks"]
+    if compliance_recurring:
+        insights.append({
+            "type": "compliance_recurring",
+            "metric": "compliance",
+            "message": f"{len(compliance_recurring)} compliance risk type(s) recur across meetings.",
+            "advice": "Create a playbook entry for each recurring risk and review it before each call.",
+            "scores": [],
+        })
+
+    return insights
+
+
+@app.route("/api/export/notion", methods=["POST"])
+def api_export_notion():
+    """Export a report to Notion."""
+    payload = request.get_json(silent=True) or {}
+    job_id = payload.get("job_id")
+    if not job_id:
+        return jsonify({"success": False, "error": "Missing job_id"}), 400
+
+    eval_data = store.get_evaluation(job_id)
+    if not eval_data:
+        return jsonify({"success": False, "error": "Evaluation not found"}), 404
+
+    try:
+        core = eval_data["evaluation"]
+        report_md = f"# Meeting QA Report: {job_id}\n\n"
+        report_md += f"Overall Score: {core.get('overall_score', 'N/A')}\n\n"
+        report_md += "## Key Insights\n"
+        for cat, score in core.get("category_scores", {}).items():
+            report_md += f"- {cat}: {score}\n"
+
+        notion_token = _stored_setting("notion_token") or os.environ.get("NOTION_TOKEN")
+        notion_db_id = _stored_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID")
+
+        result = deliver_report(
+            report_md=report_md,
+            job_id=job_id,
+            scores=core,
+            notion_token=notion_token,
+            database_id=notion_db_id,
+        )
+        return jsonify({"success": True, "page_url": result.get("page_url")})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/export/slack", methods=["POST"])
+def api_export_slack():
+    """Deliver a report to Slack."""
+    payload = request.get_json(silent=True) or {}
+    job_id = payload.get("job_id")
+    if not job_id:
+        return jsonify({"success": False, "error": "Missing job_id"}), 400
+
+    eval_data = store.get_evaluation(job_id)
+    if not eval_data:
+        return jsonify({"success": False, "error": "Evaluation not found"}), 404
+
+    try:
+        slack_result = deliver_qa_report_to_slack(
+            eval_data["evaluation"],
+            eval_data["transcript"],
+            job_id,
+        )
+        if slack_result:
+            return jsonify({"success": True, "message": slack_result})
+        return jsonify({"success": False, "error": "Slack delivery failed. Connect Slack under Connections."}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/export/trends", methods=["POST"])
+def api_export_trends():
+    """Deliver the cross-meeting trend summary to Slack."""
+    evaluations = store.get_all_evaluations()
+    if len(evaluations) < 2:
+        return jsonify({"success": False, "error": "Need at least 2 analyzed meetings for trends."}), 400
+
+    eval_dicts, names = _stored_eval_dicts(evaluations)
+    comparisons = compare_evaluations(eval_dicts, names)
+    try:
+        result = deliver_trend_summary_to_slack(comparisons)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    if result:
+        return jsonify({"success": True, "message": result})
+    return jsonify({"success": False, "error": "Slack delivery failed. Connect Slack under Connections."}), 500
+
+
 if __name__ == "__main__":
-    store.init_db()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=os.environ.get("FLASK_DEBUG") == "1",
+    )

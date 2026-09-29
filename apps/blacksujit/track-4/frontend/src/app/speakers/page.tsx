@@ -4,11 +4,67 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { getSpeakers, SpeakersResponse } from "@/lib/api";
+import { getSpeakers, SpeakersResponse, SpeakerStat } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import PageHeader from "@/components/PageHeader";
+import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import {
+  ShieldCheckIcon,
+  WaveformIcon,
+  CrosshairIcon,
+  ListChecksIcon,
+  AlertIcon,
+  UsersIcon,
+} from "@/components/icons";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
-const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
+
+const issueColors: Record<string, string> = {
+  compliance: "var(--cat-compliance)",
+  tension: "var(--cat-tension)",
+  clarity: "var(--cat-clarity)",
+  action_items: "var(--cat-actions)",
+};
+
+const issueLabels: Record<string, string> = {
+  compliance_risks: "Compliance",
+  tension_signals: "Tension",
+  clarity_issues: "Clarity",
+  compliance: "Compliance",
+  tension: "Tension",
+  clarity: "Clarity",
+  action_items: "Action items",
+};
+
+function IssueIcon({ type, size = 14 }: { type: string; size?: number }) {
+  if (type.startsWith("compliance")) return <ShieldCheckIcon size={size} />;
+  if (type.startsWith("tension")) return <WaveformIcon size={size} />;
+  if (type.startsWith("clarity")) return <CrosshairIcon size={size} />;
+  return <ListChecksIcon size={size} />;
+}
+
+function getSpeakerInitials(name: string): string {
+  const parts = name.split(" ");
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+function getAvatarBg(name: string): string {
+  const colors = [
+    "var(--brand)",
+    "var(--cat-clarity)",
+    "var(--cat-tension)",
+    "var(--cat-actions)",
+    "var(--brand-700)",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + (hash << 5) - hash;
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
 
 export default function SpeakersPage() {
   const [data, setData] = useState<SpeakersResponse | null>(null);
@@ -28,29 +84,30 @@ export default function SpeakersPage() {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
-            Loading speaker analysis...
-          </motion.p>
+        <div className="section-wide section-pad">
+          <div className="skeleton skeleton-title" />
+          <div className="skeleton skeleton-line" style={{ width: "42%" }} />
+          <div className="card" style={{ marginTop: 24 }}>
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+          </div>
         </div>
       </main>
     );
   }
 
-  // Not enough data state
   if (!data || !data.success) {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <p className="section-eyebrow">Speaker Performance</p>
-            <h1>Not enough data yet</h1>
-            <p className="hero-lede">
-              {data?.error || "Speaker analysis appears after you analyze two or more meetings."}
-            </p>
-            <Link href="/" className="btn-primary">Upload your first meeting</Link>
-          </motion.div>
+        <div className="section-wide section-pad">
+          <PageHeader
+            eyebrow="Speakers"
+            title="Not enough calls yet."
+            subtitle={data?.error || "Speaker patterns appear once two or more calls are scored."}
+            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+          />
         </div>
       </main>
     );
@@ -64,141 +121,100 @@ export default function SpeakersPage() {
     <PageTransition>
     <main className="site-shell">
       <Navbar />
-      <section className="section-wide" style={{ paddingTop: "92px" }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.1 }}
-        >
-          <p className="section-eyebrow">Speaker Performance</p>
-          <h1>Individual analysis and coaching insights.</h1>
-          <p className="hero-lede">
-            Data from {speakers.length} speakers across your analyzed meetings.
-          </p>
-        </motion.div>
+      <section className="section-wide section-pad">
+        <PageHeader
+          eyebrow="Speakers"
+          title="Who the issues come from."
+          subtitle={`${speakers.length} speakers across your scored calls.`}
+        />
 
-        {/* Speakers Grid */}
-        <motion.div
-          className="section-wide"
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "24px", marginTop: "42px" }}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.2 }}
-        >
-          {speakers.map((speaker, i) => {
-            const isHighRisk = highRisk.includes(speaker.name);
-            const issueTypes = speaker.issue_types || [];
-            return (
-              <motion.div
-                key={speaker.name}
-                className="card"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ ...springReveal, delay: 0.3 + i * 0.1 }}
-                whileHover="hover"
-              >
-                <motion.div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}
-                  variants={{ hover: { x: 4 } }}
-                  transition={springHover}
-                >
-                  <div>
-                    <h3 className="text-v4-ink">{speaker.name}</h3>
-                    <p className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-                      {issueTypes.join(" · ") || "No issues"}
-                    </p>
-                  </div>
-                  <motion.div
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: 700,
-                      color: isHighRisk ? "var(--color-accent)" : "var(--color-ok)",
-                    }}
-                  >
-                    {speaker.issue_count}
-                  </motion.div>
-                </motion.div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div>
-                    <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Issue count</div>
-                    <div className="text-v4-ink" style={{ fontSize: "var(--text-body)" }}>{speaker.issue_count}</div>
-                  </div>
-                  <div>
-                    <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>Risk level</div>
-                    <div className="text-v4-ink" style={{ fontSize: "var(--text-body)" }}>
-                      {isHighRisk ? "High" : "Low"}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        {/* High Risk Speakers */}
-        {highRisk.length > 0 && (
+        {speakers.length > 0 && (
           <motion.div
-            className="card"
-            style={{ marginTop: "24px", border: "1px solid var(--color-accent)" }}
+            className="speakers-grid"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ ...springReveal, delay: 0.4 }}
+            transition={{ ...springReveal, delay: 0.2 }}
           >
-            <p className="section-eyebrow" style={{ color: "var(--color-accent)" }}>Attention Needed</p>
-            <p style={{ color: "var(--v4-ink)", fontSize: "var(--text-body)" }}>
-              {highRisk.join(", ")} {highRisk.length === 1 ? "has" : "have"} recurring patterns that need attention.
-            </p>
+            {speakers.map((speaker: SpeakerStat, i) => {
+              const isHighRisk = highRisk.includes(speaker.name);
+              const issueTypes = speaker.issue_types || [];
+              return (
+                <AnimatedContent key={speaker.name} delay={0.05 * i}>
+                  <div className="speaker-card">
+                    <div className="speaker-avatar" style={{ background: getAvatarBg(speaker.name) }}>
+                      {getSpeakerInitials(speaker.name)}
+                    </div>
+                    <div className="speaker-info">
+                      <h3 className="text-v4-ink">{speaker.name}</h3>
+                      <div className="speaker-issues">
+                        {issueTypes.map((type, idx) => {
+                          const key = type.replace(/s$/, "");
+                          const color = issueColors[key] || "var(--v4-ink-muted)";
+                          return (
+                            <span key={idx} className="cat-dot" style={{ color }}>
+                              <IssueIcon type={type} size={14} /> {issueLabels[type] || type.replace(/_/g, " ")}
+                            </span>
+                          );
+                        })}
+                        {issueTypes.length === 0 && "No issues found"}
+                      </div>
+                    </div>
+                    <div className="speaker-badge" style={{ color: isHighRisk ? "var(--cat-compliance)" : "var(--cat-clarity)" }}>
+                      {speaker.issue_count}
+                    </div>
+                  </div>
+                </AnimatedContent>
+              );
+            })}
           </motion.div>
         )}
 
-        {/* Top Contributors */}
+        {highRisk.length > 0 && (
+          <AnimatedContent className="alert-card" delay={0.25}>
+            <div className="alert-header">
+              <span className="alert-icon" style={{ color: "var(--cat-compliance)" }}>
+                <AlertIcon size={18} />
+              </span>
+              <p className="section-eyebrow" style={{ color: "var(--cat-compliance)", marginBottom: 0 }}>Recurring pattern</p>
+            </div>
+            <p className="section-subtitle">
+              {highRisk.join(", ")} {highRisk.length === 1 ? "keeps" : "keep"} coming up in the flagged moments across calls.
+            </p>
+          </AnimatedContent>
+        )}
+
         {topContributors.length > 0 && (
-          <motion.div
-            className="section-wide"
-            style={{ marginTop: "24px" }}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...springReveal, delay: 0.5 }}
-          >
-            <p className="section-eyebrow">Top Action Item Generators</p>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "12px" }}>
+          <AnimatedContent className="top-contributors" delay={0.3}>
+            <p className="section-eyebrow">Most commitments made</p>
+            <div className="contributor-pills">
               {topContributors.map((speaker, i) => {
-                const name = typeof speaker === 'string' ? speaker : speaker?.name || String(speaker);
+                const name = typeof speaker === "string" ? speaker : speaker?.name || String(speaker);
                 return (
                   <motion.span
                     key={String(name) + i}
-                    className="card"
-                    style={{ padding: "6px 14px", fontSize: "var(--text-micro)" }}
+                    className="contributor-pill"
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ ...springReveal, delay: 0.6 + i * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
+                    transition={{ ...springReveal, delay: 0.4 + i * 0.08 }}
+                    whileHover={{ scale: 1.04 }}
                   >
                     {name}
                   </motion.span>
                 );
               })}
             </div>
-          </motion.div>
+          </AnimatedContent>
         )}
 
-        {/* Call to Action */}
-        <motion.div
-          className="card"
-          style={{ marginTop: "24px", backgroundColor: "var(--color-v4-bg-alt)" }}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.7 }}
-        >
-          <h3 style={{ margin: "0 0 8px" }}>Need deeper insights?</h3>
-          <p style={{ color: "var(--v4-ink-muted)", fontSize: "var(--text-body)", marginBottom: "16px" }}>
-            Visit the Coaching page for prescriptive recommendations based on these patterns.
+        <AnimatedContent className="cta-card" delay={0.4}>
+          <h3 className="chart-title">Turn this into coaching</h3>
+          <p className="section-subtitle">
+            The coach page reads the same calls and writes down what to change first.
           </p>
-          <Link href="/coach" className="btn-primary">View coaching insights</Link>
-        </motion.div>
+          <Link href="/coach" className="btn-primary">What to fix next</Link>
+        </AnimatedContent>
       </section>
     </main>
-  </PageTransition>
+    </PageTransition>
   );
 }

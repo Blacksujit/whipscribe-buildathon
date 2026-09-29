@@ -26,11 +26,16 @@ def submit_file(api_key, filepath, language=None):
 
 
 def submit_url(api_key, url, language=None):
-    """Submit a URL for transcription and return the job_id."""
+    """Submit a URL for transcription and return the job_id.
+
+    WhipScribe accepts URL submits on POST /api/v1/transcribe/url (per docs).
+    Only Creative Commons-licensed YouTube URLs are currently accepted.
+    """
     payload = {"url": url}
     if language:
         payload["language"] = language
-    resp = requests.post(f"{BASE_URL}/transcribe", headers=_headers(api_key), json=payload)
+    payload["source"] = "url"
+    resp = requests.post(f"{BASE_URL}/transcribe/url", headers=_headers(api_key), json=payload)
     resp.raise_for_status()
     return resp.json()["job_id"]
 
@@ -39,6 +44,9 @@ def poll_job(api_key, job_id, timeout=300, interval=5):
     """Poll job status with robust retry for 5xx errors."""
     start_time = time.time()
     while True:
+        if (time.time() - start_time) > timeout:
+            raise TimeoutError(f"Job {job_id} timed out after {timeout}s")
+
         try:
             resp = requests.get(f"{BASE_URL}/jobs/{job_id}", headers=_headers(api_key))
             if resp.status_code in (502, 503, 504):
@@ -58,8 +66,6 @@ def poll_job(api_key, job_id, timeout=300, interval=5):
             time.sleep(interval)
             continue
 
-        if (time.time() - start_time) > timeout:
-            raise TimeoutError(f"Job {job_id} timed out after {timeout}s")
         time.sleep(interval)
 
 
@@ -96,14 +102,29 @@ def get_me(api_key):
 
 
 def get_session_summary(api_key, job_id):
-    """Fetch a high-level summary of a specific job."""
+    """Fetch a high-level summary of a specific job.
+
+    Falls back gracefully if the summary endpoint is unavailable for this job.
+    """
     resp = requests.get(f"{BASE_URL}/jobs/{job_id}/summary", headers=_headers(api_key))
+    if resp.status_code == 404:
+        return None
     resp.raise_for_status()
     return resp.json()
 
 
 def get_high_signal_moments(api_key, job_id):
-    """Fetch high-signal moments (quotes) from a job."""
-    resp = requests.get(f"{BASE_URL}/jobs/{job_id}/moments", headers=_headers(api_key))
+    """Fetch high-signal moments (quotes) from a job.
+
+    Uses the /clips/candidates endpoint as documented in the WhipScribe API.
+    Falls back to None if the endpoint is unavailable for this job.
+    """
+    resp = requests.get(
+        f"{BASE_URL}/jobs/{job_id}/clips/candidates",
+        headers=_headers(api_key),
+        params={"kind": "question"},
+    )
+    if resp.status_code == 404:
+        return None
     resp.raise_for_status()
     return resp.json()

@@ -1,0 +1,103 @@
+<template>
+  <div data-hf-id="hf-mmer" id="root" data-composition-id="07-cta" data-start="48" data-duration="6" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg {
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.08), transparent 50%),
+                    radial-gradient(ellipse at 30% 30%, rgba(0, 194, 203, 0.04), transparent 40%),
+                    #1A1A2E;
+        z-index: 0;
+      }
+      .wc { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 2; }
+      .wm { font-family: 'Inter', system-ui, sans-serif; font-size: 96px; font-weight: 700; letter-spacing: -2px; color: var(--hf-ink); opacity: 0; }
+      .wm .teal { color: var(--hf-accent); }
+      .tagline { position: absolute; top: 70%; left: 50%; transform: translateX(-50%); text-align: center; z-index: 2; }
+      .tagline .line { font-family: 'Inter', system-ui, sans-serif; font-size: 24px; font-weight: 400; color: var(--hf-ink); opacity: 0; margin: 4px 0; }
+      .tagline .line.teal { color: var(--hf-accent); font-weight: 500; }
+      .partners { position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); display: flex; gap: 28px; align-items: center; z-index: 2; opacity: 0; }
+      .partner { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: var(--hf-muted); display: flex; align-items: center; gap: 8px; }
+      .partner .dot { width: 6px; height: 6px; background: var(--hf-accent); border-radius: 50%; }
+      .particle { position: absolute; background: var(--hf-accent); border-radius: 3px; opacity: 0; pointer-events: none; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+    <div data-hf-id="hf-2twa" class="wc" id="wc">
+      <div data-hf-id="hf-pdei" class="wm" id="wordmark">Call<span data-hf-id="hf-x3xb" class="teal">Coach</span>-AI</div>
+    </div>
+    <div data-hf-id="hf-2z9e" class="tagline" id="tagline">
+      <div data-hf-id="hf-0132" class="line teal">Your sales calls, scored.</div>
+      <div data-hf-id="hf-ndpc" class="line">Your reps, coached.</div>
+      <div data-hf-id="hf-dbvc" class="line">Your team, improved.</div>
+    </div>
+    <div data-hf-id="hf-2mza" class="partners" id="partners">
+      <span data-hf-id="hf-ez2k" class="partner">WhipScribe · transcription</span>
+      <span data-hf-id="hf-9gry" class="dot"></span>
+      <span data-hf-id="hf-k74t" class="partner">GROQ · LLM inference</span>
+    </div>
+
+    <script>
+      const TOTAL_DUR=6;
+      const TIMING={particles:0.4,wordmark:1.3,tagline:2.5,partners:4.0};
+
+      gsap.set('#wordmark',{opacity:0,scale:0.3});
+      gsap.set('#tagline .line',{opacity:0,y:20});
+      gsap.set('#partners',{opacity:0,y:20});
+
+      /* Create 30 particles */
+      const wc=document.getElementById('wc');
+      const particles=[];
+      for(let i=0;i<30;i++){
+        const p=document.createElement('div');
+        p.className='particle';
+        p.style.width='12px';
+        p.style.height='12px';
+        p.style.left='50%';
+        p.style.top='55%';
+        wc.appendChild(p);
+        particles.push(p);
+      }
+      gsap.set(particles,{opacity:0});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["07-cta"]=tl;
+
+      /* Seeded PRNG for deterministic particle scatter */
+      let seed=42;
+      function mulberry32(){return (seed=(seed*1664525+1)%2147483648)/2147483648;}
+      particles.forEach((p,i)=>{
+        const angle=(i/particles.length)*Math.PI*2;
+        const dist=200+mulberry32()*100;
+        gsap.set(p,{x:Math.cos(angle)*dist,y:Math.sin(angle)*dist});
+      });
+      tl.to(particles,{opacity:1,x:0,y:0,scale:0.3,duration:0.8,ease:'power3.out',stagger:{each:0.02,from:'start'}},TIMING.particles);
+
+      /* Wordmark fades in */
+      tl.to(particles,{opacity:0,duration:0.1},TIMING.particles+0.9);
+      tl.fromTo('#wordmark',{opacity:0,scale:0.3},{opacity:1,scale:1,duration:0.8,ease:'power3.out'},TIMING.wordmark);
+
+      /* Tagline lines build */
+      tl.fromTo('#tagline .line',{opacity:0,y:20},{opacity:1,y:0,duration:0.5,ease:'power3.out',stagger:0.3},TIMING.tagline);
+
+      /* Partner credits */
+      tl.fromTo('#partners',{opacity:0,y:20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.partners);
+
+      /* Hold with subtle jitter on wordmark */
+      const wm=document.getElementById('wordmark');
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.wordmark+0.5){
+          const j=Math.sin(tl.time()*1.2)*0.8;
+          gsap.set(wm,{x:j,y:j*0.5});
+        }
+      }},0);
+    </script>
+  </div>
+</template>

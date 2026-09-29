@@ -1,0 +1,125 @@
+<template>
+  <div data-hf-id="hf-hxuw" id="root" data-composition-id="03-solution" data-start="14" data-duration="10" data-width="1920" data-height="1080">
+    <style>
+      :root {
+        --hf-accent: #00C2CB;
+        --hf-ink: #FFFFFF;
+        --hf-muted: #9A9A9A;
+        --card-bg: rgba(0, 194, 203, 0.06);
+        --card-border: rgba(0, 194, 203, 0.2);
+        --red: #EF4444;
+        --orange: #F59E1F;
+        --blue: #5568FF;
+        --green: #059669;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(0, 194, 203, 0.05), transparent 50%), #1A1A2E; z-index: 0; }
+
+      .onscreen { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); font-family: 'Inter', system-ui, sans-serif; font-size: 26px; font-weight: 600; color: var(--hf-ink); opacity: 0; z-index: 3; }
+
+      .agent-row { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1400px; display: flex; justify-content: space-between; z-index: 2; }
+      .agent-card { width: 300px; background: var(--card-bg); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 20px; text-align: center; opacity: 0; transform: translateY(40px); }
+      #agent1 { border-color: var(--red); }
+      #agent2 { border-color: var(--orange); }
+      #agent3 { border-color: var(--blue); }
+      #agent4 { border-color: var(--green); }
+      .agent-icon { font-size: 36px; margin-bottom: 8px; }
+      .agent-name { font-family: 'Inter', system-ui, sans-serif; font-size: 18px; font-weight: 700; color: var(--hf-ink); margin-bottom: 8px; }
+      .agent-desc { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 400; color: var(--hf-muted); line-height: 1.5; opacity: 0; }
+
+      .arch-row { position: absolute; top: 85%; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 32px; z-index: 2; opacity: 0; }
+      .arch-box { background: var(--card-bg); border: 1.5px solid var(--card-border); border-radius: 12px; padding: 14px 24px; text-align: center; }
+      .arch-label { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--hf-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+      .arch-name { font-family: 'Inter', system-ui, sans-serif; font-size: 18px; font-weight: 700; color: var(--hf-ink); }
+      .arch-sub { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: var(--hf-muted); }
+
+      .connector { position: absolute; stroke: var(--hf-muted); stroke-width: 2; stroke-dasharray: '4,4'; }
+      .data-dot { position: absolute; width: 8px; height: 8px; background: var(--hf-accent); border-radius: 50%; }
+    </style>
+
+    <div data-hf-id="hf-a5th" class="bg clip" id="bg" data-start="0" data-duration="6" data-track-index="1"></div>
+
+    <div data-hf-id="hf-rx5k" class="onscreen" id="os">4 specialized AI agents judge every call</div>
+
+    <div data-hf-id="hf-68fr" class="agent-row" id="agentRow">
+      <div data-hf-id="hf-mpx0" class="agent-card" id="agent1">
+        <div data-hf-id="hf-3yq6" class="agent-icon">🛡️</div>
+        <div data-hf-id="hf-e03j" class="agent-name">ComplianceAgent</div>
+        <div data-hf-id="hf-ux9q" class="agent-desc" id="desc1">Unbacked promises · Missing disclosures · Risky commitments</div>
+      </div>
+      <div data-hf-id="hf-vdsv" class="agent-card" id="agent2">
+        <div data-hf-id="hf-broq" class="agent-icon">⚡</div>
+        <div data-hf-id="hf-9l1q" class="agent-name">TensionAgent</div>
+        <div data-hf-id="hf-ikbd" class="agent-desc" id="desc2">Customer hesitations · Defensive responses · Conflict signals</div>
+      </div>
+      <div data-hf-id="hf-rfou" class="agent-card" id="agent3">
+        <div data-hf-id="hf-qo7m" class="agent-icon">🎯</div>
+        <div data-hf-id="hf-a7gk" class="agent-name">ClarityAgent</div>
+        <div data-hf-id="hf-in0p" class="agent-desc" id="desc3">Vague language · Hedging detected · Unbacked claims</div>
+      </div>
+      <div data-hf-id="hf-03kp" class="agent-card" id="agent4">
+        <div data-hf-id="hf-6sam" class="agent-icon">✅</div>
+        <div data-hf-id="hf-t915" class="agent-name">ActionItemAgent</div>
+        <div data-hf-id="hf-2tow" class="agent-desc" id="desc4">Decisions without owners · Missing deadlines · Unresolved threads</div>
+      </div>
+    </div>
+
+    <svg data-hf-id="hf-fgih" class="arch-row" id="archRow" style="top: 82%;">
+      <foreignobject data-hf-id="hf-ancn" width="300" height="80">
+        <div data-hf-id="hf-j6z4" class="arch-box">
+          <div data-hf-id="hf-16rx" class="arch-label">3rd-party API</div>
+          <div data-hf-id="hf-5vls" class="arch-name">WhipScribe</div>
+          <div data-hf-id="hf-3uv4" class="arch-sub">ASR + Diarization</div>
+        </div>
+      </foreignobject>
+      <line data-hf-id="hf-zyr8" x1="50" y1="40" x2="160" y2="40" stroke="var(--hf-muted)" stroke-width="2" stroke-dasharray="4,4" />
+      <foreignobject data-hf-id="hf-ptu5" width="300" height="80" x="250">
+        <div data-hf-id="hf-85ig" class="arch-box">
+          <div data-hf-id="hf-fy3w" class="arch-label">Inference</div>
+          <div data-hf-id="hf-bm81" class="arch-name">GROQ</div>
+          <div data-hf-id="hf-tdmf" class="arch-sub">openai/gpt-oss-120b</div>
+        </div>
+      </foreignobject>
+    </svg>
+
+    <script>
+      const TOTAL_DUR=10;
+      const TIMING={textAt:0.3,c1:1.5,c2:3.2,c3:4.9,c4:6.6,arch:8.0};
+
+      gsap.set('#os',{opacity:0,y:-20});
+      gsap.set('#agent1,#agent2,#agent3,#agent4',{opacity:0,y:40});
+      gsap.set('#desc1,#desc2,#desc3,#desc4',{opacity:0});
+      gsap.set('#archRow',{opacity:0});
+
+      window.__timelines=window.__timelines||{};
+      const tl=gsap.timeline({paused:true});
+      window.__timelines["03-solution"]=tl;
+
+      tl.fromTo('#os',{opacity:0,y:-20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.textAt);
+
+      tl.fromTo('#agent1',{opacity:0,y:40},{opacity:1,y:0,duration:0.6,ease:'power3.out'},TIMING.c1);
+      tl.fromTo('#desc1',{opacity:0,y:10},{opacity:1,y:0,duration:0.4,ease:'power3.out'},'<+0.2');
+
+      tl.fromTo('#agent2',{opacity:0,y:40},{opacity:1,y:0,duration:0.6,ease:'power3.out'},TIMING.c2);
+      tl.fromTo('#desc2',{opacity:0,y:10},{opacity:1,y:0,duration:0.4,ease:'power3.out'},'<+0.2');
+
+      tl.fromTo('#agent3',{opacity:0,y:40},{opacity:1,y:0,duration:0.6,ease:'power3.out'},TIMING.c3);
+      tl.fromTo('#desc3',{opacity:0,y:10},{opacity:1,y:0,duration:0.4,ease:'power3.out'},'<+0.2');
+
+      tl.fromTo('#agent4',{opacity:0,y:40},{opacity:1,y:0,duration:0.6,ease:'power3.out'},TIMING.c4);
+      tl.fromTo('#desc4',{opacity:0,y:10},{opacity:1,y:0,duration:0.4,ease:'power3.out'},'<+0.2');
+
+      tl.fromTo('#archRow',{opacity:0,y:20},{opacity:1,y:0,duration:0.5,ease:'power3.out'},TIMING.arch);
+
+      /* Hold with subtle jitter */
+      tl.to({tick:0},{tick:1,duration:TOTAL_DUR,ease:'none',onUpdate:function(){
+        if(tl.time()>TIMING.arch+1){
+          const j=Math.sin(tl.time()*1.5)*0.5;
+          gsap.set('#agent1,#agent2,#agent3,#agent4',{x:j});
+        }
+      }},0);
+    </script>
+  </div>
+</template>

@@ -17,12 +17,14 @@ Seed-stage founders manage 20+ investor calls per week. Each call is critical da
 - **Deal slippage**: Without systematic feedback, founders lose deals to competitors who iterate faster.
 
 ### Our Solution
+
 **CallCoach** transforms raw audio into a **Managerial Scorecard**. Using WhipScribe's API as our transcription backbone and a multi-agent AI pipeline for analysis, we provide:
 1.  Per-call Quality Reports (Compliance, Clarity, Friction, Action Items)
 2.  Cross-call Trend Analysis (Are you improving week over week?)
 3.  Prescriptive Coaching (Not "what happened," but "how to fix it")
 
 ### Key Innovation
+
 While competitors stop at a single-call scorecard, CallCoach builds a **coaching loop** across a portfolio of calls. The core insight: **"One call is data. A week of calls is a coaching signal. A multi-week trend is a performance engine."**
 
 ---

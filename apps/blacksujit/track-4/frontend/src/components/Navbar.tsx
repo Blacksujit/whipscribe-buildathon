@@ -2,41 +2,55 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
+import ShinyText from "@/components/reactbits/ShinyText/ShinyText";
+
+const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
 
 export default function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: "Meetings" },
+    { href: "/", label: "Home" },
     { href: "/trends", label: "Trends" },
-    { href: "/speakers", label: "Speakers" },
     { href: "/coach", label: "Coach" },
-    { href: "/settings", label: "Settings" },
+    { href: "/speakers", label: "Speakers" },
+    { href: "/connections", label: "Connections" },
   ];
 
   return (
-    <nav className="sticky top-0 z-20 bg-v4-bg/95 backdrop-blur border-b">
-      <div className="container-960 mx-auto px-6 py-5 flex items-center justify-between gap-8">
-        <Link
-          href="/"
-          className="text-v4-ink font-semibold tracking-[-0.04em]"
-          style={{ fontSize: "20px" }}
-        >
-          whipscribe<span className="text-[#a9dc28]">.</span>
+    <motion.nav
+      className="site-nav"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={springHover}
+    >
+      <div className="nav-container">
+        <Link href="/" className="nav-logo brand-lockup" aria-label="CallCoach-AI, built on WhipScribe">
+          <span className="nav-logo-dot" aria-hidden="true">C</span>
+          <span>CallCoach-AI</span>
+          <span className="brand-x-suffix" aria-hidden="true">
+            <ShinyText text="x WhipScribe" speed={4.5} />
+          </span>
         </Link>
-        <div className="hidden md:flex items-center gap-7">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${pathname === item.href ? "nav-link-active" : ""}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+
+        <div className="nav-links">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-link ${isActive ? "nav-link-active" : ""}`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
-        <Link href="/settings" className="btn-primary hidden sm:inline-flex">Connect source</Link>
       </div>
-    </nav>
+    </motion.nav>
   );
 }

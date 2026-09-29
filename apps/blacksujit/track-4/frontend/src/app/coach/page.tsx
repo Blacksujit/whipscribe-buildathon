@@ -4,15 +4,47 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { getCoachData, CoachDataResponse } from "@/lib/api";
+import { getCoachData, CoachDataResponse, CoachInsight, exportTrendsToSlack } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
+import PageHeader from "@/components/PageHeader";
+import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import {
+  ShieldCheckIcon,
+  WaveformIcon,
+  CrosshairIcon,
+  ListChecksIcon,
+  AlertIcon,
+  CheckCircleIcon,
+} from "@/components/icons";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
-const springHover = { type: "spring" as const, stiffness: 100, damping: 20 };
+
+const priorityColors: Record<string, string> = {
+  compliance: "var(--cat-compliance)",
+  tension: "var(--cat-tension)",
+  clarity: "var(--cat-clarity)",
+  action_items: "var(--cat-actions)",
+};
+
+const priorityLabels: Record<string, string> = {
+  compliance: "Compliance",
+  tension: "Tension",
+  clarity: "Clarity",
+  action_items: "Action items",
+};
+
+function InsightIcon({ metric, size = 18 }: { metric: string; size?: number }) {
+  if (metric === "compliance") return <ShieldCheckIcon size={size} />;
+  if (metric === "tension") return <WaveformIcon size={size} />;
+  if (metric === "clarity") return <CrosshairIcon size={size} />;
+  return <ListChecksIcon size={size} />;
+}
 
 export default function CoachPage() {
   const [data, setData] = useState<CoachDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareState, setShareState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [shareMessage, setShareMessage] = useState("");
 
   useEffect(() => {
     async function fetchData() {
@@ -24,135 +56,134 @@ export default function CoachPage() {
     fetchData();
   }, []);
 
+  async function handleShare() {
+    setShareState("sending");
+    const result = await exportTrendsToSlack();
+    if (result.success) {
+      setShareState("sent");
+      setShareMessage(result.message || "Trend summary sent to Slack.");
+    } else {
+      setShareState("error");
+      setShareMessage(result.error || "Could not send to Slack. Check the webhook in Settings.");
+    }
+  }
+
   if (loading) {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
-            Loading coaching insights...
-          </motion.p>
+        <div className="section-wide section-pad">
+          <div className="skeleton skeleton-title" />
+          <div className="skeleton skeleton-line" style={{ width: "48%" }} />
+          <div className="card" style={{ marginTop: 24 }}>
+            <div className="skeleton skeleton-row" />
+            <div className="skeleton skeleton-row" />
+          </div>
         </div>
       </main>
     );
   }
 
-  // Not enough data state
   if (!data || !data.ready) {
     return (
       <main className="site-shell">
         <Navbar />
-        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <p className="section-eyebrow">Coaching Insights</p>
-            <h1>Not enough data yet</h1>
-            <p className="hero-lede">
-              {data?.message || "Coaching insights appear after you analyze two or more meetings."}
-            </p>
-            <Link href="/" className="btn-primary">Upload your first meeting</Link>
-          </motion.div>
+        <div className="section-wide section-pad">
+          <PageHeader
+            eyebrow="Coach"
+            title="Two calls is the minimum."
+            subtitle={data?.message || "Score two or more calls and the coaching reads what changed between them."}
+            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+          />
         </div>
       </main>
     );
   }
 
   const insights = data.insights || [];
-  const trends = data.trends || {};
+  const tracking = data.action_item_tracking as { total?: number; resolved?: number; completion_rate?: number } | undefined;
 
   return (
     <PageTransition>
     <main className="site-shell">
       <Navbar />
-      <section className="section-wide" style={{ paddingTop: "92px" }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.1 }}
-        >
-          <p className="section-eyebrow">Coaching Insights</p>
-          <h1>Prescriptive recommendations based on your analyzed meetings.</h1>
-          <p className="hero-lede">
-            {data.ready
-              ? `Generated from ${Object.keys(trends).length} trend categories across your library.`
-              : "Coaching insights appear after you analyze two or more meetings."}
-          </p>
-        </motion.div>
+      <section className="section-wide section-pad">
+        <PageHeader
+          eyebrow="Coach"
+          title="What to fix next."
+          subtitle={
+            tracking && typeof tracking.completion_rate === "number"
+              ? `${tracking.resolved ?? 0} of ${tracking.total ?? 0} commitments closed (${tracking.completion_rate}%).`
+              : "Read from the calls you have scored so far."
+          }
+        />
 
-        {/* Trends Summary */}
         {insights.length > 0 && (
           <motion.div
-            className="section-wide"
-            style={{ display: "flex", gap: "24px", marginTop: "42px" }}
+            className="insights-stack"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...springReveal, delay: 0.2 }}
           >
-            {Object.entries(trends).map(([key, value]) => (
-              <div key={key} className="card" style={{ flex: 1, textAlign: "center" }}>
-                <div className="text-3xl font-bold text-v4-ink">{value}</div>
-                <div className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </div>
-              </div>
-            ))}
+            {insights.slice(0, 8).map((item, index) => {
+              const metric = item.metric || item.priority || item.category || "clarity";
+              const iconColor = priorityColors[metric] || "var(--color-7)";
+              const label = priorityLabels[metric] || metric.charAt(0).toUpperCase() + metric.slice(1);
+              const detail = item.advice || item.description;
+
+              return (
+                <AnimatedContent key={index} delay={0.05 * index}>
+                  <div className="insight-card">
+                    <div className="insight-icon" style={{ color: iconColor }}>
+                      <InsightIcon metric={metric} size={18} />
+                    </div>
+                    <div className="insight-content">
+                      <h3>{item.title || label}</h3>
+                      {item.message && <p>{item.message}</p>}
+                      {detail && <p>{detail}</p>}
+                      {item.scores && item.scores.length > 0 && (
+                        <div className="insight-meta">
+                          <span>Scores: {item.scores.join(", ")}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </AnimatedContent>
+              );
+            })}
           </motion.div>
         )}
 
-        {/* Coaching Items */}
-        <motion.div style={{ marginTop: "32px" }}>
-          {insights.map((item, index) => (
-            <motion.div
-              key={index}
-              className="card"
-              style={{ marginBottom: "16px" }}
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ ...springReveal, delay: 0.3 + index * 0.1 }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                <h3 className="text-v4-ink">
-                  {item.title || item.message || "Insight"}
-                </h3>
-                <span className="text-v4-ink-muted" style={{ fontSize: "var(--text-micro)" }}>
-                  {(item.priority || item.type || "advice").charAt(0).toUpperCase() + (item.priority || item.type || "advice").slice(1)}
-                </span>
-              </div>
+        {insights.length === 0 && (
+          <div className="card empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <CheckCircleIcon size={28} />
+            </span>
+            <p className="section-subtitle">Nothing to fix - the calls read clean.</p>
+          </div>
+        )}
 
-              <p className="text-v4-ink-muted" style={{ fontSize: "var(--text-body)", marginBottom: "12px" }}>
-                {item.description || item.message || item.advice || ""}
+        {insights.length > 0 && (
+          <AnimatedContent className="cta-card" delay={0.3}>
+            <h3 className="chart-title">Send this to the team</h3>
+            <p className="section-subtitle">
+              The trend summary lands in Slack with the metrics and the recurring issues.
+            </p>
+            <button className="btn-primary" onClick={handleShare} disabled={shareState === "sending"}>
+              {shareState === "sending" ? "Sending..." : "Send to Slack"}
+            </button>
+            {shareMessage && (
+              <p className={shareState === "error" ? "status-banner status-banner-error" : "status-banner status-banner-ok"}>
+                {shareState === "error" && <AlertIcon size={14} />} {shareMessage}{" "}
+                {shareState === "error" && (
+                  <Link href="/connections" className="evidence-listen">Open connections</Link>
+                )}
               </p>
-
-              {item.scores && item.scores.length > 0 && (
-                <div style={{ fontSize: "var(--text-micro)", color: "var(--v4-ink-muted)", marginBottom: "8px" }}>
-                  Scores: {item.scores.join(", ")}
-                </div>
-              )}
-
-              {item.category && (
-                <div style={{ fontSize: "var(--text-micro)", color: "var(--v4-ink-muted)" }}>
-                  Category: {item.category}
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Call to Action */}
-        <motion.div
-          className="card"
-          style={{ marginTop: "24px", backgroundColor: "var(--color-v4-bg-alt)" }}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springReveal, delay: 0.5 }}
-        >
-          <h3 className="text-v4-ink">Ready to coach?</h3>
-          <p className="text-v4-ink-muted" style={{ fontSize: "var(--text-body)", marginBottom: "16px" }}>
-            Review these insights with your team and create an action plan for the next call.
-          </p>
-          <button className="btn-primary">Schedule Coaching Session</button>
-        </motion.div>
+            )}
+          </AnimatedContent>
+        )}
       </section>
     </main>
-  </PageTransition>
+    </PageTransition>
   );
 }

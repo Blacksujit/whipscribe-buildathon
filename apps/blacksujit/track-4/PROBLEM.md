@@ -1,24 +1,40 @@
-# Problem: The "Blind Spot" in High-Stakes Communication
+# Problem: The blind spot in fundraising
 
-## The Persona
-**The Seed-Stage Founder**
-Managing 20+ investor calls per week. Every call is a critical data point, but the founder is too deep in the conversation to objectively audit their own performance.
+## The person
+A seed-stage founder raising a round. Fifteen to twenty investor calls a week;
+every call is a data point about the pitch, the market, and the round.
 
-## The Gap
-Current transcription tools (Otter, Fireflies) solve for **Content**: *"What was said?"*
-They provide a wall of text that requires another 30 minutes to review.
+## What they do today
+Notes written from memory, or a raw transcript skimmed days later. A 60-minute
+transcript takes about 30 minutes to review, so most calls are never revisited
+at all. Feedback arrives as a feeling: "that one went well."
 
-They fail to solve for **Quality**: *"How well was the meeting run?"*
-- Was the value proposition clear?
-- Did the investor show tension or hesitation at a specific price point?
-- Were commitments made but not tracked?
-- Is the pitch evolving based on the feedback, or is the founder repeating the same mistakes?
+## The gap
+Transcription tools answer *what was said*. Nobody answers *how well it was
+said*:
+- Was the ask clear, or did it change between calls?
+- Where exactly did the investor hesitate, and what was said right before that?
+- Which commitments were made, and were any of them followed up?
+- Is the pitch evolving on feedback, or repeating the same flaw?
 
-## The Cost of the Blind Spot
-Without a Quality Assurance (QA) system for business communication, founders suffer from:
-1. **Deal Slippage:** Missed commitments that lead to "ghosting."
-2. **Pitch Stagnation:** Repeating a flawed narrative because they "felt" the call went well, while the investor left confused.
-3. **Inefficient Iteration:** Guessing why a series of calls failed instead of having a data-backed "Scorecard" across 20 calls.
+## The cost
+1. **Deal slippage.** Commitments made on a call are forgotten; warm investors
+   go cold waiting for a follow-up nobody wrote down.
+2. **Pitch stagnation.** The same flaw survives a dozen calls because nobody
+   hears it twice - the founder cannot see their own blind spot.
+3. **Guessing instead of iterating.** With no scorecard across calls,
+   improvement cannot be told from luck.
 
-## The Solution: WhipScribe
-WhipScribe transforms raw audio into a **Managerial Scorecard**. It doesn't just transcribe; it audits. By extracting tension signals, clarity issues, and compliance risks, it provides a "Deal Velocity" metric that tells a founder exactly where their pitch is leaking momentum.
+## Why recordings are the way in
+The audio already exists. WhipScribe already turns it into an accurate
+transcript with speakers and timestamps. What is missing is judgment applied
+to that text, with evidence specific enough to trust.
+
+## What CallCoach-AI does
+Turns each recording into a managerial scorecard: an overall score, four
+category scores (compliance, tension, clarity, action items), the single
+primary risk, and every flagged quote linked to the exact second in the
+recording. Across calls: deal velocity, momentum, recurring issues, and
+action-item completion.
+
+Read the full workflow, demo and vision in the [track-4 README](README.md).

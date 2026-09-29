@@ -6,6 +6,137 @@
 - Local:         http://localhost:3000
 - Network:       http://172.21.96.1:3000
 - Environments: .env.local
-✓ Ready in 849ms
-✓ Running next.config.ts took 78ms
+✓ Ready in 938ms
+✓ Running next.config.ts took 250ms
 
+ GET / 200 in 1318ms (next.js: 903ms, application-code: 415ms)
+ GET / 200 in 43ms (next.js: 4ms, application-code: 39ms)
+ GET /coach 200 in 262ms (next.js: 192ms, application-code: 69ms)
+ GET /trends 200 in 186ms (next.js: 112ms, application-code: 73ms)
+ GET /speakers 200 in 141ms (next.js: 72ms, application-code: 69ms)
+ GET /settings 200 in 183ms (next.js: 89ms, application-code: 94ms)
+ GET /report/c32a3520-7a54-4efc-9d7d-c9f15e6d0461 200 in 968ms (next.js: 884ms, application-code: 84ms)
+ GET / 200 in 47ms (next.js: 7ms, application-code: 40ms)
+ GET / 200 in 224ms (next.js: 60ms, application-code: 164ms)
+ GET /speakers 200 in 80ms (next.js: 29ms, application-code: 51ms)
+ GET /trends 200 in 100ms (next.js: 26ms, application-code: 74ms)
+ GET /coach 200 in 80ms (next.js: 42ms, application-code: 38ms)
+ GET /coach 200 in 69ms (next.js: 35ms, application-code: 34ms)
+ GET /settings 200 in 49ms (next.js: 12ms, application-code: 37ms)
+ GET / 200 in 39ms (next.js: 10ms, application-code: 30ms)
+ GET /report/a7ca6d85-8dc6-4ed9-bc34-fd1f8ddf7183 200 in 94ms (next.js: 37ms, application-code: 57ms)
+ GET /trends 200 in 73ms (next.js: 34ms, application-code: 39ms)
+ GET /coach 200 in 41ms (next.js: 11ms, application-code: 30ms)
+ GET / 200 in 38ms (next.js: 9ms, application-code: 29ms)
+ GET / 200 in 482ms (next.js: 139ms, application-code: 343ms)
+ GET / 200 in 160ms (next.js: 13ms, application-code: 147ms)
+ GET / 200 in 349ms (next.js: 86ms, application-code: 263ms)
+ GET /report/93f174f7-fa02-4852-a52d-73eeb6e02a87 200 in 410ms (next.js: 354ms, application-code: 56ms)
+ GET /trends 200 in 198ms (next.js: 154ms, application-code: 44ms)
+ GET / 200 in 35ms (next.js: 12ms, application-code: 23ms)
+ GET /report/5daf7f75-ea8d-4aff-9257-3fbd1cbc48a0 200 in 38ms (next.js: 14ms, application-code: 24ms)
+ GET / 200 in 40ms (next.js: 6ms, application-code: 34ms)
+ GET /report/7d677664-ef31-483f-94b0-4222ecdba639 200 in 51ms (next.js: 17ms, application-code: 34ms)
+ GET /trends 200 in 76ms (next.js: 12ms, application-code: 64ms)
+ GET /coach 200 in 211ms (next.js: 175ms, application-code: 35ms)
+ GET /speakers 200 in 163ms (next.js: 126ms, application-code: 37ms)
+ GET /coach 200 in 35ms (next.js: 8ms, application-code: 27ms)
+ GET /speakers 200 in 39ms (next.js: 5ms, application-code: 34ms)
+ GET /coach 200 in 53ms (next.js: 17ms, application-code: 37ms)
+ GET /settings 200 in 169ms (next.js: 136ms, application-code: 33ms)
+ GET / 200 in 46ms (next.js: 10ms, application-code: 36ms)
+ GET /trends 200 in 40ms (next.js: 9ms, application-code: 31ms)
+ GET /trends 200 in 39ms (next.js: 10ms, application-code: 29ms)
+ GET /trends 200 in 44ms (next.js: 8ms, application-code: 36ms)
+ GET /trends 200 in 42ms (next.js: 10ms, application-code: 32ms)
+ GET /speakers 200 in 36ms (next.js: 10ms, application-code: 26ms)
+ GET /coach 200 in 48ms (next.js: 21ms, application-code: 28ms)
+ GET /speakers 200 in 36ms (next.js: 5ms, application-code: 30ms)
+ GET / 200 in 37ms (next.js: 11ms, application-code: 26ms)
+ GET / 200 in 85ms (next.js: 18ms, application-code: 66ms)
+ GET / 200 in 91ms (next.js: 8ms, application-code: 83ms)
+ GET /trends 200 in 29ms (next.js: 11ms, application-code: 18ms)
+ GET / 200 in 48ms (next.js: 12ms, application-code: 36ms)
+ GET /report/60a2dde9-cf98-4f83-8241-4a50a334e315 200 in 90ms (next.js: 35ms, application-code: 56ms)
+ GET /trends 200 in 52ms (next.js: 17ms, application-code: 34ms)
+ GET /speakers 200 in 37ms (next.js: 9ms, application-code: 28ms)
+ GET /coach 200 in 31ms (next.js: 6ms, application-code: 25ms)
+ GET / 200 in 42ms (next.js: 7ms, application-code: 35ms)
+ GET /settings 200 in 44ms (next.js: 11ms, application-code: 32ms)
+ GET / 200 in 51ms (next.js: 14ms, application-code: 37ms)
+ GET / 200 in 608ms (next.js: 94ms, application-code: 514ms)
+ GET /report/88aabe84-c726-4d87-b735-0c14b7b13365 200 in 189ms (next.js: 114ms, application-code: 75ms)
+ GET /trends 200 in 75ms (next.js: 31ms, application-code: 44ms)
+ GET /speakers 200 in 54ms (next.js: 23ms, application-code: 30ms)
+ GET / 200 in 57ms (next.js: 27ms, application-code: 31ms)
+ GET / 200 in 361ms (next.js: 87ms, application-code: 274ms)
+ GET / 200 in 339ms (next.js: 181ms, application-code: 158ms)
+ GET / 200 in 65ms (next.js: 13ms, application-code: 51ms)
+ GET / 200 in 218ms (next.js: 54ms, application-code: 164ms)
+⨯ TypeError: Cannot read properties of undefined (reading 'toString')
+    at getDecimalPlaces (src\components\reactbits\CountUp\CountUp.tsx:43:21)
+    at CountUp (src\components\reactbits\CountUp\CountUp.tsx:53:56)
+  41 |
+  42 |   const getDecimalPlaces = (num: number): number => {
+> 43 |     const str = num.toString();
+     |                     ^
+  44 |     if (str.includes('.')) {
+  45 |       const decimals = str.split('.')[1];
+  46 |       if (parseInt(decimals) !== 0) { {
+  digest: '3960429207'
+}
+ GET / 500 in 535ms (next.js: 201ms, application-code: 334ms)
+[browser] Uncaught TypeError: Cannot read properties of undefined (reading 'toString')
+    at getDecimalPlaces (src/components/reactbits/CountUp/CountUp.tsx:43:21)
+    at CountUp (src/components/reactbits/CountUp/CountUp.tsx:53:56)
+    at Home (src/app/page.tsx:230:15)
+  41 |
+  42 |   const getDecimalPlaces = (num: number): number => {
+> 43 |     const str = num.toString();
+     |                     ^
+  44 |     if (str.includes('.')) {
+  45 |       const decimals = str.split('.')[1];
+  46 |       if (parseInt(decimals) !== 0) {
+ GET / 200 in 382ms (next.js: 108ms, application-code: 274ms)
+✓ Compiled in 738ms
+✓ Compiled in 340ms
+✓ Compiled in 523ms
+✓ Compiled in 96ms
+ GET / 200 in 924ms (next.js: 460ms, application-code: 464ms)
+ GET /settings 200 in 137ms (next.js: 97ms, application-code: 39ms)
+ GET / 200 in 44ms (next.js: 8ms, application-code: 36ms)
+ GET /settings 200 in 84ms (next.js: 17ms, application-code: 67ms)
+ GET / 200 in 39ms (next.js: 10ms, application-code: 29ms)
+ GET /trends 200 in 147ms (next.js: 107ms, application-code: 40ms)
+ GET / 200 in 71ms (next.js: 15ms, application-code: 56ms)
+ GET /report/be617ff4-7da2-450f-8714-93f90b014630 200 in 146ms (next.js: 113ms, application-code: 33ms)
+ GET /trends 200 in 103ms (next.js: 58ms, application-code: 45ms)
+ GET /speakers 200 in 126ms (next.js: 96ms, application-code: 30ms)
+ GET /coach 200 in 146ms (next.js: 103ms, application-code: 42ms)
+ GET / 200 in 57ms (next.js: 24ms, application-code: 33ms)
+ GET /trends 200 in 70ms (next.js: 27ms, application-code: 42ms)
+[browser] Failed to fetch trends: TypeError: Failed to fetch
+    at getTrends (src/lib/api.ts:139:23)
+    at fetchData (src/app/trends/page.tsx:179:37)
+    at TrendsPage.useEffect (src/app/trends/page.tsx:183:5)
+  137 | export async function getTrends(): Promise<TrendsResponse | null> {
+  138 |   try {
+> 139 |     const res = await fetch(`${API_BASE}/api/trends-data`);
+      |                       ^
+  140 |     if (!res.ok) {
+  141 |       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  142 |     } (src/lib/api.ts:145:13)
+[browser] Failed to fetch trends: TypeError: Failed to fetch
+    at getTrends (src/lib/api.ts:139:23)
+    at fetchData (src/app/trends/page.tsx:179:37)
+    at TrendsPage.useEffect (src/app/trends/page.tsx:183:5)
+  137 | export async function getTrends(): Promise<TrendsResponse | null> {
+  138 |   try {
+> 139 |     const res = await fetch(`${API_BASE}/api/trends-data`);
+      |                       ^
+  140 |     if (!res.ok) {
+  141 |       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  142 |     } (src/lib/api.ts:145:13)
+ GET / 200 in 56ms (next.js: 17ms, application-code: 39ms)
+ GET / 200 in 360ms (next.js: 69ms, application-code: 291ms)
+[?25h

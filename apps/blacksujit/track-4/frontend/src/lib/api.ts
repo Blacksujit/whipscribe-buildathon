@@ -1,4 +1,4 @@
-// API client for Flask backend
+// API client for the CallCoach-AI Flask backend
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_FLASK_URL || "http://localhost:5000";
 
 export interface Job {
@@ -15,21 +15,32 @@ export interface ApiJobsResponse {
   error?: string;
 }
 
+export interface ConnectionsResponse {
+  whipscribe: { connected: boolean; source: "env" | "stored" | null };
+  slack: { connected: boolean; source: "env" | "stored" | null };
+  notion: {
+    connected: boolean;
+    source: "env" | "stored" | null;
+    database_id: string | null;
+    token_set: boolean;
+  };
+  llm: { provider: string | null; model: string; key_set: boolean };
+}
+
+export interface ActionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  page_url?: string;
+}
+
 export interface TrendsResponse {
   labels: string[];
   overall: number[];
   velocity: number;
-  momentum: string;
+  momentum: "increasing" | "decreasing" | "stable";
   slope: number;
-}
-
-export interface SettingsResponse {
-  configured: boolean;
-  api_key: string;
-  llm_model: string;
-  slack_webhook: string;
-  notion_token: string;
-  notion_database_id: string;
+  category_scores?: Record<string, number>;
 }
 
 export interface ReportResponse {
@@ -81,13 +92,6 @@ export interface CoachDataResponse {
   message?: string;
 }
 
-export interface SpeakerStats {
-  name: string;
-  total_words: number;
-  avg_score: number;
-  topics: string[];
-}
-
 export interface SpeakerStat {
   name: string;
   issue_count: number;
@@ -100,6 +104,42 @@ export interface SpeakersResponse {
   speakers: SpeakerStat[];
   high_risk: string[];
   top_contributors: Array<SpeakerStat | string>;
+}
+
+export interface UploadStartResponse {
+  success: boolean;
+  job_id?: string;
+  stage?: "transcribing" | "scoring";
+  error?: string;
+}
+
+export interface UploadStatusResponse {
+  success: boolean;
+  stage: "transcribing" | "scoring" | "done" | "error" | "unknown";
+  message?: string;
+  score?: number;
+  segments?: number;
+  error?: string;
+}
+
+async function postJson<T>(path: string, body?: unknown, method = "POST"): Promise<ActionResult> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: payload.error || `HTTP ${res.status}` };
+    }
+    return { success: true, ...payload };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to reach the CallCoach API",
+    };
+  }
 }
 
 export async function getJobs(apiKey: string): Promise<ApiJobsResponse> {
@@ -117,19 +157,18 @@ export async function getJobs(apiKey: string): Promise<ApiJobsResponse> {
   }
 }
 
-export async function analyzeJob(apiKey: string, jobId: string): Promise<{ success: boolean; error?: string }> {
+export async function getJobsWithScores(apiKey: string): Promise<{ jobs: Array<Job & { score?: number | null }> }> {
   try {
-    const res = await fetch(`${API_BASE}/api/analyze/${jobId}`, {
-      method: "POST",
-      headers: { "X-API-Key": apiKey },
+    const res = await fetch(`${API_BASE}/api/jobs`, {
+      headers: apiKey ? { "X-API-Key": apiKey } : {},
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
-    return { success: true };
+    return await res.json();
   } catch (error) {
-    console.error("Failed to analyze job:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    console.error("Failed to fetch jobs:", error);
+    return { jobs: [] };
   }
 }
 
@@ -146,57 +185,6 @@ export async function getTrends(): Promise<TrendsResponse | null> {
   }
 }
 
-export async function saveSettings(
-  apiKey: string,
-  options?: { llm_model?: string; slack_webhook?: string; notion_token?: string; notion_database_id?: string }
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${API_BASE}/api/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        whipscribe_api_key: apiKey,
-        ...options,
-      }),
-    });
-    const payload = await res.json();
-    if (!res.ok) {
-      return { success: false, error: payload.error || `HTTP ${res.status}` };
-    }
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Unable to reach Flask backend" };
-  }
-}
-
-export async function getSettings(): Promise<SettingsResponse | null> {
-  try {
-    const res = await fetch(`${API_BASE}/api/settings`);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.error("Failed to fetch settings:", error);
-    return null;
-  }
-}
-
-export async function uploadRecording(file: File): Promise<{ success: boolean; job_id?: string; score?: number; error?: string }> {
-  try {
-    const body = new FormData();
-    body.append("file", file);
-    const res = await fetch(`${API_BASE}/api/upload`, { method: "POST", body });
-    const payload = await res.json();
-    if (!res.ok) {
-      return { success: false, error: payload.error || `HTTP ${res.status}` };
-    }
-    return payload;
-  } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Unable to reach Flask backend" };
-  }
-}
-
 export async function getReport(jobId: string): Promise<ReportResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/api/report/${jobId}`);
@@ -207,21 +195,6 @@ export async function getReport(jobId: string): Promise<ReportResponse | null> {
   } catch (error) {
     console.error("Failed to fetch report:", error);
     return null;
-  }
-}
-
-export async function getJobsWithScores(apiKey: string): Promise<{ jobs: Array<Job & { score?: number; evaluation?: Record<string, unknown> }> }> {
-  try {
-    const res = await fetch(`${API_BASE}/api/jobs`, {
-      headers: apiKey ? { "X-API-Key": apiKey } : {},
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (error) {
-    console.error("Failed to fetch jobs:", error);
-    return { jobs: [] };
   }
 }
 
@@ -249,4 +222,108 @@ export async function getSpeakers(): Promise<SpeakersResponse | null> {
     console.error("Failed to fetch speakers:", error);
     return null;
   }
+}
+
+export async function exportTrendsToSlack(): Promise<ActionResult> {
+  return postJson("/api/export/trends");
+}
+
+// ---------------------------------------------------------------- uploads
+
+export async function startUpload(file: File | Blob, filename?: string): Promise<UploadStartResponse> {
+  try {
+    const body = new FormData();
+    const name = filename ?? (file as File).name ?? "upload";
+    body.append("file", file, name);
+    const res = await fetch(`${API_BASE}/api/upload`, { method: "POST", body });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: payload.error || `HTTP ${res.status}` };
+    }
+    return payload;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to reach the CallCoach API",
+    };
+  }
+}
+
+export async function getUploadStatus(jobId: string): Promise<UploadStatusResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/upload/status/${jobId}`);
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { success: false, stage: "unknown", error: "Unknown job" };
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Failed to fetch upload status:", error);
+    return null;
+  }
+}
+
+export async function startUrlUpload(url: string): Promise<UploadStartResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/api/upload/url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: payload.error || `HTTP ${res.status}` };
+    }
+    return payload;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to reach the CallCoach API",
+    };
+  }
+}
+
+// ------------------------------------------------------------ connections
+
+export async function getConnections(): Promise<ConnectionsResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/connections`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Failed to fetch connections:", error);
+    return null;
+  }
+}
+
+export async function testWhipscribe(): Promise<ActionResult> {
+  return postJson("/api/connections/whipscribe/test");
+}
+
+export async function connectSlack(webhookUrl: string): Promise<ActionResult> {
+  return postJson("/api/connections/slack", { webhook_url: webhookUrl });
+}
+
+export async function testSlack(): Promise<ActionResult> {
+  return postJson("/api/connections/slack/test");
+}
+
+export async function disconnectSlack(): Promise<ActionResult> {
+  return postJson("/api/connections/slack", undefined, "DELETE");
+}
+
+export async function connectNotion(token: string, database: string): Promise<ActionResult> {
+  return postJson("/api/connections/notion", { token, database });
+}
+
+export async function testNotion(): Promise<ActionResult> {
+  return postJson("/api/connections/notion/test");
+}
+
+export async function disconnectNotion(): Promise<ActionResult> {
+  return postJson("/api/connections/notion", undefined, "DELETE");
 }

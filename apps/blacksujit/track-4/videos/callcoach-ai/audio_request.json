@@ -1,0 +1,41 @@
+{
+  "provider": "kokoro",
+  "speed": 1,
+  "lines": [
+    {
+      "id": "01",
+      "text": "Stop watching. Start reading."
+    },
+    {
+      "id": "02",
+      "text": "Sarah spends five hours every week reading call transcripts line by line. She still misses compliance risks, loses action items, and coaches her reps two days too late."
+    },
+    {
+      "id": "03",
+      "text": "CallCoach-AI is the independent AI quality layer on top of WhipScribe's transcription API. Four specialized LLM agents judge every call: ComplianceAgent, TensionAgent, ClarityAgent, and ActionItemAgent."
+    },
+    {
+      "id": "04",
+      "text": "Every issue links to the exact timestamp and quote. Click through to the moment in the recording. Overall score: 68 out of 100."
+    },
+    {
+      "id": "05",
+      "text": "CallCoach-AI doesn't just score one call — it tracks improvement across your entire team, week over week."
+    },
+    {
+      "id": "06",
+      "text": "Zero missed action items. Zero compliance blowback. Five hours reclaimed every week."
+    },
+    {
+      "id": "07",
+      "text": "CallCoach-AI. Your sales calls scored. Your reps coached. Your team improved."
+    }
+  ],
+  "bgm": {
+    "mode": "retrieve",
+    "query": "CallCoach-AI turns every sales call transcript into a structured QA score with evidence timestamps — so managers stop watching recordings and start reading the insights.",
+    "blob": "CallCoach-AI turns every sales call transcript into a structured QA score with evidence timestamps — so managers stop watching recordings and start reading the insights.",
+    "arc": "Stop Watching → Problem → Solution → Proof → CTA"
+  },
+  "voice": "am_michael"
+}
