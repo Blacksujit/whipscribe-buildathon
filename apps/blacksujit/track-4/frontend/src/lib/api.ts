@@ -1,4 +1,14 @@
 // API client for the CallCoach-AI Flask backend
+import {
+  SAMPLE_JOBS,
+  SAMPLE_REPORT,
+  SAMPLE_TRENDS,
+  SAMPLE_COACH_DATA,
+  SAMPLE_SPEAKERS,
+  SAMPLE_CONNECTIONS,
+  isDemo,
+} from "./mockData";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_FLASK_URL || "http://localhost:5000";
 
 export interface Job {
@@ -153,6 +163,7 @@ export async function getJobs(apiKey: string): Promise<ApiJobsResponse> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch jobs:", error);
+    if (isDemo()) return SAMPLE_JOBS;
     return { jobs: [], success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
@@ -168,6 +179,7 @@ export async function getJobsWithScores(apiKey: string): Promise<{ jobs: Array<J
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch jobs:", error);
+    if (isDemo()) return { jobs: SAMPLE_JOBS.jobs.map((j) => ({ ...j, score: 40 })) };
     return { jobs: [] };
   }
 }
@@ -181,6 +193,7 @@ export async function getTrends(): Promise<TrendsResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch trends:", error);
+    if (isDemo()) return SAMPLE_TRENDS;
     return null;
   }
 }
@@ -194,6 +207,7 @@ export async function getReport(jobId: string): Promise<ReportResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch report:", error);
+    if (isDemo()) return SAMPLE_REPORT;
     return null;
   }
 }
@@ -207,6 +221,7 @@ export async function getCoachData(): Promise<CoachDataResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch coach data:", error);
+    if (isDemo()) return SAMPLE_COACH_DATA;
     return null;
   }
 }
@@ -220,6 +235,7 @@ export async function getSpeakers(): Promise<SpeakersResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch speakers:", error);
+    if (isDemo()) return SAMPLE_SPEAKERS;
     return null;
   }
 }
@@ -296,6 +312,7 @@ export async function getConnections(): Promise<ConnectionsResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch connections:", error);
+    if (isDemo()) return SAMPLE_CONNECTIONS;
     return null;
   }
 }
