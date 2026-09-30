@@ -496,11 +496,30 @@ export async function runSampleCall(): Promise<{ success: boolean; job_id?: stri
   return postJson("/api/sample/run");
 }
 
-export async function getOauthUrl(tool: "slack" | "notion"): Promise<string | null> {
+export async function getOauthUrl(tool: "slack" | "notion" | "hubspot"): Promise<string | null> {
   try {
     const res = await fetch(`${API_BASE}/api/oauth/${tool}/url`);
     const payload = await res.json().catch(() => ({}));
     return payload.success ? payload.url : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface OauthToolConfig {
+  available: boolean;
+  redirect_uri: string;
+  setup_url: string;
+  env: string[];
+}
+
+export type OauthConfig = Record<"slack" | "notion" | "hubspot", OauthToolConfig>;
+
+export async function getOauthConfig(): Promise<OauthConfig | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/oauth/config`);
+    const payload = await res.json().catch(() => ({}));
+    return payload.success ? payload.tools : null;
   } catch {
     return null;
   }

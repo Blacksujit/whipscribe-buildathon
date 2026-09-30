@@ -222,13 +222,34 @@ def _notion_connection():
     }
 
 
+def _hubspot_token():
+    """HubSpot access token, refreshed automatically when the OAuth grant is present."""
+    token = _stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN")
+    refresh_token = _stored_setting("hubspot_refresh_token")
+    if refresh_token and oauth.hubspot_configured():
+        try:
+            expires_at = float(_stored_setting("hubspot_token_expires_at") or 0)
+        except (TypeError, ValueError):
+            expires_at = 0
+        if time.time() > expires_at - 120:
+            try:
+                fresh = oauth.hubspot_refresh(refresh_token)
+                store.save_setting("hubspot_token", fresh["access_token"])
+                store.save_setting("hubspot_refresh_token", fresh["refresh_token"])
+                store.save_setting("hubspot_token_expires_at", str(time.time() + fresh["expires_in"]))
+                return fresh["access_token"]
+            except Exception:
+                pass
+    return token
+
+
 def _hubspot_connection():
     stored = _stored_setting("hubspot_token")
     env = (os.environ.get("HUBSPOT_TOKEN") or "").strip() or None
     return {
-        "connected": bool(stored or env),
-        "mode": "stored" if stored else ("env" if env else None),
-        "detail": "tasks" if (stored or env) else None,
+        "connected": bool(stored or env or _stored_setting("hubspot_refresh_token")),
+        "mode": "oauth" if _stored_setting("hubspot_refresh_token") else ("stored" if stored else ("env" if env else None)),
+        "detail": "tasks" if (stored or env or _stored_setting("hubspot_refresh_token")) else None,
     }
 
 
@@ -333,7 +354,7 @@ def _deliver_scorecard(tool, job_id, evaluation, transcript, name=None):
             return True, result.get("page_url") or "page created"
         if tool == "hubspot":
             result = deliver_hubspot_task(
-                evaluation, job_id, call_name=name, token=_stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN"),
+                evaluation, job_id, call_name=name, token=_hubspot_token(),
                 transcript=transcript,
             )
             return True, f"task {result.get('id')} created"
@@ -403,7 +424,7 @@ def api_connections():
     oauth_available = {
         "slack": oauth.slack_configured(),
         "notion": oauth.notion_configured(),
-        "hubspot": False,
+        "hubspot": oauth.hubspot_configured(),
     }
 
     def tool_block(tool, connection):
@@ -1274,7 +1295,7 @@ def api_connections_hubspot():
 @app.route("/api/connections/hubspot/test", methods=["POST"])
 def api_connections_hubspot_test():
     """Create a real test task in the connected HubSpot portal."""
-    token = _stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN")
+    token = _hubspot_token()
     if not token:
         return jsonify({"success": False, "error": "HubSpot is not connected yet."}), 400
     try:
@@ -1365,7 +1386,10 @@ def _oauth_page(tool, ok, message):
 def api_oauth_slack_url():
     if not oauth.slack_configured():
         return jsonify({"success": False, "error": "Slack OAuth is not configured on the server."}), 400
-    return jsonify({"success": True, "url": oauth.slack_authorize_url(_oauth_redirect_uri("slack"))})
+    return jsonify({
+        "success": True,
+        "url": oauth.slack_authorize_url(_oauth_redirect_uri("slack"), state=oauth.sign_state(app.secret_key, "slack")),
+    })
 
 
 @app.route("/api/oauth/slack/callback")
@@ -1373,6 +1397,8 @@ def api_oauth_slack_callback():
     code = request.args.get("code")
     if not code:
         return _oauth_page("slack", False, f"Slack authorization failed: {request.args.get('error', 'missing code')}")
+    if oauth.verify_state(app.secret_key, request.args.get("state", "")) != "slack":
+        return _oauth_page("slack", False, "That authorization link expired or was altered - start again from the Connect Center.")
     try:
         data = oauth.slack_exchange(code, _oauth_redirect_uri("slack"))
         store.save_setting("slack_bot_token", data["access_token"])
@@ -1414,7 +1440,10 @@ def api_oauth_slack_channel():
 def api_oauth_notion_url():
     if not oauth.notion_configured():
         return jsonify({"success": False, "error": "Notion OAuth is not configured on the server."}), 400
-    return jsonify({"success": True, "url": oauth.notion_authorize_url(_oauth_redirect_uri("notion"))})
+    return jsonify({
+        "success": True,
+        "url": oauth.notion_authorize_url(_oauth_redirect_uri("notion"), state=oauth.sign_state(app.secret_key, "notion")),
+    })
 
 
 @app.route("/api/oauth/notion/callback")
@@ -1422,6 +1451,8 @@ def api_oauth_notion_callback():
     code = request.args.get("code")
     if not code:
         return _oauth_page("notion", False, f"Notion authorization failed: {request.args.get('error', 'missing code')}")
+    if oauth.verify_state(app.secret_key, request.args.get("state", "")) != "notion":
+        return _oauth_page("notion", False, "That authorization link expired or was altered - start again from the Connect Center.")
     try:
         data = oauth.notion_exchange(code, _oauth_redirect_uri("notion"))
         store.save_setting("notion_token", data["access_token"])
@@ -1463,6 +1494,40 @@ def api_oauth_notion_database():
     store.save_setting("notion_database_id", database)
     store.save_setting("notion_database_name", name or database)
     return jsonify({"success": True, "message": "Connected - a confirmation page was created.", "page_url": result.get("page_url")})
+
+
+@app.route("/api/oauth/hubspot/url")
+def api_oauth_hubspot_url():
+    if not oauth.hubspot_configured():
+        return jsonify({"success": False, "error": "HubSpot OAuth is not configured on the server."}), 400
+    return jsonify({
+        "success": True,
+        "url": oauth.hubspot_authorize_url(_oauth_redirect_uri("hubspot"), state=oauth.sign_state(app.secret_key, "hubspot")),
+    })
+
+
+@app.route("/api/oauth/hubspot/callback")
+def api_oauth_hubspot_callback():
+    code = request.args.get("code")
+    if not code:
+        return _oauth_page("hubspot", False, f"HubSpot authorization failed: {request.args.get('error', 'missing code')}")
+    if oauth.verify_state(app.secret_key, request.args.get("state", "")) != "hubspot":
+        return _oauth_page("hubspot", False, "That authorization link expired or was altered - start again from the Connect Center.")
+    try:
+        data = oauth.hubspot_exchange(code, _oauth_redirect_uri("hubspot"))
+        store.save_setting("hubspot_token", data["access_token"])
+        store.save_setting("hubspot_refresh_token", data["refresh_token"] or "")
+        store.save_setting("hubspot_token_expires_at", str(time.time() + data["expires_in"]))
+        return _oauth_page("hubspot", True, "HubSpot authorized. Tasks will land in this portal automatically.")
+    except Exception as exc:  # noqa: BLE001
+        return _oauth_page("hubspot", False, str(exc))
+
+
+@app.route("/api/oauth/config")
+def api_oauth_config():
+    """One-click availability plus the exact setup steps when a tool is not configured."""
+    base = os.environ.get("OAUTH_REDIRECT_BASE") or request.url_root.rstrip("/")
+    return jsonify({"success": True, "tools": oauth.config(base)})
 
 
 @app.route("/api/sample/run", methods=["POST"])

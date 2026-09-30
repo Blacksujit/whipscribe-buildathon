@@ -9,6 +9,7 @@ import { SlackMark, NotionMark, HubSpotMark, WhipScribeMark } from "@/components
 import { CheckCircleIcon, AlertIcon, SparkIcon } from "@/components/icons";
 import {
   getConnections,
+  getOauthConfig,
   testWhipscribe,
   connectSlack,
   testToolDelivery,
@@ -24,6 +25,7 @@ import {
   getNotionDatabases,
   selectNotionDatabase,
   type ConnectCenterResponse,
+  type OauthConfig,
   type ToolConnection,
 } from "@/lib/api";
 
@@ -66,6 +68,81 @@ function AutoToggle({
       </span>
       <span className="switch-label">Deliver every new scorecard automatically</span>
     </label>
+  );
+}
+
+function OauthSetup({
+  name,
+  config,
+  serverHost,
+}: {
+  name: string;
+  config: OauthConfig["slack"] | undefined;
+  serverHost: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!config || config.available) return null;
+  return (
+    <div className="oauth-setup">
+      <button type="button" className="link-btn" onClick={() => setOpen((value) => !value)}>
+        {open ? "Hide one-click setup" : "Set up one-click connect"}
+      </button>
+      {open && (
+        <div className="oauth-steps">
+          <p>
+            One-time setup (about two minutes). After this, the button is a single click for everyone -
+            no tokens, no copy-paste.
+          </p>
+          <ol>
+            <li>
+              Create the {name} app:{" "}
+              <a href={config.setup_url} target="_blank" rel="noopener noreferrer">
+                {config.setup_url.replace("https://", "")}
+              </a>
+            </li>
+            <li className="oauth-copy-row">
+              <span>Add this redirect URL in the app:</span>
+              <code>{config.redirect_uri}</code>
+              <button
+                type="button"
+                className="copy-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(config.redirect_uri);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </li>
+            <li className="oauth-copy-row">
+              <span>Set these on the server ({serverHost}) and restart:</span>
+              <code>{config.env.join(", ")}</code>
+              <button
+                type="button"
+                className="copy-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(config.env.join(", "));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </li>
+          </ol>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -123,6 +200,7 @@ export default function ConnectionsPage() {
   const [picked, setPicked] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [oauthConfig, setOauthConfig] = useState<OauthConfig | null>(null);
 
   const [slackWebhook, setSlackWebhook] = useState("");
   const [notionToken, setNotionToken] = useState("");
@@ -141,14 +219,20 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     refresh();
+    getOauthConfig().then(setOauthConfig).catch(() => setOauthConfig(null));
   }, [refresh]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       const payload = event.data;
       if (!payload || payload.source !== "callcoach-oauth") return;
-      const tool = payload.tool as "slack" | "notion";
+      const tool = payload.tool as "slack" | "notion" | "hubspot";
       if (payload.status === "ok") {
+        if (tool === "hubspot") {
+          setNotice({ tool, ok: true, text: "HubSpot connected - scorecard tasks will land in that portal." });
+          refresh();
+          return;
+        }
         setOauthStage((state) => ({ ...state, [tool]: "pick" }));
         setPicked("");
         if (tool === "slack") getSlackChannels().then(setChannels);
@@ -162,7 +246,7 @@ export default function ConnectionsPage() {
     return () => window.removeEventListener("message", onMessage);
   }, [refresh]);
 
-  async function startOauth(tool: "slack" | "notion") {
+  async function startOauth(tool: "slack" | "notion" | "hubspot") {
     setBusy(tool);
     const url = await getOauthUrl(tool);
     setBusy(null);
@@ -215,6 +299,8 @@ export default function ConnectionsPage() {
     setNotice({ tool, ok: result.success, text: result.message || result.error || "Disconnected." });
     refresh();
   }
+
+  const serverHost = typeof window !== "undefined" ? window.location.host : "your server";
 
   if (loadError) {
     return (
@@ -299,13 +385,15 @@ export default function ConnectionsPage() {
                 <p className="connect-hint">Waiting for Slack to authorize in the popup...</p>
               ) : (
                 <div className="connect-form">
-                  {data?.slack.oauth_available && (
+                  {oauthConfig?.slack?.available ? (
                     <button className="btn-primary" disabled={busy === "slack"} onClick={() => startOauth("slack")}>
                       Continue with Slack
                     </button>
+                  ) : (
+                    <OauthSetup name="Slack" config={oauthConfig?.slack} serverHost={serverHost} />
                   )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "slack" ? null : "slack")}>
-                    {data?.slack.oauth_available ? "or paste a link instead" : "Connect with a link"}
+                    {oauthConfig?.slack?.available ? "or paste a link instead" : "Connect with a link"}
                   </button>
                   {openForm === "slack" && (
                     <div className="connect-paste">
@@ -407,13 +495,15 @@ export default function ConnectionsPage() {
                 <p className="connect-hint">Waiting for Notion to authorize in the popup...</p>
               ) : (
                 <div className="connect-form">
-                  {data?.notion.oauth_available && (
+                  {oauthConfig?.notion?.available ? (
                     <button className="btn-primary" disabled={busy === "notion"} onClick={() => startOauth("notion")}>
                       Continue with Notion
                     </button>
+                  ) : (
+                    <OauthSetup name="Notion" config={oauthConfig?.notion} serverHost={serverHost} />
                   )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "notion" ? null : "notion")}>
-                    {data?.notion.oauth_available ? "or paste a token instead" : "Connect with a token"}
+                    {oauthConfig?.notion?.available ? "or paste a token instead" : "Connect with a token"}
                   </button>
                   {openForm === "notion" && (
                     <div className="connect-paste">
@@ -487,8 +577,15 @@ export default function ConnectionsPage() {
                 </>
               ) : (
                 <div className="connect-form">
+                  {oauthConfig?.hubspot?.available ? (
+                    <button className="btn-primary" disabled={busy === "hubspot"} onClick={() => startOauth("hubspot")}>
+                      Continue with HubSpot
+                    </button>
+                  ) : (
+                    <OauthSetup name="HubSpot" config={oauthConfig?.hubspot} serverHost={serverHost} />
+                  )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "hubspot" ? null : "hubspot")}>
-                    Connect with a token
+                    {oauthConfig?.hubspot?.available ? "or paste a private-app token instead" : "Connect with a token"}
                   </button>
                   {openForm === "hubspot" && (
                     <div className="connect-paste">
