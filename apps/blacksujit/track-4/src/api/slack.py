@@ -14,24 +14,31 @@ PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://callcoachai.sujit.top
 
 
 def get_slack_client():
-    """Webhook URL from settings or env."""
+    """Webhook URL from settings or env, trimmed (env values often carry whitespace)."""
     webhook_url = os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_WEBHOOK")
+    if webhook_url:
+        webhook_url = webhook_url.strip() or None
     if not webhook_url:
         try:
             from src.database import store
 
-            webhook_url = store.get_setting("slack_webhook")
+            stored = store.get_setting("slack_webhook")
+            webhook_url = stored.strip() if isinstance(stored, str) and stored.strip() else None
         except Exception:
             pass
     return webhook_url
 
 
 def get_slack_bot():
-    """Bot token + default channel from settings (OAuth path)."""
+    """Bot token + default channel from settings (OAuth path), trimmed."""
     try:
         from src.database import store
 
-        return store.get_setting("slack_bot_token"), store.get_setting("slack_channel")
+        token = store.get_setting("slack_bot_token")
+        channel = store.get_setting("slack_channel")
+        token = token.strip() if isinstance(token, str) and token.strip() else None
+        channel = channel.strip() if isinstance(channel, str) and channel.strip() else None
+        return token, channel
     except Exception:
         return None, None
 

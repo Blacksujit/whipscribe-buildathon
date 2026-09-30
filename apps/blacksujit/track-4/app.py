@@ -263,7 +263,13 @@ def _deliver_scorecard(tool, job_id, evaluation, transcript, name=None):
     try:
         if tool == "slack":
             message = deliver_qa_report(evaluation, transcript, job_id, name)
-            return (True, message) if message else (False, "Slack is not connected")
+            if message:
+                return True, message
+            configured = bool(os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("SLACK_WEBHOOK")
+                              or _stored_setting("slack_webhook")
+                              or (_stored_setting("slack_bot_token") and _stored_setting("slack_channel")))
+            return False, ("Slack rejected the message - check the webhook" if configured
+                           else "Slack is not connected")
         if tool == "notion":
             report_md = f"# Scorecard: {name or job_id}\n\nOverall score: {evaluation.get('overall_score', 0)}/100\n\n"
             for category, score in (evaluation.get("category_scores") or {}).items():
