@@ -68,7 +68,7 @@ python test_complete.py        # 52 passed — all 13 features end to end
 
 ## Screenshots (live, real data)
 
-| Dashboard | Trends, 8 real calls | Griot, answering from the call library |
+| Dashboard | Trends, 9 real calls | Griot, answering from the call library |
 |---|---|---|
 | ![Home](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-home.png) | ![Trends](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-trends.png) | ![Griot](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-griot.png) |
 
