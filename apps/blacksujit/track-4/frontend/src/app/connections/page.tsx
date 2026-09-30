@@ -74,11 +74,9 @@ function AutoToggle({
 function OauthSetup({
   name,
   config,
-  serverHost,
 }: {
   name: string;
   config: OauthConfig["slack"] | undefined;
-  serverHost: string;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -121,7 +119,10 @@ function OauthSetup({
               </button>
             </li>
             <li className="oauth-copy-row">
-              <span>Set these on the server ({serverHost}) and restart:</span>
+              <span>
+                Add these two keys to the server's environment (on Render: Environment, then Save - the
+                service restarts itself), and one-click is live for everyone:
+              </span>
               <code>{config.env.join(", ")}</code>
               <button
                 type="button"
@@ -300,8 +301,6 @@ export default function ConnectionsPage() {
     refresh();
   }
 
-  const serverHost = typeof window !== "undefined" ? window.location.host : "your server";
-
   if (loadError) {
     return (
       <main className="site-shell">
@@ -390,7 +389,7 @@ export default function ConnectionsPage() {
                       Continue with Slack
                     </button>
                   ) : (
-                    <OauthSetup name="Slack" config={oauthConfig?.slack} serverHost={serverHost} />
+                    <OauthSetup name="Slack" config={oauthConfig?.slack} />
                   )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "slack" ? null : "slack")}>
                     {oauthConfig?.slack?.available ? "or paste a link instead" : "Connect with a link"}
@@ -500,7 +499,7 @@ export default function ConnectionsPage() {
                       Continue with Notion
                     </button>
                   ) : (
-                    <OauthSetup name="Notion" config={oauthConfig?.notion} serverHost={serverHost} />
+                    <OauthSetup name="Notion" config={oauthConfig?.notion} />
                   )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "notion" ? null : "notion")}>
                     {oauthConfig?.notion?.available ? "or paste a token instead" : "Connect with a token"}
@@ -582,7 +581,7 @@ export default function ConnectionsPage() {
                       Continue with HubSpot
                     </button>
                   ) : (
-                    <OauthSetup name="HubSpot" config={oauthConfig?.hubspot} serverHost={serverHost} />
+                    <OauthSetup name="HubSpot" config={oauthConfig?.hubspot} />
                   )}
                   <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "hubspot" ? null : "hubspot")}>
                     {oauthConfig?.hubspot?.available ? "or paste a private-app token instead" : "Connect with a token"}

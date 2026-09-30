@@ -93,6 +93,8 @@ Connect Center - Slack connected with auto-delivery on; Notion and HubSpot are o
 
 WhipScribe's own read and conversation dynamics side by side on a real report: ![Deep reads](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-deep-reads.png)
 
+One-click connect: "Continue with X" when the app keys are configured; otherwise a three-step setup card with the copyable redirect URL - ![One-click setup](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-one-click-setup.png)
+
 Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
 
 ## The 13 features
