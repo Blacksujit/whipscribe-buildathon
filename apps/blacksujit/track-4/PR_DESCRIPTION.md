@@ -1,5 +1,14 @@
 # Track 4 — CallCoach-AI x WhipScribe Workflow
 
+> **What changed since the last review** (reviewed 2026-09-29 01:45 UTC):
+>
+> - **Deployment fixed** — the live URL was returning 404; it now serves the dashboard (with a demo fallback when the backend is unreachable): [callcoachai.sujit.top](https://callcoachai.sujit.top)
+> - **The live backend is real** — 5 recordings evaluated through the API (4 short calls + a 13.6-minute sample call); Trends/Coach/Speakers show the real data: [live trend chart](https://callcoachai.sujit.top/trends)
+> - **13 features added and tested** — real-time coaching, CRM sync, follow-ups, benchmarking, custom rubrics, sentiment, coaching plans, 12 languages, assistant, export, MCP
+> - **103 test assertions, all passing** — there were zero tests at review time
+> - **New: Ask-the-Assistant page** — conversational Q&A with quote + speaker + timestamp evidence
+> - **Honesty pass** — the fake `videotourl.com` link is gone from the README and PR; evidence now points at real job IDs and screenshots
+
 ## Track record
 
 I'm Nirmal Sujit ([@Blacksujit](https://github.com/Blacksujit)). My PRs and issues across the buildathon:
@@ -85,8 +94,10 @@ Beyond the core scorecard, these are built and tested:
 - Speaker-level risk scoring
 - Slack and Notion integrations with live validation
 - MCP server for assistant integration (4 tools)
-- Full Next.js dashboard (6 routes) deployed to Vercel — works in demo mode without a backend
+- Full Next.js dashboard (7 routes, including Ask-the-Assistant) deployed to Vercel — works in demo mode without a backend
 - 103 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
+- Real WhipScribe API run (2026-09-30): upload → poll → 7-segment transcript → LLM evaluation, job `7ebaeca0-9076-4c14-97be-a8b1948c8482` — evidence in [`docs/real-api-run.md`](docs/real-api-run.md)
+- Deployed backend evaluated **5 real recordings** (4 short calls + a 13.6-minute sample call) — the live dashboard renders the real score chart, coaching insights, and speaker analysis: [`docs/screenshots/live-trends.png`](docs/screenshots/live-trends.png), [`docs/screenshots/live-report.png`](docs/screenshots/live-report.png)
 
 ## What does not work yet
 
@@ -152,7 +163,7 @@ Beyond the core scorecard, these are built and tested:
 ### Workflows (Track 4)
 - [x] PROBLEM.md names one specific person and what it costs them today
 - [x] Workflow is drawn: steps, what the API/MCP does, what the person sees
-- [ ] One flow runs end to end on real API calls (offline demo runs with sample transcript)
+- [x] One flow runs end to end on real API calls and my own recordings (job `7ebaeca0-9076-4c14-97be-a8b1948c8482`, evidence in `docs/real-api-run.md`)
 - [x] Two-minute recording shows the workflow doing its job (`videos/demo/`)
 - [x] Vision says who else it serves, what it needs, and what comes next
 
