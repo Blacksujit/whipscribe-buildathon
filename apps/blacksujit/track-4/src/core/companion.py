@@ -134,14 +134,23 @@ def ask(question: str, evidence: dict[str, Any], provider: str | None = None,
     return _data_answer(question, evidence)
 
 
+def _fold(text: str) -> str:
+    """Lowercase and strip everything outside a-z0-9.
+
+    Model output often swaps hyphens/apostrophes for lookalikes (non-breaking
+    hyphen, curly quote), which would otherwise break name matching.
+    """
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
 def _extract_sources(answer: str, evidence: dict[str, Any]) -> list[dict[str, Any]]:
     """Match cited call names back to stored issues so the UI can deep-link."""
     sources = []
-    answer_lower = answer.lower()
+    answer_folded = _fold(answer)
     seen = set()
     for call in evidence.get("calls", []):
         name = call.get("name") or ""
-        if name and name.lower() in answer_lower:
+        if name and _fold(name) in answer_folded:
             for issue in call.get("issues", [])[:2]:
                 key = (call["job_id"], issue["start"], issue["text"][:40])
                 if key in seen:
