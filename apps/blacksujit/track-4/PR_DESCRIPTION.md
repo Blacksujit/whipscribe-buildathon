@@ -52,11 +52,29 @@ python app.py
 python -m src.main --sample  # uses bundled sample transcript, no keys needed
 ```
 
-### End-to-end test (51 assertions)
+### End-to-end tests (103 assertions, all passing)
 ```bash
-python test_comprehensive.py   # runs offline, no keys needed
-# Result: 51 passed, 0 failed
+python test_comprehensive.py   # 51 passed — pipeline, cross-call, coaching, MCP
+python test_complete.py        # 52 passed — all 13 features end to end
 ```
+
+## The 13 features
+
+Beyond the core scorecard, these are built and tested:
+
+1. **Real-time coaching during calls** — live prompts while the call is happening (`src/realtime/analyzer.py`)
+2. **Post-call 4-agent analysis** — Compliance, Tension, Clarity, Action Items
+3. **Cross-call intelligence** — velocity, momentum, recurring clusters, speaker risk
+4. **CRM integration** — Salesforce and HubSpot task/note creation (`src/api/crm.py`)
+5. **Follow-up emails** — generated from action items and risks (`src/api/followup.py`)
+6. **Team benchmarking** — rep rankings, top performers, coaching needs (`src/core/benchmark.py`)
+7. **Custom rubrics** — weighted scoring criteria per team (`src/core/rubric.py`)
+8. **Sentiment analysis** — by call and by speaker (`src/core/sentiment.py`)
+9. **Coaching plans** — weaknesses, action items, goals per rep (`src/core/coaching_plan.py`)
+10. **Multi-language** — 12 languages (`src/core/multilang.py`)
+11. **AI coaching assistant** — conversational Q&A over your calls (`src/core/assistant.py`)
+12. **Export** — Markdown, JSON, Slack, Notion, CSV (`src/core/export.py`)
+13. **MCP integration** — library/folder/search tools (`src/api/mcp_integration.py`)
 
 ## What works
 
@@ -68,7 +86,7 @@ python test_comprehensive.py   # runs offline, no keys needed
 - Slack and Notion integrations with live validation
 - MCP server for assistant integration (4 tools)
 - Full Next.js dashboard (6 routes) deployed to Vercel — works in demo mode without a backend
-- 51 test assertions all passing (`test_comprehensive.py`)
+- 103 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
 
 ## What does not work yet
 
@@ -107,7 +125,7 @@ python test_comprehensive.py   # runs offline, no keys needed
 - [x] No invented API behaviour — every WhipScribe API call matches the docs or a real response (verified via `e2e_test.py`)
 
 ### Finishing
-- [x] Full flow works end to end from clean install (`test_comprehensive.py` runs with 0 dependencies, 51 tests pass)
+- [x] Full flow works end to end from clean install (`python test_complete.py` — 52 tests pass; `test_comprehensive.py` — 51 more)
 - [x] Someone other than me tested it during Track 1 review — incorporated their feedback on the upload UX copy
 - [x] README says what does not work (section 4 above)
 - [x] Install and run instructions work on a non-Windows machine (Render deploy configured with `render.yaml`, Vercel config in `vercel.json`)
