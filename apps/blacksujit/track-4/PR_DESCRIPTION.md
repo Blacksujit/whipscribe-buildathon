@@ -68,9 +68,11 @@ python test_complete.py        # 52 passed — all 13 features end to end
 
 ## Screenshots (live, real data)
 
-| Dashboard | Trends — 5 real calls | Assistant |
+| Dashboard | Trends, 8 real calls | Griot, answering from the call library |
 |---|---|---|
-| ![Home](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-home.png) | ![Trends](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-trends.png) | ![Assistant](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-assistant.png) |
+| ![Home](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-home.png) | ![Trends](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-trends.png) | ![Griot](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-griot.png) |
+
+The Griot panel above is a real answer over the seeded calls - note the German and Hindi calls in the evidence.
 
 Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
 
@@ -101,10 +103,10 @@ Beyond the core scorecard, these are built and tested:
 - Speaker-level risk scoring
 - Slack and Notion integrations with live validation
 - MCP server for assistant integration (4 tools)
-- Full Next.js dashboard (7 routes, including Ask-the-Assistant) deployed to Vercel — works in demo mode without a backend
+- Full Next.js dashboard (6 routes + the Griot widget on every page) deployed to Vercel; when the backend is asleep it shows labeled sample data instead of empty pages
 - 103 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
 - Real WhipScribe API run (2026-09-30): upload → poll → 7-segment transcript → LLM evaluation, job `7ebaeca0-9076-4c14-97be-a8b1948c8482` — evidence in [`docs/real-api-run.md`](docs/real-api-run.md)
-- Deployed backend evaluated **5 real recordings** (4 short calls + a 13.6-minute sample call) — the live dashboard renders the real score chart, coaching insights, and speaker analysis: [`docs/screenshots/live-trends.png`](docs/screenshots/live-trends.png), [`docs/screenshots/live-report.png`](docs/screenshots/live-report.png)
+- Deployed backend evaluated **8 real recordings** (real WhipScribe transcripts, LLM-scored, shipped as `seed_evaluations.db`) - the live dashboard renders the real score chart, coaching insights, and speaker analysis: [`docs/screenshots/live-trends.png`](docs/screenshots/live-trends.png), [`docs/screenshots/live-report.png`](docs/screenshots/live-report.png)
 
 ## What does not work yet
 

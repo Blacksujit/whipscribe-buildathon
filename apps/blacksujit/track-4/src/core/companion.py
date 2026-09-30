@@ -142,7 +142,7 @@ def _extract_sources(answer: str, evidence: dict[str, Any]) -> list[dict[str, An
     for call in evidence.get("calls", []):
         name = call.get("name") or ""
         if name and name.lower() in answer_lower:
-            for issue in call.get("issues", []):
+            for issue in call.get("issues", [])[:2]:
                 key = (call["job_id"], issue["start"], issue["text"][:40])
                 if key in seen:
                     continue

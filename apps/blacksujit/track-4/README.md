@@ -2,7 +2,7 @@
 
 **Three jobs, one pipeline: coach the call while it happens, read the pattern across calls, and answer any question about what was said - with the quotes to prove it.**
 
-[Live App](https://callcoachai.sujit.top/) · [Demo Video](https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/videos/demo/callcoach-demo-2026-09-28T15-11-37.webm) (330MB, right-click "Save As")
+[Live App](https://callcoachai.sujit.top/) · [Demo Video](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
 
 ---
 
@@ -25,27 +25,13 @@
 ## Everything inside (13 capabilities)
 
 ### 1. Spotter - Real-Time Coaching During Calls
+
 Live coaching prompts during calls:
 - Real-time sentiment analysis
 - Live compliance risk detection
 - Instant action item extraction
 - Live coaching prompts
-
-```python
-from src.realtime.analyzer import RealtimeAnalyzer
-
-analyzer = RealtimeAnalyzer()
-result = analyzer.add_segment({
-    "text": "We'll deliver by Q1",
-    "speaker": "Sarah",
-    "start": 0,
-    "end": 5
-})
-
-print(result['coaching_prompts'])
-# -> [HIGH] Consider qualifying this commitment.
-# -> [LOW] Action item captured.
-```
+  
 
 ### 2. Post-Call Analysis
 Four-agent LLM scoring:
@@ -194,7 +180,13 @@ Features tested:
 
 ---
 
-## API Reference
+## Conclusion
+
+CallCoach-AI is the only platform that provides **real-time coaching during calls** (not just post-call), plus comprehensive CRM integration, automated follow-up emails, team benchmarking, and custom scoring rubrics.
+
+These features make CallCoach-AI the most comprehensive call coaching platform available.
+
+<!-- ## API Reference
 
 ### Real-Time Coaching
 ```python
@@ -221,19 +213,14 @@ email = generator.generate_followup_email(evaluation, transcript, "user@example.
 from src.core.benchmark import TeamBenchmark
 benchmark = TeamBenchmark()
 benchmark.add_rep_data("Sarah", evaluations)
-```
-
+``` -->
+<!-- 
 ### Custom Rubrics
 ```python
 from src.core.rubric import RubricManager
 manager = RubricManager()
 rubric = manager.create_rubric("Custom", {"compliance": 0.3, "clarity": 0.3, "action_items": 0.4})
-```
+``` -->
 
 ---
 
-## Conclusion
-
-CallCoach-AI is the only platform that provides **real-time coaching during calls** (not just post-call), plus comprehensive CRM integration, automated follow-up emails, team benchmarking, and custom scoring rubrics.
-
-These features make CallCoach-AI the most comprehensive call coaching platform available.
