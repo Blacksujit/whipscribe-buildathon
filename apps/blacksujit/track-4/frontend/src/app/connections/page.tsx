@@ -423,8 +423,12 @@ export default function ConnectionsPage() {
                         {busy === "slack" ? "Connecting..." : "Connect Slack"}
                       </button>
                       <p className="connect-steps">
-                        In Slack: Settings, then Integrations, then Incoming Webhooks, then Add to a channel,
-                        and copy the link it shows you. We send one test message before saving it.
+                        Fastest route:{" "}
+                        <a href="https://my.slack.com/services/new/incoming-webhook/" target="_blank" rel="noopener noreferrer">
+                          open Slack&apos;s webhook page
+                        </a>{" "}
+                        - pick the channel, copy the link it shows you, paste it above. We send one test
+                        message before saving it.
                       </p>
                     </div>
                   )}
@@ -543,8 +547,12 @@ export default function ConnectionsPage() {
                         {busy === "notion" ? "Connecting..." : "Connect Notion"}
                       </button>
                       <p className="connect-steps">
-                        In Notion: Settings, then Connections, then Develop or manage integrations, then create
-                        one, copy its token, and share the database with it.
+                        Fastest route:{" "}
+                        <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
+                          create a Notion integration
+                        </a>{" "}
+                        (one click), copy its token, then Share the database with it and paste the database
+                        link above.
                       </p>
                     </div>
                   )}
@@ -615,8 +623,12 @@ export default function ConnectionsPage() {
                         {busy === "hubspot" ? "Checking..." : "Connect HubSpot"}
                       </button>
                       <p className="connect-steps">
-                        In HubSpot: Settings, then Integrations, then Private apps, then create one with the
-                        tasks scope, and copy its token.
+                        Fastest route:{" "}
+                        <a href="https://app.hubspot.com/l/private-apps/" target="_blank" rel="noopener noreferrer">
+                          open HubSpot private apps
+                        </a>{" "}
+                        - create one, add the Tasks read+write scope, copy its token, paste it above. We
+                        verify it against the live API before saving.
                       </p>
                     </div>
                   )}
