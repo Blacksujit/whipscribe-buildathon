@@ -46,7 +46,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.api.whip_api import (
     list_jobs, get_transcript, poll_job, submit_file, submit_url, get_audio_url, get_me,
-    get_session_summary, get_high_signal_moments,
+    get_session_summary, get_high_signal_moments, get_insights,
 )
 from src.api.notion import NOTION_API, deliver_report
 from src.api.slack import (
@@ -63,6 +63,12 @@ from src.api.hubspot import deliver_task as deliver_hubspot_task, verify as veri
 from src import oauth
 from src.core.evaluator import evaluate
 from src.core.compare import compare_evaluations
+from src.core.dynamics import analyze_dynamics, dynamics_line
+from src.core.commitments import build_ledger
+from src.core.sentiment import SentimentTracker
+from src.core.rubric import RubricManager, create_default_rubrics, DEFAULT_RUBRICS, ScoringRubric
+from src.core.coaching_plan import CoachingPlanGenerator
+from src.core.export import ExportManager
 from src.database import store
 
 MASK = "********"
@@ -212,12 +218,18 @@ def _auto_enabled(tool):
 
 
 def _whip_extras(api_key, job_id):
-    """Extra WhipScribe API reads per analysis: summary, key moments, audio URL."""
+    """Extra WhipScribe API reads per analysis: summary, insights, moments, audio URL."""
     extras = {}
     try:
         summary = get_session_summary(api_key, job_id)
         if summary:
             extras["session_summary"] = summary
+    except Exception:
+        pass
+    try:
+        insights = get_insights(api_key, job_id)
+        if insights:
+            extras["insights"] = insights
     except Exception:
         pass
     try:
@@ -253,6 +265,14 @@ def _attach_whip_extras(evaluation, extras):
         moments = moments.get("moments") or moments.get("candidates") or moments.get("clips") or []
     if isinstance(moments, list) and moments:
         clean["key_moments"] = moments[:5]
+    insights = extras.get("insights")
+    if isinstance(insights, dict):
+        clean["insights"] = {
+            "summary": str(insights.get("summary") or "")[:1200],
+            "topics": (insights.get("topics") or [])[:8],
+            "quotes": (insights.get("quotes") or [])[:8],
+            "speakers": (insights.get("speakers") or [])[:6],
+        }
     if extras.get("audio_url"):
         clean["audio_url"] = extras["audio_url"]
     if clean:
@@ -275,6 +295,9 @@ def _deliver_scorecard(tool, job_id, evaluation, transcript, name=None):
             report_md = f"# Scorecard: {name or job_id}\n\nOverall score: {evaluation.get('overall_score', 0)}/100\n\n"
             for category, score in (evaluation.get("category_scores") or {}).items():
                 report_md += f"- {category}: {score}\n"
+            balance = dynamics_line(analyze_dynamics(transcript))
+            if balance:
+                report_md += f"\n{balance}\n"
             issues = collect_top_issues(evaluation, limit=4)
             if issues:
                 report_md += "\n## What to fix\n"
@@ -290,8 +313,8 @@ def _deliver_scorecard(tool, job_id, evaluation, transcript, name=None):
             return True, result.get("page_url") or "page created"
         if tool == "hubspot":
             result = deliver_hubspot_task(
-                evaluation, job_id, call_name=name,
-                token=_stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN"),
+                evaluation, job_id, call_name=name, token=_stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN"),
+                transcript=transcript,
             )
             return True, f"task {result.get('id')} created"
     except Exception as exc:  # noqa: BLE001
@@ -735,12 +758,29 @@ def api_report(job_id):
         except Exception:
             pass
 
+    # WhipScribe's own read of this call: fresh when possible, stored otherwise.
+    whip_read = (evaluation.get("whip") or {}).get("insights") or {}
+    if api_key:
+        try:
+            fresh = get_insights(api_key, job_id)
+            if fresh:
+                whip_read = {
+                    "summary": str(fresh.get("summary") or "")[:1200],
+                    "topics": (fresh.get("topics") or [])[:8],
+                    "quotes": (fresh.get("quotes") or [])[:8],
+                    "speakers": (fresh.get("speakers") or [])[:6],
+                }
+        except Exception:
+            pass
+
     return jsonify({
         "success": True,
         "job_id": job_id,
         "transcript": transcript,
         "evaluation": evaluation,
         "audio_url": audio_url,
+        "dynamics": analyze_dynamics(transcript),
+        "whip_read": whip_read,
     })
 
 
@@ -765,9 +805,48 @@ def api_speakers():
     ]
     speakers_list.sort(key=lambda s: s["issue_count"], reverse=True)
 
+    # Conversation dynamics per speaker across every stored call (pure timestamps).
+    totals = {}
+    for evaluation in evaluations:
+        transcript = evaluation.get("transcript")
+        if isinstance(transcript, str):
+            try:
+                transcript = json.loads(transcript)
+            except (json.JSONDecodeError, TypeError):
+                transcript = {}
+        dynamics = analyze_dynamics(transcript or {})
+        for speaker in dynamics.get("speakers", []):
+            if speaker["name"] == "Unknown":
+                continue
+            agg = totals.setdefault(speaker["name"], {
+                "talk_seconds": 0.0, "calls": 0, "questions": 0, "overlaps": 0, "longest_seconds": 0.0,
+            })
+            agg["talk_seconds"] += speaker["talk_seconds"]
+            agg["calls"] += 1
+            agg["questions"] += speaker["questions"]
+            agg["overlaps"] += speaker["overlaps"]
+            agg["longest_seconds"] = max(agg["longest_seconds"], speaker["longest_monologue"]["seconds"])
+
+    total_seconds = sum(a["talk_seconds"] for a in totals.values()) or 1.0
+    dynamics_list = sorted(
+        [
+            {
+                "name": name,
+                "talk_share": round(agg["talk_seconds"] / total_seconds * 100, 1),
+                "calls": agg["calls"],
+                "questions": agg["questions"],
+                "overlaps": agg["overlaps"],
+                "longest_monologue_seconds": round(agg["longest_seconds"], 1),
+            }
+            for name, agg in totals.items()
+        ],
+        key=lambda item: -item["talk_share"],
+    )
+
     return jsonify({
         "success": True,
         "speakers": speakers_list,
+        "dynamics": dynamics_list,
         "high_risk": [s["name"] for s in speakers_list if s["issue_count"] > 5][:5],
         "top_contributors": speakers_list[:5],
     })
@@ -949,6 +1028,50 @@ def trends_data():
             category_scores = mapped
             break
 
+    # What changed: category movement between the first and second half of the calls.
+    changes = []
+    core_list = [p["core"] for p in parsed_evals]
+    if len(core_list) >= 4:
+        half = len(core_list) // 2
+        first_half, second_half = core_list[:half], core_list[half:]
+
+        def _avg(evals, key):
+            values = [
+                int((e.get("category_scores") or {}).get(key, 0) or 0)
+                for e in evals
+                if isinstance(e.get("category_scores"), dict)
+            ]
+            values = [v for v in values if v > 0]
+            return round(sum(values) / len(values), 1) if values else 0
+
+        for category in ("compliance", "clarity", "tension", "action_items"):
+            before, after = _avg(first_half, category), _avg(second_half, category)
+            if before or after:
+                changes.append({
+                    "category": category,
+                    "before": before,
+                    "after": after,
+                    "delta": round(after - before, 1),
+                })
+        changes.sort(key=lambda c: -abs(c["delta"]))
+
+    # Tone across calls, from the stored transcripts (src/core/sentiment.py).
+    tracker = SentimentTracker()
+    for evaluation in sorted_evals:
+        transcript = evaluation.get("transcript")
+        if isinstance(transcript, str):
+            try:
+                transcript = json.loads(transcript)
+            except (json.JSONDecodeError, TypeError):
+                transcript = {}
+        segments = (transcript or {}).get("segments") or []
+        if segments:
+            try:
+                tracker.add_call(evaluation.get("meeting_name") or evaluation["job_id"][:8], segments)
+            except Exception:
+                continue
+    sentiment = tracker.get_sentiment_trend()
+
     return jsonify({
         "labels": labels,
         "overall": scores,
@@ -956,6 +1079,8 @@ def trends_data():
         "momentum": momentum,
         "slope": round(slope, 2),
         "category_scores": category_scores,
+        "changes": changes,
+        "sentiment": sentiment,
     })
 
 
@@ -1281,6 +1406,85 @@ def api_sample_run():
         daemon=True,
     ).start()
     return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"})
+
+
+# --------------------------------------------- ledger, plans, rubrics, export
+
+@app.route("/api/commitments")
+def api_commitments():
+    """Cross-call commitment ledger built from stored action items."""
+    evaluations = store.get_all_evaluations()
+    rows = store.get_all_action_items()
+    return jsonify({"success": True, **build_ledger(rows, evaluations)})
+
+
+@app.route("/api/plan")
+def api_plan():
+    """A coaching plan generated from the stored evaluations."""
+    evaluations = store.get_all_evaluations()
+    if not evaluations:
+        return jsonify({"success": False, "error": "Analyze a call first."}), 400
+    eval_dicts, names = _stored_eval_dicts(evaluations)
+    comparisons = compare_evaluations(eval_dicts, names)
+    generator = CoachingPlanGenerator()
+    plan = generator.generate_plan("You", eval_dicts, comparisons)
+    return jsonify({"success": True, "plan": plan})
+
+
+@app.route("/api/rubrics")
+def api_rubrics():
+    """The built-in rubric presets (weights per category)."""
+    return jsonify({
+        "success": True,
+        "rubrics": [{"key": key, **value} for key, value in DEFAULT_RUBRICS.items()],
+    })
+
+
+@app.route("/api/rubric/score", methods=["POST"])
+def api_rubric_score():
+    """Rescore a stored call with custom category weights (pure weighted math)."""
+    payload = request.get_json(silent=True) or {}
+    job_id = str(payload.get("job_id", "")).strip()
+    weights = payload.get("weights") or {}
+
+    stored = store.get_evaluation(job_id) if job_id else None
+    if not stored:
+        return jsonify({"success": False, "error": "No stored evaluation for this job."}), 404
+
+    core = _core_eval(stored.get("evaluation"))
+    category_scores = core.get("category_scores") or {}
+
+    cleaned = {}
+    for key in ("compliance", "tension", "clarity", "action_items"):
+        try:
+            value = float(weights.get(key, 0))
+        except (TypeError, ValueError):
+            value = 0.0
+        if value > 0:
+            cleaned[key] = value
+    if not cleaned:
+        return jsonify({"success": False, "error": "Provide positive weights for at least one category."}), 400
+
+    total = sum(cleaned.values())
+    normalized = {key: value / total for key, value in cleaned.items()}
+    score = ScoringRubric("Custom", normalized).calculate_score(category_scores)
+    return jsonify({
+        "success": True,
+        "score": round(score, 1),
+        "weights": normalized,
+        "category_scores": category_scores,
+    })
+
+
+@app.route("/api/export/markdown/<job_id>")
+def api_export_markdown(job_id):
+    """Download a stored scorecard as Markdown."""
+    stored = store.get_evaluation(job_id)
+    if not stored:
+        return jsonify({"success": False, "error": "No stored evaluation for this job."}), 404
+    manager = ExportManager(_core_eval(stored.get("evaluation")), stored.get("transcript") or {})
+    markdown = manager.export_markdown()
+    return app.response_class(markdown, mimetype="text/markdown")
 
 
 @app.route("/api/export/notion", methods=["POST"])

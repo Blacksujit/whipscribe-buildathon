@@ -2,6 +2,7 @@
 
 > **What changed since the last review** (reviewed 2026-09-29 01:45 UTC):
 >
+> - **Deeper reads on every call (new).** The four agents now come with: **conversation dynamics** (talk balance, overlapping starts, thinking pauses, questions per speaker - computed from real timestamps), **WhipScribe's own read** (the platform's summary, named quotes and topics shown next to ours), a **cross-call commitment ledger** (every promise, deduplicated, aged, with repeats flagged), a **custom-rubric rescore** (reweight the four categories and rescore instantly), and **Markdown export**. 110 test assertions pass.
 > - **One-click delivery to your tools.** The Connect Center connects Slack (OAuth or one paste), Notion (OAuth or one paste), and HubSpot (verified token). Each connection is proven with a real message or page on the spot, then every new scorecard is delivered automatically - score, quotes with timestamps, commitments, report link. Every attempt is logged and any report can be re-sent from its page.
 > - **A real sample call in one click.** The hero runs bundled 26-second audio through the live WhipScribe API end to end - transcription, four agents, delivery.
 > - **Griot - the grounded companion.** A floating chat on every page that answers from your real call library: "What did we commit to across calls?" Every claim comes back with a call, a speaker, and the exact second. It calls a real endpoint (`POST /api/ask`) that reads the stored evaluations and answers with the configured LLM. No canned Q&A - the placeholder assistant page was deleted.

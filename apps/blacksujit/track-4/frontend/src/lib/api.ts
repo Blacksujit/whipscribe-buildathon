@@ -54,6 +54,19 @@ export interface ActionResult {
   page_url?: string;
 }
 
+export interface TrendChange {
+  category: string;
+  before: number;
+  after: number;
+  delta: number;
+}
+
+export interface SentimentTrend {
+  trend: string;
+  calls: Array<{ name: string; sentiment: string; score: number }>;
+  average_score: number;
+}
+
 export interface TrendsResponse {
   labels: string[];
   overall: number[];
@@ -61,6 +74,33 @@ export interface TrendsResponse {
   momentum: "increasing" | "decreasing" | "stable";
   slope: number;
   category_scores?: Record<string, number[]>;
+  changes?: TrendChange[];
+  sentiment?: SentimentTrend;
+}
+
+export interface DynamicsSpeaker {
+  name: string;
+  talk_share: number;
+  talk_seconds: number;
+  segments: number;
+  questions: number;
+  overlaps: number;
+  longest_monologue: { seconds: number; start: number; at: string; text: string };
+}
+
+export interface DynamicsSummary {
+  speakers: DynamicsSpeaker[];
+  silences: { count: number; longest_seconds: number; items: Array<{ start: number; seconds: number; after: string; before: string }> };
+  turns: number;
+  total_talk_seconds: number;
+  verdict: string;
+}
+
+export interface WhipRead {
+  summary?: string;
+  topics?: string[];
+  quotes?: Array<{ speaker?: string; text?: string; start?: number }>;
+  speakers?: Array<{ speaker?: string; summary?: string }>;
 }
 
 export interface ReportResponse {
@@ -87,6 +127,8 @@ export interface ReportResponse {
     deal_killer?: string;
   };
   audio_url?: string;
+  dynamics?: DynamicsSummary;
+  whip_read?: WhipRead;
   error?: string;
 }
 
@@ -127,10 +169,20 @@ export interface SpeakerStat {
   issue_types: string[];
 }
 
+export interface SpeakerDynamics {
+  name: string;
+  talk_share: number;
+  calls: number;
+  questions: number;
+  overlaps: number;
+  longest_monologue_seconds: number;
+}
+
 export interface SpeakersResponse {
   success: boolean;
   error?: string;
   speakers: SpeakerStat[];
+  dynamics?: SpeakerDynamics[];
   high_risk: string[];
   top_contributors: Array<SpeakerStat | string>;
 }
@@ -480,6 +532,94 @@ export async function getNotionDatabases(): Promise<Array<{ id: string; title: s
 
 export async function selectNotionDatabase(database: string, name?: string): Promise<ActionResult> {
   return postJson("/api/oauth/notion/database", { database, name });
+}
+
+// ------------------------------------------------- dynamics, ledger, plans
+
+export interface RubricPreset {
+  key: string;
+  name: string;
+  categories: Record<string, number>;
+}
+
+export async function getRubrics(): Promise<RubricPreset[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/rubrics`);
+    const payload = await res.json().catch(() => ({}));
+    return payload.success ? payload.rubrics || [] : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function rubricScore(
+  jobId: string,
+  weights: Record<string, number>
+): Promise<{ success: boolean; score?: number; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/rubric/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: jobId, weights }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    return payload;
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unable to reach the API" };
+  }
+}
+
+export interface LedgerItem {
+  text: string;
+  owner: string;
+  open: boolean;
+  times_seen: number;
+  days_open?: number | null;
+  first_seen?: { call?: string; date?: string } | null;
+  calls?: Array<{ call: string; date: string }>;
+}
+
+export interface LedgerResponse {
+  success: boolean;
+  open?: LedgerItem[];
+  resolved?: LedgerItem[];
+  open_count?: number;
+  resolved_count?: number;
+  repeated_count?: number;
+  error?: string;
+}
+
+export async function getCommitments(): Promise<LedgerResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/commitments`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export interface CoachingPlanResponse {
+  success: boolean;
+  plan?: {
+    rep_name?: string;
+    weaknesses?: Array<{ category?: string; score?: number; severity?: string }>;
+    action_items?: Array<{ title?: string; description?: string; category?: string; priority?: string }>;
+    goals?: Array<{ goal?: string; metric?: string; target?: string }>;
+    success_metrics?: Array<{ metric?: string; target?: string }>;
+    timeline?: Array<{ phase?: string; focus?: string; duration?: string }>;
+  };
+  error?: string;
+}
+
+export async function getPlan(): Promise<CoachingPlanResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/plan`);
+    const payload = await res.json().catch(() => ({}));
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- griot

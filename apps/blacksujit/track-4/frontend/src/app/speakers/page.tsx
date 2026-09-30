@@ -169,6 +169,29 @@ export default function SpeakersPage() {
           </motion.div>
         )}
 
+        {(data.dynamics?.length ?? 0) > 0 && (
+          <AnimatedContent className="card" delay={0.22}>
+            <h2 className="chart-title">Talk balance across calls</h2>
+            <p className="section-subtitle" style={{ marginBottom: 12 }}>
+              Floor time per speaker, measured from the timestamps of every scored call.
+            </p>
+            <div className="dyn-bars">
+              {data.dynamics?.slice(0, 6).map((speaker) => (
+                <div key={speaker.name} className="dyn-row dyn-row-meta">
+                  <span className="dyn-name">{speaker.name}</span>
+                  <span className="dyn-track">
+                    <span className="dyn-fill" style={{ width: `${Math.min(100, speaker.talk_share)}%` }} />
+                  </span>
+                  <span className="dyn-share">{speaker.talk_share}%</span>
+                  <span className="dyn-meta">
+                    {speaker.calls} calls | {speaker.questions} questions | {speaker.overlaps} overlaps
+                  </span>
+                </div>
+              ))}
+            </div>
+          </AnimatedContent>
+        )}
+
         {highRisk.length > 0 && (
           <AnimatedContent className="alert-card" delay={0.25}>
             <div className="alert-header">

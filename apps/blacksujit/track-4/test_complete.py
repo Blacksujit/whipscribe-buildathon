@@ -331,6 +331,41 @@ def test_mcp_integration(results):
     results.assert_true("name" in details, "Details has name")
 
 
+def test_dynamics_and_commitments(results):
+    """Test: conversation dynamics, commitment ledger, rubric math."""
+    print("\n  [Test] Dynamics, Ledger, Rubrics")
+
+    from src.core.dynamics import analyze_dynamics, dynamics_line
+    from src.core.commitments import build_ledger
+    from src.core.rubric import ScoringRubric
+
+    transcript = load_sample_transcript()
+    dynamics = analyze_dynamics(transcript)
+
+    results.assert_true("speakers" in dynamics, "Dynamics produce speakers")
+    results.assert_true(dynamics.get("turns", 0) >= 2, "Dynamics count turns")
+    line = dynamics_line(dynamics)
+    results.assert_true(line.startswith("Talk balance") or line == "", "Dynamics line renders")
+
+    rows = [
+        {"job_id": "call-1", "text": "Follow up with the team by Friday", "owner": "you", "status": "PENDING", "resolved_at": None},
+        {"job_id": "call-2", "text": "Follow up with the team by Friday!", "owner": "you", "status": "PENDING", "resolved_at": None},
+        {"job_id": "call-2", "text": "Send the pricing deck", "owner": "you", "status": "RESOLVED", "resolved_at": "2026-09-30T10:00:00"},
+    ]
+    evaluations = [
+        {"job_id": "call-1", "meeting_name": "First call", "created_at": "2026-09-28 10:00:00"},
+        {"job_id": "call-2", "meeting_name": "Second call", "created_at": "2026-09-30 10:00:00"},
+    ]
+    ledger = build_ledger(rows, evaluations)
+    results.assert_true(ledger["open_count"] == 1, "Ledger groups repeated commitments")
+    results.assert_true(ledger["repeated_count"] == 1, "Ledger flags repeats across calls")
+    results.assert_true(ledger["resolved_count"] == 1, "Ledger tracks resolved items")
+
+    rubric = ScoringRubric("Compliance heavy", {"compliance": 0.5, "tension": 0.15, "clarity": 0.15, "action_items": 0.2})
+    score = rubric.calculate_score({"compliance": 100, "tension": 0, "clarity": 0, "action_items": 0})
+    results.assert_true(abs(score - 50.0) < 0.01, "Rubric applies weights to real scores")
+
+
 def main():
     print("=" * 60)
     print("  CallCoach-AI — Complete Test Suite")
@@ -351,6 +386,7 @@ def main():
     test_assistant(results)
     test_export(results)
     test_mcp_integration(results)
+    test_dynamics_and_commitments(results)
 
     print("\n" + "=" * 60)
     success = results.summary()

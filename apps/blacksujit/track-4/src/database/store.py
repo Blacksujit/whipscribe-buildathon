@@ -176,6 +176,17 @@ def get_unresolved_action_items(db_path=None):
     return [{"text": r["text"], "owner": r["owner"]} for r in rows]
 
 
+def get_all_action_items(db_path=None):
+    """Fetch every tracked action item with its job and status."""
+    conn = _connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT job_id, text, owner, status, created_at, resolved_at FROM action_items ORDER BY created_at ASC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def resolve_action_item(text, job_id=None, db_path=None):
     """Mark a pending action item as resolved based on its text."""
     conn = _connect(db_path)

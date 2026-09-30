@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import { getReport, runAnalysis, deliverJob, getConnections, ReportResult, type ConnectCenterResponse } from "@/lib/api";
+import { getReport, runAnalysis, deliverJob, getConnections, getRubrics, rubricScore, ReportResult, type ConnectCenterResponse, type RubricPreset } from "@/lib/api";
 import { SlackMark, NotionMark, HubSpotMark } from "@/components/BrandIcons";
 import PageTransition from "@/components/PageTransition";
 import ScoreRing from "@/components/charts/ScoreRing";
@@ -118,10 +118,25 @@ export default function ReportPage() {
   const [connections, setConnections] = useState<ConnectCenterResponse | null>(null);
   const [delivering, setDelivering] = useState(false);
   const [deliverNotice, setDeliverNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  const [rubrics, setRubrics] = useState<RubricPreset[]>([]);
+  const [weights, setWeights] = useState<Record<string, number>>({ compliance: 25, tension: 25, clarity: 25, action_items: 25 });
+  const [rescored, setRescored] = useState<number | null>(null);
+  const [rescoring, setRescoring] = useState(false);
 
   useEffect(() => {
     getConnections().then(setConnections).catch(() => setConnections(null));
+    getRubrics().then(setRubrics).catch(() => setRubrics([]));
   }, []);
+
+  async function handleRescore() {
+    if (!jobId || rescoring) return;
+    setRescoring(true);
+    const result = await rubricScore(jobId, weights);
+    setRescoring(false);
+    if (result.success && typeof result.score === "number") {
+      setRescored(result.score);
+    }
+  }
 
   async function handleDeliver() {
     if (!jobId || delivering) return;
@@ -322,6 +337,150 @@ export default function ReportPage() {
               {deliverNotice.text}
             </span>
           )}
+        </motion.div>
+
+        <div className="insight-grid">
+          {report.whip_read?.summary && (
+            <motion.div
+              className="card insight-card"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.2 }}
+            >
+              <p className="section-eyebrow">WhipScribe&apos;s own read</p>
+              <p className="insight-summary">{report.whip_read.summary}</p>
+              {report.whip_read.topics && report.whip_read.topics.length > 0 && (
+                <div className="insight-chips">
+                  {report.whip_read.topics.map((topic) => (
+                    <span key={topic} className="insight-chip">{topic}</span>
+                  ))}
+                </div>
+              )}
+              {report.whip_read.quotes && report.whip_read.quotes.length > 0 && (
+                <ul className="insight-quotes">
+                  {report.whip_read.quotes.slice(0, 4).map((quote, index) => (
+                    <li key={index}>
+                      <a
+                        href={listenUrl(jobId, quote.start)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="insight-quote-link"
+                      >
+                        {fmtTime(quote.start)}
+                      </a>{" "}
+                      <strong>{quote.speaker || "Speaker"}</strong>: &ldquo;{quote.text}&rdquo;
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {report.whip_read.speakers && report.whip_read.speakers.length > 0 && (
+                <ul className="insight-speakers">
+                  {report.whip_read.speakers.slice(0, 3).map((speaker, index) => (
+                    <li key={index}>
+                      <strong>{speaker.speaker || "Speaker"}</strong> - {speaker.summary}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </motion.div>
+          )}
+
+          {report.dynamics && (report.dynamics.speakers?.length ?? 0) > 0 && (
+            <motion.div
+              className="card insight-card"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springReveal, delay: 0.25 }}
+            >
+              <p className="section-eyebrow">Conversation dynamics</p>
+              <div className="dyn-bars">
+                {report.dynamics.speakers.slice(0, 4).map((speaker) => (
+                  <div key={speaker.name} className="dyn-row">
+                    <span className="dyn-name">{speaker.name}</span>
+                    <span className="dyn-track">
+                      <span className="dyn-fill" style={{ width: `${Math.min(100, speaker.talk_share)}%` }} />
+                    </span>
+                    <span className="dyn-share">{speaker.talk_share}%</span>
+                  </div>
+                ))}
+              </div>
+              <p className="dyn-stats">
+                {report.dynamics.turns} turns |{" "}
+                {report.dynamics.speakers.reduce((sum, s) => sum + s.questions, 0)} questions |{" "}
+                {report.dynamics.speakers.reduce((sum, s) => sum + s.overlaps, 0)} overlapping starts |{" "}
+                {report.dynamics.silences.count} pauses over 4s
+                {report.dynamics.silences.count > 0
+                  ? ` (longest ${Math.round(report.dynamics.silences.longest_seconds)}s)`
+                  : ""}
+              </p>
+              {report.dynamics.verdict && <p className="insight-summary">{report.dynamics.verdict}</p>}
+            </motion.div>
+          )}
+        </div>
+
+        <motion.div
+          className="card rescore-card"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springReveal, delay: 0.3 }}
+        >
+          <div className="rescore-head">
+            <div>
+              <p className="section-eyebrow">Custom rubric</p>
+              <p className="insight-summary">
+                Reweight the four categories and rescore this call instantly - pure math on the same agent scores.
+              </p>
+            </div>
+            <a className="btn-secondary" href={`/api/export/markdown/${jobId}`}>Download .md</a>
+          </div>
+          <div className="rescore-sliders">
+            {(["compliance", "tension", "clarity", "action_items"] as const).map((key) => (
+              <label key={key} className="rescore-slider">
+                <span>{categoryLabels[key] || key} - {weights[key]}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={weights[key]}
+                  onChange={(event) =>
+                    setWeights((current) => ({ ...current, [key]: Number(event.target.value) }))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <div className="rescore-actions">
+            <button type="button" className="btn-primary" disabled={rescoring} onClick={handleRescore}>
+              {rescoring ? "Rescoring..." : "Rescore with these weights"}
+            </button>
+            {rescored !== null && (
+              <span className="rescore-result">
+                Custom score: <strong>{rescored}/100</strong> (agents scored {score}/100)
+              </span>
+            )}
+            {rubrics.length > 0 && (
+              <span className="rescore-presets">
+                presets:{" "}
+                {rubrics.map((preset) => (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    className="link-btn"
+                    onClick={() =>
+                      setWeights({
+                        compliance: Math.round((preset.categories.compliance || 0) * 100),
+                        tension: Math.round((preset.categories.tension || 0) * 100),
+                        clarity: Math.round((preset.categories.clarity || 0) * 100),
+                        action_items: Math.round((preset.categories.action_items || 0) * 100),
+                      })
+                    }
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </span>
+            )}
+          </div>
         </motion.div>
 
         <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "60px", marginTop: "42px" }}>

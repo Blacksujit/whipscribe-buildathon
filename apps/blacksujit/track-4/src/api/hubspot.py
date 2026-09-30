@@ -38,13 +38,15 @@ def verify(token: str) -> Dict[str, Any]:
 
 def deliver_task(evaluation: Dict[str, Any], job_id: str,
                  call_name: Optional[str] = None,
-                 token: Optional[str] = None) -> Dict[str, Any]:
+                 token: Optional[str] = None,
+                 transcript: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Create a real HubSpot task describing the scorecard."""
     token = token or os.getenv("HUBSPOT_TOKEN")
     if not token:
         raise RuntimeError("HubSpot is not connected.")
 
     from src.api.slack import collect_top_issues
+    from src.core.dynamics import analyze_dynamics, dynamics_line
 
     score = evaluation.get("overall_score", 0)
     lines = [f"CallCoach-AI scorecard: {score}/100"]
@@ -52,6 +54,11 @@ def deliver_task(evaluation: Dict[str, Any], job_id: str,
         lines.append(str(evaluation["summary"])[:300])
     lines.append(f"Report: {PUBLIC_APP_URL}/report/{job_id}")
     lines.append("")
+
+    balance = dynamics_line(analyze_dynamics(transcript or {}))
+    if balance:
+        lines.append(balance)
+        lines.append("")
 
     issues = collect_top_issues(evaluation, limit=3)
     if issues:

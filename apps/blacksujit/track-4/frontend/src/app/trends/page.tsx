@@ -200,6 +200,60 @@ export default function TrendsPage() {
                 ))}
               </div>
             </AnimatedContent>
+
+            {(data?.changes?.length ?? 0) > 0 && (
+              <AnimatedContent className="card" delay={0.25}>
+                <h2 className="chart-title">What changed</h2>
+                <p className="section-subtitle" style={{ marginBottom: 12 }}>
+                  First half of your calls versus the recent half.
+                </p>
+                <div className="change-list">
+                  {data?.changes?.map((change) => (
+                    <div key={change.category} className="change-row">
+                      <span className="change-name">
+                        <span className="cat-dot" style={{ color: categoryColors[change.category] }}>
+                          <CategoryIcon category={change.category} size={15} />{" "}
+                          {categoryLabels[change.category] || change.category}
+                        </span>
+                      </span>
+                      <span className="change-values">
+                        {change.before} to {change.after}
+                      </span>
+                      <span
+                        className={
+                          change.delta > 0
+                            ? "change-delta text-ok"
+                            : change.delta < 0
+                            ? "change-delta text-err"
+                            : "change-delta text-secondary"
+                        }
+                      >
+                        {change.delta > 0 ? "+" : ""}
+                        {change.delta}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </AnimatedContent>
+            )}
+
+            {data?.sentiment && (data.sentiment.calls?.length ?? 0) > 0 && (
+              <AnimatedContent className="card" delay={0.3}>
+                <h2 className="chart-title">Tone</h2>
+                <p className="section-subtitle" style={{ marginBottom: 12 }}>
+                  Sentiment across calls - {data.sentiment.trend} (average {data.sentiment.average_score}).
+                </p>
+                <div className="tone-strip">
+                  {data.sentiment.calls.slice(-16).map((call, index) => (
+                    <span
+                      key={index}
+                      className={`tone-dot tone-${call.sentiment}`}
+                      title={`${call.name}: ${call.sentiment} (${call.score})`}
+                    />
+                  ))}
+                </div>
+              </AnimatedContent>
+            )}
           </>
         )}
       </section>

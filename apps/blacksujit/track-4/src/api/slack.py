@@ -10,6 +10,8 @@ from typing import Dict, List, Optional
 
 import requests
 
+from src.core.dynamics import analyze_dynamics, dynamics_line
+
 PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://callcoachai.sujit.top").rstrip("/")
 
 
@@ -126,6 +128,10 @@ def format_qa_report_for_slack(evaluation: Dict, transcript: Dict, job_id: str,
             "value": "\n".join(f"- {(item.get('text') or '')[:90]}" for item in items),
             "short": False,
         })
+
+    balance = dynamics_line(analyze_dynamics(transcript or {}))
+    if balance:
+        fields.append({"title": "Talk balance", "value": balance, "short": False})
 
     return {
         "text": f"*{title}* scored {score}/100 - <{report_url}|open the scorecard>",

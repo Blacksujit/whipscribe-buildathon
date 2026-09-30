@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { getCoachData, CoachDataResponse, CoachInsight, exportTrendsToSlack } from "@/lib/api";
+import { getCoachData, getPlan, getCommitments, CoachDataResponse, CoachInsight, exportTrendsToSlack, type CoachingPlanResponse, type LedgerResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
 import PageHeader from "@/components/PageHeader";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
@@ -45,6 +45,8 @@ export default function CoachPage() {
   const [loading, setLoading] = useState(true);
   const [shareState, setShareState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [shareMessage, setShareMessage] = useState("");
+  const [plan, setPlan] = useState<CoachingPlanResponse | null>(null);
+  const [ledger, setLedger] = useState<LedgerResponse | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -54,6 +56,8 @@ export default function CoachPage() {
       setLoading(false);
     }
     fetchData();
+    getPlan().then(setPlan).catch(() => setPlan(null));
+    getCommitments().then(setLedger).catch(() => setLedger(null));
   }, []);
 
   async function handleShare() {
@@ -162,6 +166,64 @@ export default function CoachPage() {
             <p className="section-subtitle">Nothing to fix - the calls read clean.</p>
           </div>
         )}
+
+        <div className="coach-grid">
+          {plan?.plan && (
+            <AnimatedContent className="card coach-card" delay={0.28}>
+              <p className="section-eyebrow">Your plan</p>
+              {(plan.plan.weaknesses?.length ?? 0) > 0 && (
+                <ul className="coach-list">
+                  {plan.plan.weaknesses?.slice(0, 4).map((weakness, index) => (
+                    <li key={index}>
+                      <strong>
+                        {priorityLabels[weakness.category || ""] || weakness.category || "Focus"}
+                      </strong>
+                      {typeof weakness.score === "number" ? ` - ${weakness.score}/100` : ""}
+                      {weakness.severity ? ` (${weakness.severity})` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(plan.plan.action_items?.length ?? 0) > 0 && (
+                <ol className="coach-actions">
+                  {plan.plan.action_items?.slice(0, 5).map((action, index) => (
+                    <li key={index}>
+                      <strong>{action.title || "Action"}</strong>
+                      {action.description ? ` - ${action.description}` : ""}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {(plan.plan.goals?.length ?? 0) > 0 && (
+                <p className="coach-goals">
+                  Goal: {plan.plan.goals?.[0]?.goal || ""}
+                  {plan.plan.goals?.[0]?.target ? ` (target ${plan.plan.goals[0].target})` : ""}
+                </p>
+              )}
+            </AnimatedContent>
+          )}
+
+          {ledger && (ledger.open_count ?? 0) > 0 && (
+            <AnimatedContent className="card coach-card" delay={0.32}>
+              <p className="section-eyebrow">Commitment ledger</p>
+              <p className="section-subtitle" style={{ marginBottom: 10 }}>
+                {ledger.open_count} open
+                {ledger.repeated_count ? `, ${ledger.repeated_count} repeated across calls` : ""}.
+              </p>
+              <ul className="coach-list">
+                {ledger.open?.slice(0, 6).map((item, index) => (
+                  <li key={index}>
+                    {item.times_seen > 1 ? <strong>{`x${item.times_seen} `}</strong> : null}
+                    {item.text.slice(0, 110)}
+                    {typeof item.days_open === "number" && item.days_open > 0
+                      ? ` (${item.days_open}d old)`
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+            </AnimatedContent>
+          )}
+        </div>
 
         {insights.length > 0 && (
           <AnimatedContent className="cta-card" delay={0.3}>
