@@ -67,6 +67,14 @@ python test_comprehensive.py   # 51 passed — pipeline, cross-call, coaching, M
 python test_complete.py        # 52 passed — all 13 features end to end
 ```
 
+## Screenshots (live, real data)
+
+| Dashboard | Trends — 5 real calls | Assistant |
+|---|---|---|
+| ![Home](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-home.png) | ![Trends](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-trends.png) | ![Assistant](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-assistant.png) |
+
+Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
+
 ## The 13 features
 
 Beyond the core scorecard, these are built and tested:
