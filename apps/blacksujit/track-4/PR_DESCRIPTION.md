@@ -91,6 +91,8 @@ The Griot panel above is a real answer over the seeded calls - note the German a
 
 Connect Center - Slack connected with auto-delivery on; Notion and HubSpot are one paste away: ![Connect Center](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-connect.png)
 
+WhipScribe's own read and conversation dynamics side by side on a real report: ![Deep reads](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-deep-reads.png)
+
 Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
 
 ## The 13 features
