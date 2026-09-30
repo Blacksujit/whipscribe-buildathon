@@ -95,6 +95,8 @@ WhipScribe's own read and conversation dynamics side by side on a real report: !
 
 One-click connect: "Continue with X" when the app keys are configured; otherwise a three-step setup card with the copyable redirect URL - ![One-click setup](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-one-click-setup.png)
 
+The homepage shows where scorecards land, live from the API - Slack and Notion connected, HubSpot waiting for its token: ![Connected strip](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-connected-strip.png)
+
 Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
 
 ## The 13 features
