@@ -1119,11 +1119,22 @@ def coach_data():
 
     comparisons = _cached_comparisons(evaluations)
     eval_dicts, _ = _stored_eval_dicts(evaluations[:COMPARE_WINDOW])
+
+    # The commitment ledger is the single source of truth for closure stats.
+    ledger = build_ledger(store.get_all_action_items(), evaluations)
+    total = ledger["open_count"] + ledger["resolved_count"]
+    tracking = {
+        **comparisons.get("action_item_tracking", {}),
+        "total": total,
+        "resolved": ledger["resolved_count"],
+        "completion_rate": round(ledger["resolved_count"] / total * 100, 1) if total else 0.0,
+    }
+
     return jsonify({
         "ready": True,
         "insights": _generate_coaching_insights(comparisons, eval_dicts),
         "trends": comparisons.get("trends", {}),
-        "action_item_tracking": comparisons.get("action_item_tracking", {}),
+        "action_item_tracking": tracking,
     })
 
 
