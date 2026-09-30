@@ -21,18 +21,25 @@ def _headers(token: str) -> Dict[str, str]:
 
 def verify(token: str) -> Dict[str, Any]:
     """Check the token by reading one task. Raises with a friendly message."""
-    resp = requests.get(
-        f"{BASE}/crm/v3/objects/tasks",
-        headers=_headers(token),
-        params={"limit": 1},
-        timeout=15,
-    )
-    if resp.status_code == 401:
+    try:
+        resp = requests.get(
+            f"{BASE}/crm/v3/objects/tasks",
+            headers=_headers(token),
+            params={"limit": 1},
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Could not reach HubSpot: {exc}") from exc
+    if resp.status_code in (401, 403):
         raise RuntimeError(
             "HubSpot rejected the token. Create a private app with the "
             "crm.objects.tasks read+write scope and paste its token."
         )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise RuntimeError(
+            f"HubSpot rejected the token (HTTP {resp.status_code}). Check that it is a "
+            "private-app token with the crm.objects.tasks scope."
+        )
     return resp.json()
 
 

@@ -262,8 +262,12 @@ def _generate_insights(meetings, trends, common_issues, action_tracking, recurri
     insights = []
     if trends.get("overall") == "improving": insights.append("Overall meeting quality is trending upwards.")
     if trends.get("overall") == "declining": insights.append("Warning: Overall meeting quality is declining.")
-    if common_issues: insights.append(f"Recurring pattern detected: {common_issues[0]['text']} appearing in multiple calls.")
-    if recurring_clusters: insights.append(f"Cluster found: {recurring_clusters[0]['pattern']} is a systemic issue.")
+    # One-word fragments ("No", "Yes") come back from extraction now and then; they
+    # read as noise in an insight line, so the first meaningful text is used instead.
+    meaningful = next((issue for issue in common_issues if len(str(issue.get("text", "")).strip()) >= 12), None)
+    if meaningful: insights.append(f"Recurring pattern detected: {meaningful['text'][:90]} appearing in multiple calls.")
+    cluster = next((c for c in recurring_clusters if len(str(c.get("pattern", "")).strip()) >= 12), None)
+    if cluster: insights.append(f"Cluster found: {cluster['pattern'][:90]} is a systemic issue.")
     if action_tracking["resolved"] > 0: insights.append(f"Positive momentum: {action_tracking['resolved']} action items resolved.")
     return insights
 

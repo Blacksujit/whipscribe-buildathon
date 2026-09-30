@@ -903,10 +903,17 @@ def api_analyze(job_id):
 
 @app.route("/api/analyze-all", methods=["POST"])
 def api_analyze_all():
-    """API endpoint: analyze all on-account jobs."""
+    """API endpoint: analyze every on-account job.
+
+    Skips jobs that already have a stored evaluation unless {"force": true} is
+    passed, so a sweep spends credit on new calls instead of re-scoring.
+    """
     api_key = get_api_key()
     if not api_key:
         return jsonify({"success": False, "error": "No API key configured"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    force = bool(payload.get("force"))
 
     provider, llm_key, model = get_eval_settings()
     try:
@@ -919,10 +926,16 @@ def api_analyze_all():
         ]
         # Longest conversations first: they carry the most signal.
         done_jobs.sort(key=lambda j: -(j.get("audio_duration_seconds") or 0))
+
+        existing = {row.get("job_id") for row in store.get_all_evaluations()}
         evaluated = 0
+        skipped = 0
         for job in done_jobs[:20]:
             jid = job.get("job_id")
             if not jid:
+                continue
+            if not force and jid in existing:
+                skipped += 1
                 continue
             try:
                 transcript = get_transcript(api_key, jid)
@@ -935,7 +948,7 @@ def api_analyze_all():
                 evaluated += 1
             except Exception:
                 continue
-        return jsonify({"success": True, "evaluated": evaluated, "total": len(done_jobs)})
+        return jsonify({"success": True, "evaluated": evaluated, "skipped": skipped, "total": len(done_jobs)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
