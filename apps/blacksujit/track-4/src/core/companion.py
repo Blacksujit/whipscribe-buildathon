@@ -62,7 +62,7 @@ def build_evidence(evaluations: list[dict], job_id: str | None = None, max_calls
                 continue
             items.append({
                 "text": text,
-                "speaker": item.get("speaker", "Unknown"),
+                "speaker": item.get("speaker") or "Unknown",
                 "start": item.get("start", 0),
             })
 

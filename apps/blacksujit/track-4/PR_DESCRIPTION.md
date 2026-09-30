@@ -1,13 +1,13 @@
-# Track 4 — CallCoach-AI x WhipScribe Workflow
+# Track 4 - CallCoach-AI x WhipScribe Workflow
 
 > **What changed since the last review** (reviewed 2026-09-29 01:45 UTC):
 >
-> - **Deployment fixed** — the live URL was returning 404; it now serves the dashboard (with a demo fallback when the backend is unreachable): [callcoachai.sujit.top](https://callcoachai.sujit.top)
-> - **The live backend is real** — 5 recordings evaluated through the API (4 short calls + a 13.6-minute sample call); Trends/Coach/Speakers show the real data: [live trend chart](https://callcoachai.sujit.top/trends)
-> - **13 features added and tested** — real-time coaching, CRM sync, follow-ups, benchmarking, custom rubrics, sentiment, coaching plans, 12 languages, assistant, export, MCP
-> - **103 test assertions, all passing** — there were zero tests at review time
-> - **New: Ask-the-Assistant page** — conversational Q&A with quote + speaker + timestamp evidence
-> - **Honesty pass** — the fake `videotourl.com` link is gone from the README and PR; evidence now points at real job IDs and screenshots
+> - **Griot - the grounded companion.** A floating chat on every page that answers from your real call library: "What did we commit to across calls?" Every claim comes back with a call, a speaker, and the exact second. It calls a real endpoint (`POST /api/ask`) that reads the stored evaluations and answers with the configured LLM. No canned Q&A - the placeholder assistant page was deleted.
+> - **Spotter is testable live.** `POST /api/spotter` returns real coaching prompts for one utterance. Try: `curl -X POST https://callcoachai.sujit.top/api/spotter -H "Content-Type: application/json" -d '{"text":"I guarantee we will deliver by Q1"}'`
+> - **The live dashboard always has real data.** The repo ships `seed_evaluations.db` - 8 real calls (real WhipScribe transcripts, LLM-scored) restored automatically when the working database is empty. No empty dashboard on first load, no mock rows.
+> - **Unscored recordings are now actionable.** Opening a recording with no stored evaluation offers "Run the 4-agent analysis" instead of a sample report.
+> - **Sample-data fallback is labeled.** When the free-tier backend sleeps, a chip shows "Sample preview - backend unreachable" instead of silently swapping in sample data.
+> - Earlier fixes still stand: deployment fixed (the live URL was 404, now it serves the dashboard), 103 test assertions passing, fake links removed.
 
 ## Track record
 
@@ -22,16 +22,15 @@ I'm Nirmal Sujit ([@Blacksujit](https://github.com/Blacksujit)). My PRs and issu
 
 ## What this does
 
-CallCoach-AI turns every founder-investor call into an evidence-backed scorecard. You upload a recording (or paste a YouTube/Drive link, or record in-browser), WhipScribe transcribes it with speaker labels and timestamps, and four AI agents score it on Compliance, Tension, Clarity, and Action Items. Every flagged quote links to the exact second in the recording.
+CallCoach-AI turns calls into coaching intelligence. Three jobs, one pipeline:
 
-What makes this different from other Track 4 entries: **nobody else does cross-call intelligence**. Every other Track 4 entry does single-call-to-summary (recording becomes a summary, action items, or a GitHub issue). CallCoach-AI is the only one that builds coaching intelligence *across* calls:
+1. **Spotter - coaches during the call.** Live prompts as sentences land: compliance flags, hedged numbers, commitments captured the second they are made (`POST /api/spotter`, `src/realtime/analyzer.py`).
+2. **Radar - reads the pattern across calls.** Deal velocity, momentum, recurring issue clusters, action-item lifecycle, speaker-level risk (`/trends`, `/coach`, `/speakers`).
+3. **Griot - answers questions about the whole library.** Grounded chat with call + speaker + second citations (`POST /api/ask`, `src/core/companion.py`).
 
-- **Deal velocity** — your score trend over time, with a slope and momentum direction (increasing/decreasing/stable)
-- **Recurring issue clusters** — the same problems keep showing up across different calls
-- **Speaker-level risk** — which participant introduces the most compliance, tension, and clarity issues
-- **Coach recommendations** — prescriptive fixes tied to exact quotes and timestamps
+Why this stands out: every other Track 4 entry stops at one call - one recording in, one summary, one issue, or one proposal out. CallCoach-AI is the only entry that coaches *during* the call (Spotter), reads features *across* calls (Radar), and can be asked questions about the whole library (Griot).
 
-I also built a CLI (`python -m src.main --file call.mp3`) and an MCP server (`src/mcp_server.py`) with four tools for agent integration.
+Under the hood: four scoring agents (Compliance, Tension, Clarity, Action Items), a CLI (`python -m src.main --file call.mp3`), an MCP server (`src/mcp_server.py`) with four tools, CRM sync, follow-up emails, custom rubrics, 12 languages, and exports.
 
 ## How to try it
 

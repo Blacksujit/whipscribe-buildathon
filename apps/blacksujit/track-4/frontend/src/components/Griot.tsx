@@ -33,7 +33,7 @@ export default function Griot() {
   const [busy, setBusy] = useState(false);
   const [calls, setCalls] = useState<number | null>(null);
   const [status, setStatus] = useState<BackendStatus>("checking");
-  const retriesRef = useRef(0);
+  const [wakeKey, setWakeKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -48,36 +48,37 @@ export default function Griot() {
   }, [open]);
 
   // Wake check: the free-tier backend sleeps when idle, so poll while waking.
+  // Deliberately keyed on open/wakeKey only - status changes inside the loop
+  // must not tear down the in-flight work.
   useEffect(() => {
-    if (!open || status === "awake") return;
+    if (!open) return;
     let cancelled = false;
 
-    async function check() {
+    async function wake() {
       setStatus("checking");
-      const alive = await pingBackend();
-      if (cancelled) return;
-      if (alive) {
-        setStatus("awake");
-        const trends = await getTrendsDirect();
-        if (!cancelled && trends?.labels) setCalls(trends.labels.length);
-        return;
+      for (let attempt = 0; attempt <= 5; attempt += 1) {
+        if (cancelled) return;
+        const alive = await pingBackend();
+        if (cancelled) return;
+        if (alive) {
+          setStatus("awake");
+          const trends = await getTrendsDirect();
+          if (!cancelled && trends?.labels) setCalls(trends.labels.length);
+          return;
+        }
+        if (attempt < 5) {
+          setStatus("waking");
+          await new Promise((resolve) => setTimeout(resolve, 7000));
+        }
       }
-      retriesRef.current += 1;
-      if (retriesRef.current <= 5) {
-        setStatus("waking");
-        setTimeout(() => {
-          if (!cancelled) check();
-        }, 7000);
-      } else {
-        setStatus("down");
-      }
+      if (!cancelled) setStatus("down");
     }
 
-    if (retriesRef.current === 0) check();
+    wake();
     return () => {
       cancelled = true;
     };
-  }, [open, status]);
+  }, [open, wakeKey]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -147,8 +148,10 @@ export default function Griot() {
             <div className="griot-head-text">
               <strong className="griot-title">Griot</strong>
               <span className="griot-sub">
-                {status !== "awake" || calls === null
-                  ? "answers only from your scored calls"
+                {status !== "awake"
+                  ? "waking the backend..."
+                  : calls === null
+                  ? "reading your call library..."
                   : calls === 1
                   ? "grounded in 1 scored call"
                   : `grounded in ${calls} scored calls`}
@@ -175,8 +178,8 @@ export default function Griot() {
                       type="button"
                       className="griot-inline-btn"
                       onClick={() => {
-                        retriesRef.current = 0;
                         setStatus("checking");
+                        setWakeKey((k) => k + 1);
                       }}
                     >
                       Retry
@@ -188,6 +191,9 @@ export default function Griot() {
                     No scored calls yet. Open a recording on the home page and run the analysis - then I
                     can quote it back to you.
                   </p>
+                )}
+                {status === "awake" && calls === null && (
+                  <p className="griot-note">Reading your call library...</p>
                 )}
                 {status === "awake" && (calls ?? 0) > 0 && (
                   <p className="griot-note">
@@ -235,7 +241,7 @@ export default function Griot() {
             ))}
           </div>
 
-          {emptyState && status === "awake" && (calls ?? 0) > 0 && (
+          {emptyState && status === "awake" && calls !== 0 && (
             <div className="griot-suggestions">
               {SUGGESTIONS.map((suggestion) => (
                 <button
