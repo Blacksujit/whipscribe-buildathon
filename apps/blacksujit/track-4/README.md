@@ -1,36 +1,30 @@
-# CallCoach-AI × WhipScribe
+# CallCoach-AI x WhipScribe
 
-**The only call coaching platform with real-time coaching during calls.**
+**Three jobs, one pipeline: coach the call while it happens, read the pattern across calls, and answer any question about what was said - with the quotes to prove it.**
 
 [Live App](https://callcoachai.sujit.top/) · [Demo Video](https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/videos/demo/callcoach-demo-2026-09-28T15-11-37.webm) (330MB, right-click "Save As")
 
 ---
 
-## What Makes CallCoach-AI Different
+## Spotter, Radar, and Griot
 
-| Feature | CallCoach-AI | Others |
-|---------|-------------|--------|
-| **Real-Time Coaching During Calls** | ✅ | ❌ |
-| Post-Call Analysis | ✅ | ✅ |
-| Cross-Call Intelligence | ✅ | ❌ |
-| CRM Integration | ✅ | ❌ |
-| Follow-Up Emails | ✅ | ❌ |
-| Team Benchmarking | ✅ | ❌ |
-| Custom Rubrics | ✅ | ❌ |
-| Sentiment Analysis | ✅ | ❌ |
-| Coaching Plans | ✅ | ❌ |
-| Multi-Language | ✅ | ❌ |
-| AI Assistant | ✅ | ❌ |
-| Export | ✅ | ❌ |
-| MCP Integration | ✅ | ❌ |
+| Pillar | What it is | Where it lives |
+|--------|-----------|----------------|
+| **Spotter** | Real-time coaching during the call - compliance flags, hedged numbers, and commitments captured the second they are said | `POST /api/spotter`, `src/realtime/analyzer.py` |
+| **Radar** | Cross-call deal intelligence - velocity, momentum, recurring issue clusters, action-item lifecycle, speaker risk | `/trends`, `/coach`, `/speakers`, `src/core/compare.py` |
+| **Griot** | The grounded companion - a floating chat that answers from your real call library with call + speaker + second citations | `POST /api/ask`, `src/core/companion.py` |
 
-**The #1 differentiator: Real-Time Coaching During Calls.** All competitors do post-call analysis. CallCoach-AI provides live coaching during calls.
+**Why this stands out in Track 4:** every other entry stops at one call. One recording in, one summary, one issue, one proposal out. CallCoach-AI is the only entry that coaches *during* the call (Spotter), reads the pattern *across* calls (Radar), and lets you interrogate the whole library (Griot).
+
+**Grounded, not generated:** Griot answers only from stored evaluations and cites `[Call @ m:ss - Speaker]`; if the evidence does not cover the question, it says so. There is no canned Q&A - the old placeholder assistant page was deleted. Try it live: the chat bubble on every page at [callcoachai.sujit.top](https://callcoachai.sujit.top/).
+
+**No empty dashboard:** the repo ships `seed_evaluations.db`, a real snapshot of eight scored calls (produced through the same pipeline with real WhipScribe transcripts). The app restores it when the working database is empty, so every page has real data on first load. Rebuild it any time with `python scripts/seed_db.py`.
 
 ---
 
-## Features
+## Everything inside (13 capabilities)
 
-### 1. Real-Time Coaching During Calls
+### 1. Spotter - Real-Time Coaching During Calls
 Live coaching prompts during calls:
 - Real-time sentiment analysis
 - Live compliance risk detection
@@ -59,7 +53,7 @@ Four-agent LLM scoring:
 - Evidence-backed quotes with timestamps
 - Primary risk identification
 
-### 3. Cross-Call Intelligence
+### 3. Radar - Cross-Call Intelligence
 Trend analysis across multiple meetings:
 - Deal velocity metrics
 - Recurring issue clustering
@@ -106,11 +100,13 @@ Personalized coaching plans:
 Analyze calls in 12 languages:
 - English, Spanish, French, German, Italian, Portuguese, Dutch, Japanese, Korean, Chinese, Hindi, Arabic
 
-### 11. AI Coaching Assistant
-Conversational coaching:
-- "How did I do on my last call?"
-- "What should I improve?"
-- "What are my weaknesses?"
+### 11. Griot - Grounded Companion (the floating chat)
+Conversational coaching over your stored evaluations, served by `POST /api/ask`:
+- "What did we commit to across calls?"
+- "Where do we keep losing points?"
+- "How did my last call score?"
+- Every answer cites the call, the speaker, and the exact second; if the evidence does not cover it, Griot says so instead of inventing
+- No LLM key configured? It degrades to a data-derived summary over the same stored rows (never fabricated quotes)
 
 ### 12. Export
 Multiple formats:

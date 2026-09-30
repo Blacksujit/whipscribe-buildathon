@@ -173,16 +173,18 @@ export default function Home() {
   return (
     <PageTransition>
     <main className="site-shell">
-      <Navbar />
+     <Navbar />
 
-      {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-        <div className="status-banner status-banner-info" style={{ margin: 0, borderRadius: 0 }}>
-          <strong>Demo mode:</strong> Showing sample scoring data. Connect your WhipScribe API key at
-          <a href="/connections" style={{ marginLeft: 8 }}>Connections</a> to score real calls.
-        </div>
-      )}
+     {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+       <div className="demo-banner">
+         <span className="demo-banner__text">
+           Fallback on: if the backend is asleep (free tier), pages show a small &quot;sample preview&quot;
+           label and switch back to live data when it wakes.
+         </span>
+       </div>
+     )}
 
-      <section className="d-hero-v2">
+     <section className="d-hero-v2">
         <div className="d-hero-v2-inner">
           <div className="d-hero-v2-copy">
             <h1 className="d-hero-v2-h1 d-hero-v2-h1-sm" style={{ display: "block" }}>
@@ -280,28 +282,61 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Beyond the score */}
+      {/* Three pillars */}
       <section className="section container-wide">
         <AnimatedContent>
-          <p className="section-label">Beyond the score</p>
-          <h2>Thirteen features, all tested.</h2>
+          <p className="section-label">What this does</p>
+          <h2>Spotter, Radar, and Griot.</h2>
           <p className="body-muted">
-            Real-time coaching during calls, CRM sync, follow-up emails, team benchmarking, custom
-            rubrics, sentiment, coaching plans, 12 languages, export formats, and an MCP server -
-            103 test assertions, all passing.
+            Three jobs, one pipeline: coach the call while it happens, read the pattern across calls,
+            and answer any question about what was said - with the quotes to prove it.
           </p>
         </AnimatedContent>
-        <div className="assistant-chips" style={{ marginTop: 18 }}>
-          <Link href="/assistant" className="btn-primary">Ask the assistant</Link>
+        <div className="pillar-grid">
+          <SpotlightCard className="pillar-card pillar-card-spotter">
+            <p className="pillar-kicker">During the call</p>
+            <h3>Spotter</h3>
+            <p>
+              Live coaching prompts as sentences land: compliance flags, hedged numbers, commitments
+              captured the second they are made.
+            </p>
+          </SpotlightCard>
+          <SpotlightCard className="pillar-card pillar-card-radar">
+            <p className="pillar-kicker">Across calls</p>
+            <h3>Radar</h3>
+            <p>
+              Deal velocity, momentum, recurring issue clusters, action-item lifecycle, and speaker-level
+              risk - read from every scored call you have.
+            </p>
+            <Link href="/trends" className="pillar-link">Open Radar</Link>
+          </SpotlightCard>
+          <SpotlightCard className="pillar-card pillar-card-griot">
+            <p className="pillar-kicker">Ask anything</p>
+            <h3>Griot</h3>
+            <p>
+              Your call library, answering questions. Every claim comes back with a call, a speaker, and
+              the exact second.
+            </p>
+            <button
+              type="button"
+              className="pillar-link pillar-link-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent("griot:open"))}
+            >
+              Ask Griot
+            </button>
+          </SpotlightCard>
+        </div>
+        <p className="pillar-foot">
+          Under the hood: CRM sync, follow-up emails, team benchmarking, custom rubrics, sentiment
+          trends, 12 languages, export formats, and an MCP server - 103 test assertions, all passing.{" "}
           <a
             href="https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/README.md"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary"
           >
-            See all 13
+            See all of it
           </a>
-        </div>
+        </p>
       </section>
 
       {/* Library */}

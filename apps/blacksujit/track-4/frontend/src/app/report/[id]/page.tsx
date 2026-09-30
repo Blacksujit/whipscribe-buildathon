@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import { getReport, ReportResponse } from "@/lib/api";
+import { getReport, runAnalysis, ReportResult } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
 import ScoreRing from "@/components/charts/ScoreRing";
 import {
@@ -110,9 +110,10 @@ function EvidenceCard({
 export default function ReportPage() {
   const params = useParams();
   const jobId = params.id as string;
-  const [report, setReport] = useState<ReportResponse | null>(null);
+  const [report, setReport] = useState<ReportResult>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
@@ -121,7 +122,9 @@ export default function ReportPage() {
       setLoading(true);
       setError(null);
       const data = await getReport(jobId);
-      if (data && data.success) {
+      if (data && "not_analyzed" in data) {
+        setReport(data);
+      } else if (data && data.success) {
         setReport(data);
       } else {
         setError(data?.error || "No report found. The analysis may still be running.");
@@ -132,6 +135,23 @@ export default function ReportPage() {
     fetchReport();
   }, [jobId]);
 
+  async function handleAnalyze() {
+    if (!jobId || analyzing) return;
+    setAnalyzing(true);
+    const result = await runAnalysis(jobId);
+    if (result.success) {
+      const data = await getReport(jobId);
+      if (data && data.success && !("not_analyzed" in data)) {
+        setReport(data);
+        setAnalyzing(false);
+        return;
+      }
+    }
+    setAnalyzing(false);
+    setError(result.error || "Scoring failed - give it a moment and try again.");
+    setReport(null);
+  }
+
   if (loading) {
     return (
       <main className="site-shell">
@@ -140,6 +160,29 @@ export default function ReportPage() {
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={springReveal}>
             Loading report...
           </motion.p>
+        </div>
+      </main>
+    );
+  }
+
+  if (report && "not_analyzed" in report) {
+    return (
+      <main className="site-shell">
+        <Navbar />
+        <div className="section-wide" style={{ paddingTop: "92px", paddingBottom: "60px" }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
+            <h1 className="section-title">Not scored yet</h1>
+            <p className="section-subtitle">
+              This recording is transcribed on WhipScribe but has no stored evaluation here. Run the
+              four agents to score it - it takes a few seconds to a minute.
+            </p>
+            <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
+              <button type="button" className="btn-primary" onClick={handleAnalyze} disabled={analyzing}>
+                {analyzing ? "Scoring..." : "Run the 4-agent analysis"}
+              </button>
+              <Link href="/" className="btn-secondary">Back to library</Link>
+            </div>
+          </motion.div>
         </div>
       </main>
     );

@@ -60,6 +60,41 @@ def init_db(db_path=None):
     conn.close()
 
 
+def seed_if_missing(db_path=None):
+    """Restore the shipped seed DB when the working DB has no evaluations.
+
+    Deployed containers start with an empty SQLite file (the DB is excluded from
+    the image), so a fresh container restores the real evaluation snapshot that
+    ships with the repo. Runtime writes then accumulate on top of it.
+    """
+    target = db_path or DB_PATH
+    try:
+        conn = _connect(target)
+        count = conn.execute("SELECT COUNT(*) FROM evaluations").fetchone()[0]
+        conn.close()
+    except Exception:
+        count = 0
+    if count:
+        return count
+
+    seed = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "seed_evaluations.db",
+    )
+    if not os.path.exists(seed):
+        return 0
+    try:
+        import shutil
+
+        shutil.copyfile(seed, target)
+        conn = _connect(target)
+        count = conn.execute("SELECT COUNT(*) FROM evaluations").fetchone()[0]
+        conn.close()
+        return count
+    except Exception:
+        return 0
+
+
 def save_evaluation(job_id, transcript, evaluation, meeting_name=None, db_path=None):
     """Store an evaluation result and track action items."""
     conn = _connect(db_path)

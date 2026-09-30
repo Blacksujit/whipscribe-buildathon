@@ -14,7 +14,6 @@ export default function Navbar() {
     { href: "/", label: "Home" },
     { href: "/trends", label: "Trends" },
     { href: "/coach", label: "Coach" },
-    { href: "/assistant", label: "Assistant" },
     { href: "/speakers", label: "Speakers" },
     { href: "/connections", label: "Connections" },
   ];

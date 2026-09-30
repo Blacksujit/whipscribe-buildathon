@@ -69,6 +69,10 @@ UPLOAD_URL_POLL_TIMEOUT = int(os.environ.get("UPLOAD_URL_POLL_TIMEOUT", "1800"))
 
 # Create tables at import time so gunicorn / production servers work too.
 store.init_db()
+try:
+    store.seed_if_missing()
+except Exception:
+    pass
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24).hex()
@@ -630,6 +634,63 @@ def api_analyze_all():
         return jsonify({"success": True, "evaluated": evaluated, "total": len(done_jobs)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/ask", methods=["POST"])
+def api_ask():
+    """Griot: grounded Q&A over the stored evaluations."""
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get("question") or "").strip()
+    if not question:
+        return jsonify({"success": False, "error": "Ask a question."}), 400
+    job_id = (payload.get("job_id") or "").strip() or None
+
+    from src.core import companion
+
+    provider, llm_key, model = get_eval_settings()
+    evaluations = store.get_all_evaluations()
+    evidence = companion.build_evidence(evaluations, job_id=job_id)
+    result = companion.ask(question, evidence, provider=provider, api_key=llm_key, model=model)
+    return jsonify({
+        "success": True,
+        "answer": result.get("answer", ""),
+        "mode": result.get("mode", "data"),
+        "sources": result.get("sources", []),
+        "calls_used": len(evidence.get("calls", [])),
+    })
+
+
+@app.route("/api/spotter", methods=["POST"])
+def api_spotter():
+    """Spotter: a real coaching prompt for one live utterance."""
+    payload = request.get_json(silent=True) or {}
+    text = (payload.get("text") or "").strip()
+    if not text:
+        return jsonify({"success": False, "error": "Send a segment of speech."}), 400
+
+    from src.realtime.analyzer import RealtimeAnalyzer
+
+    analyzer = RealtimeAnalyzer()
+    try:
+        start = float(payload.get("start") or 0)
+    except (TypeError, ValueError):
+        start = 0.0
+    result = analyzer.add_segment({
+        "text": text,
+        "speaker": payload.get("speaker") or "Speaker",
+        "start": start,
+        "end": start + 3,
+    })
+    analysis = result.get("analysis", {})
+    return jsonify({
+        "success": True,
+        "prompts": result.get("coaching_prompts", []),
+        "sentiment": analysis.get("sentiment"),
+        "action_item": analysis.get("action_item"),
+        "compliance_risk": analysis.get("compliance_risk"),
+        "clarity_issue": analysis.get("clarity_issue"),
+        "tension_signal": analysis.get("tension_signal"),
+    })
 
 
 @app.route("/api/trends-data")

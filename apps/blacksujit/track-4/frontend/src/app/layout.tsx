@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, DM_Serif_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import Griot from "@/components/Griot";
+import FallbackChip from "@/components/FallbackChip";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -47,6 +49,8 @@ export default function RootLayout({
         ].join(" ")}
       >
         {children}
+        <FallbackChip />
+        <Griot />
       </body>
     </html>
   );
