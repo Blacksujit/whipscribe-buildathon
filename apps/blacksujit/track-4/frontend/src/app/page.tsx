@@ -280,6 +280,30 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Beyond the score */}
+      <section className="section container-wide">
+        <AnimatedContent>
+          <p className="section-label">Beyond the score</p>
+          <h2>Thirteen features, all tested.</h2>
+          <p className="body-muted">
+            Real-time coaching during calls, CRM sync, follow-up emails, team benchmarking, custom
+            rubrics, sentiment, coaching plans, 12 languages, export formats, and an MCP server -
+            103 test assertions, all passing.
+          </p>
+        </AnimatedContent>
+        <div className="assistant-chips" style={{ marginTop: 18 }}>
+          <Link href="/assistant" className="btn-primary">Ask the assistant</Link>
+          <a
+            href="https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary"
+          >
+            See all 13
+          </a>
+        </div>
+      </section>
+
       {/* Library */}
       <section className="section container-wide">
         <AnimatedContent>

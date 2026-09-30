@@ -69,10 +69,10 @@ export interface ReportResponse {
   evaluation: {
     overall_score: number;
     category_scores: Record<string, number>;
-    action_items: Array<{ text: string; speaker: string; start: number; end: number }>;
-    clarity_issues: Array<{ text: string; speaker: string; start: number; issue: string }>;
-    tension_signals: Array<{ text_a: string; speaker_a: string; start: number; text_b?: string; speaker_b?: string; signal?: string }>;
-    compliance_risks: Array<{ text: string; speaker: string; start: number; risk: string }>;
+    action_items: Array<{ text: string; speaker: string; start: number; end: number; owner?: string; deadline?: string }>;
+    clarity_issues: Array<{ text: string; speaker: string; start: number; issue: string; end?: number }>;
+    tension_signals: Array<{ text_a: string; speaker_a: string; start: number; text_b?: string; speaker_b?: string; signal?: string; end?: number }>;
+    compliance_risks: Array<{ text: string; speaker: string; start: number; risk: string; end?: number }>;
     summary?: string;
     deal_killer?: string;
   };

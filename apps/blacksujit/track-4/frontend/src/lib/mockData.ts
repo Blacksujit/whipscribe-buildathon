@@ -234,3 +234,66 @@ export const SAMPLE_CONNECTIONS: ConnectionsResponse = {
     key_set: false,
   },
 };
+
+export type AssistantQA = {
+  q: string;
+  keywords: string[];
+  answer: string;
+  category: string;
+  evidence: Array<{ text: string; speaker: string; start: number }>;
+};
+
+export const SAMPLE_ASSISTANT_QA: AssistantQA[] = [
+  {
+    q: "How did I do on my last call?",
+    keywords: ["how did", "last call", "score", "did i do"],
+    category: "clarity",
+    answer:
+      "40/100. Clarity (54) and compliance (58) dragged it down: two hedged numbers and a Q1 mobile promise made without engineering sign-off. Action items scored best (67) because the close was concrete - 'circle back by Friday'.",
+    evidence: [
+      { text: "I think we should launch in November.", speaker: "ALEX", start: 8.3 },
+      { text: "We'll promise to ship mobile apps in Q1 as well.", speaker: "ALEX", start: 31.6 },
+    ],
+  },
+  {
+    q: "What should I improve?",
+    keywords: ["improve", "fix", "better", "next time"],
+    category: "compliance",
+    answer:
+      "Stop hedging and stop promising without sign-off. 'I think we should launch' turned into 'can we push to December' six seconds later; the Q1 mobile commitment was made with engineering not in the room. Have the pricing decision ready - it came up in 5 of 5 calls.",
+    evidence: [
+      { text: "We'll promise to ship mobile apps in Q1 as well.", speaker: "ALEX", start: 31.6 },
+      { text: "Also, what about the pricing model? I'm not sure about the $99 price point.", speaker: "JORDAN", start: 22.9 },
+    ],
+  },
+  {
+    q: "What are my weaknesses?",
+    keywords: ["weakness", "pattern", "recurring", "again", "weak"],
+    category: "action_items",
+    answer:
+      "One pattern repeats in every call: pricing uncertainty. The $99 point is questioned or hedged on in 5 of 5 calls. The second is follow-through - 3 of 5 commitments are still open, including 'circle back by Friday' from three different calls.",
+    evidence: [
+      { text: "Also, what about the pricing model? I'm not sure about the $99 price point.", speaker: "JORDAN", start: 22.9 },
+      { text: "Let me circle back with you by Friday. Thanks.", speaker: "ALEX", start: 47.9 },
+    ],
+  },
+  {
+    q: "What did we commit to?",
+    keywords: ["commit", "promise", "action item", "follow", "agreed"],
+    category: "action_items",
+    answer:
+      "Three commitments tracked, 40% closed. Open: 'circle back by Friday' (Alex - from three calls) and the price-point decision (Jordan). Landed: the timeline moved to December on the call.",
+    evidence: [
+      { text: "Let me circle back with you by Friday. Thanks.", speaker: "ALEX", start: 47.9 },
+      { text: "Hmm, I need to check with the product team.", speaker: "JORDAN", start: 39.3 },
+    ],
+  },
+  {
+    q: "What can you answer?",
+    keywords: ["what can", "help", "question", "ask"],
+    category: "clarity",
+    answer:
+      "Ask about your calls: 'How did I do on my last call?', 'What should I improve?', 'What are my weaknesses?', 'What did we commit to?'. Every answer cites the transcript - quote, speaker, and the second.",
+    evidence: [],
+  },
+];

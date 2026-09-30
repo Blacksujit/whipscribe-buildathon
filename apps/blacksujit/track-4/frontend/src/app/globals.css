@@ -1830,6 +1830,141 @@ p, .body {
   font-size: 15px;
 }
 
+/* === Assistant page === */
+.assistant-shell {
+  max-width: 860px;
+}
+
+.assistant-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 24px;
+}
+
+.assistant-chip {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--bg-primary);
+  color: var(--v4-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.assistant-chip:hover {
+  border-color: var(--brand-700);
+  background: var(--brand-100);
+}
+
+.assistant-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.assistant-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.assistant-q {
+  align-self: flex-end;
+  background: #eef2f7;
+  color: var(--v4-ink);
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 80%;
+}
+
+.assistant-a {
+  background: var(--bg-primary);
+  border: var(--card-border);
+  box-shadow: var(--shadow);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.assistant-a-head {
+  margin-bottom: 8px;
+}
+
+.assistant-a p {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.assistant-evidence {
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assistant-ev {
+  font-size: 13px;
+  color: var(--v4-ink-muted);
+  line-height: 1.5;
+}
+
+.assistant-ev a {
+  color: var(--brand-700);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.assistant-pending {
+  color: var(--v4-ink-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.assistant-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.assistant-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+.assistant-input:focus {
+  outline: none;
+  border-color: var(--brand-700);
+  box-shadow: 0 0 0 2px rgba(163, 220, 45, 0.12);
+}
+
+@media (max-width: 640px) {
+  .assistant-thread {
+    max-height: none;
+  }
+  .assistant-q {
+    max-width: 92%;
+  }
+  .assistant-input-row {
+    flex-direction: column;
+  }
+}
+
 /* === Responsive === */
 @media (max-width: 760px) {
   .hero-grid {
