@@ -24,6 +24,7 @@ Data contract (evaluation dict shape):
 import copy
 import time
 from typing import Any
+from functools import lru_cache
 from difflib import SequenceMatcher
 import numpy as np
 
@@ -109,7 +110,7 @@ def compare_evaluations(
                 "tension": int(scores.get("tension", 0) or 0),
                 "compliance": int(scores.get("compliance", 0) or 0),
             },
-            "issues": _collect_all_issues(eval_data),
+            "issues": _collect_all_issues(eval_data)[:60],
         }
         meetings.append(meeting)
 
@@ -161,8 +162,20 @@ def _collect_all_issues(eval_data: dict[str, Any]) -> list[dict[str, Any]]:
 def _normalize_text(text: str) -> str:
     return text.lower().strip()[:60]
 
+@lru_cache(maxsize=50000)
 def _fuzzy_match(text1: str, text2: str, threshold: float = 0.7) -> bool:
-    return SequenceMatcher(None, text1.lower(), text2.lower()).ratio() >= threshold
+    a, b = text1[:140].lower(), text2[:140].lower()
+    if not a or not b:
+        return False
+    longest = max(len(a), len(b))
+    if abs(len(a) - len(b)) > 0.35 * longest:
+        # SequenceMatcher ratio cannot reach the threshold from this length gap.
+        return False
+    tokens_a, tokens_b = set(a.split()), set(b.split())
+    if tokens_a and tokens_b and not (tokens_a & tokens_b):
+        # No shared vocabulary at all: the ratio stays near zero.
+        return False
+    return SequenceMatcher(None, a, b).ratio() >= threshold
 
 def _find_common_issues(meetings: list[dict]) -> list[dict[str, Any]]:
     groups: dict[str, dict[str, Any]] = {}
@@ -189,12 +202,22 @@ def _find_common_issues(meetings: list[dict]) -> list[dict[str, Any]]:
 
 def _cluster_recurring_issues(meetings: list[dict]) -> list[dict[str, Any]]:
     all_issues: list[dict[str, Any]] = []
+    seen_keys = set()
     for meeting in meetings:
         for issue in meeting["issues"]:
             text = issue.get("text", "") or f"{issue.get('text_a','')} / {issue.get('text_b','')}"
-            if text:
-                all_issues.append({"type": issue["type"], "text": text, "meeting": meeting["name"], "date": meeting["date"]})
-    
+            if not text:
+                continue
+            # Exact repeats collapse first: the fuzzy pass only compares distinct variants.
+            key = f"{issue['type']}:{_normalize_text(text)}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            all_issues.append({"type": issue["type"], "text": text, "meeting": meeting["name"], "date": meeting["date"]})
+
+    # The clustering pass is pairwise; bound it so a long recording cannot stall a request.
+    all_issues = all_issues[:150]
+
     clusters: list[dict[str, Any]] = []
     used_indices = set()
     for i, issue1 in enumerate(all_issues):
@@ -221,15 +244,16 @@ def _track_action_items(meetings: list[dict]) -> dict[str, Any]:
                 all_items.append({"text": issue.get("text", ""), "from": meeting["name"], "date": meeting["date"]})
     resolved = 0
     unresolved: list[dict[str, Any]] = []
+    last_index: dict[str, int] = {}
+    for index, item in enumerate(all_items):
+        last_index[_normalize_text(item["text"])] = index
     for i, item in enumerate(all_items):
         normalized = _normalize_text(item["text"])
-        is_resolved = True
-        for later in all_items[i + 1:]:
-            if _normalize_text(later["text"]) == normalized:
-                is_resolved = False
-                break
-        if is_resolved: resolved += 1
-        else: unresolved.append(item)
+        # Resolved when the same commitment never appears again later in the history.
+        if last_index.get(normalized, i) <= i:
+            resolved += 1
+        else:
+            unresolved.append(item)
     total = len(all_items)
     completion_rate = round((resolved / total) * 100, 1) if total else 0.0
     return {"total": total, "resolved": resolved, "unresolved": unresolved, "completion_rate": completion_rate}

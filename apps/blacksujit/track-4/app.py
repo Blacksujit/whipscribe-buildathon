@@ -161,6 +161,26 @@ def _stored_eval_dicts(evaluations):
     return eval_dicts, names
 
 
+_COMPARE_CACHE = {"key": None, "value": None}
+
+# Cross-call comparison walks every issue pair; bound the window so a long
+# recording cannot stall the request.
+COMPARE_WINDOW = int(os.environ.get("COMPARE_WINDOW", "20"))
+
+
+def _cached_comparisons(evaluations):
+    """compare_evaluations with a small in-process cache, newest N calls only."""
+    recent = evaluations[:COMPARE_WINDOW]
+    key = (len(recent), recent[0].get("created_at") if recent else None)
+    if _COMPARE_CACHE["key"] == key and _COMPARE_CACHE["value"] is not None:
+        return _COMPARE_CACHE["value"]
+    eval_dicts, names = _stored_eval_dicts(recent)
+    value = compare_evaluations(eval_dicts, names)
+    _COMPARE_CACHE["key"] = key
+    _COMPARE_CACHE["value"] = value
+    return value
+
+
 def _stored_setting(name):
     """Return a setting value that is not blank, else None."""
     value = store.get_setting(name)
@@ -791,8 +811,7 @@ def api_speakers():
     if len(evaluations) < 2:
         return jsonify({"success": False, "error": "Need at least 2 analyzed meetings for speaker analysis."}), 400
 
-    eval_dicts, names = _stored_eval_dicts(evaluations)
-    comparisons = compare_evaluations(eval_dicts, names)
+    comparisons = _cached_comparisons(evaluations)
 
     speaker_analysis = comparisons.get("speaker_analysis", {})
     speakers_list = [
@@ -1098,8 +1117,8 @@ def coach_data():
     if len(evaluations) < 2:
         return jsonify({"ready": False, "insights": [], "message": "Analyze at least two meetings first."})
 
-    eval_dicts, names = _stored_eval_dicts(evaluations)
-    comparisons = compare_evaluations(eval_dicts, names)
+    comparisons = _cached_comparisons(evaluations)
+    eval_dicts, _ = _stored_eval_dicts(evaluations[:COMPARE_WINDOW])
     return jsonify({
         "ready": True,
         "insights": _generate_coaching_insights(comparisons, eval_dicts),
@@ -1431,8 +1450,8 @@ def api_plan():
     evaluations = store.get_all_evaluations()
     if not evaluations:
         return jsonify({"success": False, "error": "Analyze a call first."}), 400
-    eval_dicts, names = _stored_eval_dicts(evaluations)
-    comparisons = compare_evaluations(eval_dicts, names)
+    comparisons = _cached_comparisons(evaluations)
+    eval_dicts, _ = _stored_eval_dicts(evaluations[:COMPARE_WINDOW])
     generator = CoachingPlanGenerator()
     plan = generator.generate_plan("You", eval_dicts, comparisons)
     return jsonify({"success": True, "plan": plan})
@@ -1561,8 +1580,7 @@ def api_export_trends():
     if len(evaluations) < 2:
         return jsonify({"success": False, "error": "Need at least 2 analyzed meetings for trends."}), 400
 
-    eval_dicts, names = _stored_eval_dicts(evaluations)
-    comparisons = compare_evaluations(eval_dicts, names)
+    comparisons = _cached_comparisons(evaluations)
     try:
         result = deliver_trend_summary_to_slack(comparisons)
     except Exception as e:
