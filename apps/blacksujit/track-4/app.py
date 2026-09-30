@@ -901,21 +901,14 @@ def api_analyze(job_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route("/api/analyze-all", methods=["POST"])
-def api_analyze_all():
-    """API endpoint: analyze every on-account job.
+_SWEEP = {"running": False, "evaluated": 0, "skipped": 0, "total": 0,
+          "started_at": None, "finished_at": None, "error": None}
 
-    Skips jobs that already have a stored evaluation unless {"force": true} is
-    passed, so a sweep spends credit on new calls instead of re-scoring.
-    """
-    api_key = get_api_key()
-    if not api_key:
-        return jsonify({"success": False, "error": "No API key configured"}), 401
 
-    payload = request.get_json(silent=True) or {}
-    force = bool(payload.get("force"))
-
-    provider, llm_key, model = get_eval_settings()
+def _run_sweep(api_key, force, provider, llm_key, model):
+    """Background worker for /api/analyze-all (long runs would outlive the proxy)."""
+    _SWEEP.update({"running": True, "evaluated": 0, "skipped": 0, "total": 0,
+                   "started_at": time.time(), "finished_at": None, "error": None})
     try:
         all_jobs = list_jobs(api_key, limit=100)
         if isinstance(all_jobs, dict):
@@ -926,16 +919,15 @@ def api_analyze_all():
         ]
         # Longest conversations first: they carry the most signal.
         done_jobs.sort(key=lambda j: -(j.get("audio_duration_seconds") or 0))
+        _SWEEP["total"] = len(done_jobs[:20])
 
         existing = {row.get("job_id") for row in store.get_all_evaluations()}
-        evaluated = 0
-        skipped = 0
         for job in done_jobs[:20]:
             jid = job.get("job_id")
             if not jid:
                 continue
             if not force and jid in existing:
-                skipped += 1
+                _SWEEP["skipped"] += 1
                 continue
             try:
                 transcript = get_transcript(api_key, jid)
@@ -945,12 +937,50 @@ def api_analyze_all():
                     continue
                 evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
                 store.save_evaluation(jid, transcript, evaluation)
-                evaluated += 1
+                _SWEEP["evaluated"] += 1
             except Exception:
                 continue
-        return jsonify({"success": True, "evaluated": evaluated, "skipped": skipped, "total": len(done_jobs)})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception as exc:  # noqa: BLE001
+        _SWEEP["error"] = str(exc)
+    finally:
+        _SWEEP["running"] = False
+        _SWEEP["finished_at"] = time.time()
+
+
+@app.route("/api/analyze-all", methods=["POST"])
+def api_analyze_all():
+    """Start a sweep over the account's calls.
+
+    Runs in the background because a sweep outlives any proxy window; jobs
+    that already have a stored evaluation are skipped unless {"force": true}.
+    """
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No API key configured"}), 401
+
+    if _SWEEP["running"]:
+        return jsonify({"success": True, "started": False, "message": "A sweep is already running."}), 202
+
+    payload = request.get_json(silent=True) or {}
+    force = bool(payload.get("force"))
+    provider, llm_key, model = get_eval_settings()
+
+    threading.Thread(target=_run_sweep, args=(api_key, force, provider, llm_key, model), daemon=True).start()
+    return jsonify({
+        "success": True,
+        "started": True,
+        "message": "Sweep started in the background - new calls appear in the library as they finish.",
+    }), 202
+
+
+@app.route("/api/analyze-all/status")
+def api_analyze_all_status():
+    """Progress of the background sweep."""
+    elapsed = None
+    if _SWEEP["started_at"]:
+        end = _SWEEP["finished_at"] or time.time()
+        elapsed = round(end - _SWEEP["started_at"], 1)
+    return jsonify({"success": True, **{k: v for k, v in _SWEEP.items() if k != "started_at"}, "elapsed_seconds": elapsed})
 
 
 @app.route("/api/ask", methods=["POST"])
@@ -1145,18 +1175,18 @@ def coach_data():
 
     return jsonify({
         "ready": True,
-        "insights": _generate_coaching_insights(comparisons, eval_dicts),
+        "insights": _generate_coaching_insights(comparisons, eval_dicts, tracking),
         "trends": comparisons.get("trends", {}),
         "action_item_tracking": tracking,
     })
 
 
-def _generate_coaching_insights(comparisons, evaluations):
+def _generate_coaching_insights(comparisons, evaluations, tracking=None):
     """Generate prescriptive coaching insights from trend data."""
     insights = []
     trends = comparisons.get("trends", {})
     meetings = comparisons.get("meetings", [])
-    action_tracking = comparisons.get("action_item_tracking", {})
+    action_tracking = tracking or comparisons.get("action_item_tracking", {})
 
     for metric in ["overall", "action_items", "clarity", "tension", "compliance"]:
         trend = trends.get(metric, "stable")
