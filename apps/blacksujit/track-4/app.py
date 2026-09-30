@@ -74,12 +74,13 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 UPLOAD_POLL_TIMEOUT = int(os.environ.get("UPLOAD_POLL_TIMEOUT", "900"))
 UPLOAD_URL_POLL_TIMEOUT = int(os.environ.get("UPLOAD_URL_POLL_TIMEOUT", "1800"))
 
-# Create tables at import time so gunicorn / production servers work too.
-store.init_db()
+# Restore the shipped seed snapshot first, then create tables: the copy would
+# otherwise replace the freshly created deliveries table with the seed file.
 try:
     store.seed_if_missing()
 except Exception:
     pass
+store.init_db()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24).hex()
@@ -513,7 +514,7 @@ def _set_upload_state(job_id, **fields):
         state["updated_at"] = time.time()
 
 
-def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT):
+def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT, name=None):
     """Background worker: transcribe, score, store. Updates the live stage."""
     try:
         _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the recording.")
@@ -532,10 +533,10 @@ def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT):
             audio_url=extras.get("audio_url"),
         )
         _attach_whip_extras(evaluation, extras)
-        store.save_evaluation(job_id, transcript, evaluation)
+        store.save_evaluation(job_id, transcript, evaluation, meeting_name=name)
 
         core = _core_eval(evaluation)
-        _dispatch_async(job_id, core, transcript)
+        _dispatch_async(job_id, core, transcript, name)
         for item in core.get("resolved_items", []):
             store.resolve_action_item(item.get("text", ""), job_id=job_id)
 
@@ -602,7 +603,7 @@ def api_upload():
             pass
 
     _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the recording.", filename=filename)
-    threading.Thread(target=_process_upload, args=(api_key, job_id), daemon=True).start()
+    threading.Thread(target=_process_upload, args=(api_key, job_id), kwargs={"name": filename}, daemon=True).start()
 
     return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"}), 202
 
@@ -654,7 +655,7 @@ def api_upload_url():
     threading.Thread(
         target=_process_upload,
         args=(api_key, job_id),
-        kwargs={"poll_timeout": UPLOAD_URL_POLL_TIMEOUT},
+        kwargs={"poll_timeout": UPLOAD_URL_POLL_TIMEOUT, "name": url},
         daemon=True,
     ).start()
 
@@ -1259,7 +1260,12 @@ def api_sample_run():
     except Exception as exc:  # noqa: BLE001
         return jsonify({"success": False, "error": f"WhipScribe rejected the sample upload: {exc}"}), 502
     _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the sample call.")
-    threading.Thread(target=_process_upload, args=(api_key, job_id), daemon=True).start()
+    threading.Thread(
+        target=_process_upload,
+        args=(api_key, job_id),
+        kwargs={"name": "Sample call - Sujit's intro"},
+        daemon=True,
+    ).start()
     return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"})
 
 
