@@ -1360,9 +1360,21 @@ def api_deliver(job_id):
 
 # ---------------------------------------------------------------- oauth
 
+def _public_base():
+    """The public origin used in OAuth redirect URIs.
+
+    Behind the Vercel proxy Flask sees the internal Render host, so the
+    explicit override wins, then PUBLIC_APP_URL, then the request host.
+    """
+    explicit = os.environ.get("OAUTH_REDIRECT_BASE") or os.environ.get("PUBLIC_APP_URL")
+    if explicit:
+        return explicit.rstrip("/")
+    root = request.url_root.rstrip("/")
+    return "https://callcoachai.sujit.top" if "onrender.com" in root else root
+
+
 def _oauth_redirect_uri(tool):
-    base = os.environ.get("OAUTH_REDIRECT_BASE") or request.url_root.rstrip("/")
-    return f"{base}/api/oauth/{tool}/callback"
+    return f"{_public_base()}/api/oauth/{tool}/callback"
 
 
 def _oauth_page(tool, ok, message):
@@ -1526,8 +1538,7 @@ def api_oauth_hubspot_callback():
 @app.route("/api/oauth/config")
 def api_oauth_config():
     """One-click availability plus the exact setup steps when a tool is not configured."""
-    base = os.environ.get("OAUTH_REDIRECT_BASE") or request.url_root.rstrip("/")
-    return jsonify({"success": True, "tools": oauth.config(base)})
+    return jsonify({"success": True, "tools": oauth.config(_public_base())})
 
 
 @app.route("/api/sample/run", methods=["POST"])
