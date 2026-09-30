@@ -2,7 +2,7 @@
 
 **The only call coaching platform with real-time coaching during calls.**
 
-[Live App](https://callcoachai.sujit.top/) · [Demo Video](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
+[Live App](https://callcoachai.sujit.top/) · [Demo Video](https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/videos/demo/callcoach-demo-2026-09-28T15-11-37.webm) (330MB, right-click "Save As")
 
 ---
 
