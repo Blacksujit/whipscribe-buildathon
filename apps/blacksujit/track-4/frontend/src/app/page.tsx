@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import ConnectedTools from "@/components/ConnectedTools";
 import PageTransition from "@/components/PageTransition";
 import BlurText from "@/components/reactbits/BlurText/BlurText";
 import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
@@ -277,6 +278,8 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      <ConnectedTools />
 
       {/* The four agents */}
       <section className="section">
