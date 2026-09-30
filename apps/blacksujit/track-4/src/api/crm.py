@@ -1,159 +1,72 @@
-"""CRM integration for CallCoach-AI.
+"""CRM delivery for CallCoach-AI.
 
-Integrates with Salesforce and HubSpot to automatically update records
-based on call analysis. Syncs action items, scores, and coaching notes.
+Real HubSpot integration via the v3 CRM API (private-app token). Salesforce
+support was removed on purpose: its REST tokens expire every couple of hours,
+so a one-click connect is impossible - a checkbox that cannot stay green is
+worse than an honest limit.
+
+Without a token every call reports the honest "not connected" state; nothing
+here invents a record id.
 """
 
-import json
-import os
-from typing import Any
+from typing import Any, Dict, List
+
+from src.api.hubspot import deliver_task
 
 
-class CRMIntegration:
-    """Base class for CRM integrations."""
+class HubSpotIntegration:
+    """Thin HubSpot client used by the sync helper and the demo scripts."""
 
-    def __init__(self, api_key: str, **kwargs):
-        self.api_key = api_key
-        self.config = kwargs
+    provider = "hubspot"
 
-    def create_record(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Create a record in the CRM."""
-        raise NotImplementedError
+    def __init__(self, token: str = "", **kwargs: Any):
+        self.token = token or kwargs.get("api_key") or ""
 
-    def update_record(self, record_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        """Update a record in the CRM."""
-        raise NotImplementedError
-
-    def search_records(self, query: str) -> list[dict[str, Any]]:
-        """Search for records in the CRM."""
-        raise NotImplementedError
-
-
-class SalesforceIntegration(CRMIntegration):
-    """Salesforce CRM integration."""
-
-    def __init__(self, api_key: str, instance_url: str, **kwargs):
-        super().__init__(api_key, **kwargs)
-        self.instance_url = instance_url
-
-    def create_task(self, subject: str, description: str, due_date: str = None) -> dict[str, Any]:
-        """Create a task in Salesforce."""
-        # In production, this would make a real API call to Salesforce
-        return {
-            "id": "sf_task_123",
-            "subject": subject,
-            "description": description,
-            "due_date": due_date,
-            "status": "Not Started"
-        }
-
-    def update_opportunity(self, opp_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        """Update an opportunity in Salesforce."""
-        return {
-            "id": opp_id,
-            "updated": True,
-            "fields": data
-        }
-
-    def create_coaching_note(self, contact_id: str, note: str) -> dict[str, Any]:
-        """Create a coaching note in Salesforce."""
-        return {
-            "id": "sf_note_456",
-            "contact_id": contact_id,
-            "note": note,
-            "created_date": "2026-09-30"
-        }
+    def create_task(self, subject: str, description: str, due_date: str = None) -> Dict[str, Any]:
+        """Create one real HubSpot task, or report why it could not be created."""
+        if not self.token:
+            return {"created": False, "error": "HubSpot is not connected (no token configured)."}
+        try:
+            result = deliver_task(
+                {"overall_score": 0, "summary": description},
+                "crm-task",
+                call_name=subject[:80],
+                token=self.token,
+            )
+            return {"created": True, "id": result.get("id")}
+        except Exception as exc:  # noqa: BLE001
+            return {"created": False, "error": str(exc)}
 
 
-class HubSpotIntegration(CRMIntegration):
-    """HubSpot CRM integration."""
-
-    def __init__(self, api_key: str, portal_id: str, **kwargs):
-        super().__init__(api_key, **kwargs)
-        self.portal_id = portal_id
-
-    def create_task(self, subject: str, description: str, due_date: str = None) -> dict[str, Any]:
-        """Create a task in HubSpot."""
-        return {
-            "id": "hs_task_123",
-            "subject": subject,
-            "description": description,
-            "due_date": due_date,
-            "status": "NOT_STARTED"
-        }
-
-    def update_contact(self, contact_id: str, data: dict[str, Any]) -> dict[str, Any]:
-        """Update a contact in HubSpot."""
-        return {
-            "id": contact_id,
-            "updated": True,
-            "properties": data
-        }
-
-    def create_engagement(self, contact_id: str, note: str) -> dict[str, Any]:
-        """Create an engagement in HubSpot."""
-        return {
-            "id": "hs_engagement_456",
-            "contact_id": contact_id,
-            "note": note,
-            "type": "NOTE"
-        }
-
-
-def sync_call_to_crm(evaluation: dict[str, Any], transcript: dict[str, Any], crm: CRMIntegration) -> dict[str, Any]:
-    """Sync call analysis results to CRM.
-
-    Args:
-        evaluation: The call evaluation results
-        transcript: The call transcript
-        crm: The CRM integration to use
-
-    Returns:
-        Sync results with created/updated records
-    """
-    results = {
+def sync_call_to_crm(evaluation: dict, transcript: dict, crm: HubSpotIntegration) -> dict:
+    """Create one HubSpot task per action item, plus a scorecard summary task."""
+    results: Dict[str, List[Dict[str, Any]]] = {
         "tasks_created": [],
         "notes_created": [],
-        "records_updated": []
+        "records_updated": [],
     }
 
-    # Create tasks for action items
     for item in evaluation.get("action_items", []):
         task = crm.create_task(
-            subject=f"Action Item: {item.get('text', '')[:50]}",
+            subject=f"Action item: {item.get('text', '')[:50]}",
             description=item.get("text", ""),
-            due_date=None
         )
         results["tasks_created"].append(task)
 
-    # Create coaching note
-    note = f"CallCoach-AI Score: {evaluation.get('overall_score', 0)}/100\n"
-    note += f"Compliance: {evaluation.get('category_scores', {}).get('compliance', 0)}/100\n"
-    note += f"Action Items: {len(evaluation.get('action_items', []))}"
-
-    if hasattr(crm, 'create_coaching_note'):
-        coaching_note = crm.create_coaching_note("contact_id", note)
-        results["notes_created"].append(coaching_note)
-    elif hasattr(crm, 'create_engagement'):
-        engagement = crm.create_engagement("contact_id", note)
-        results["notes_created"].append(engagement)
-
+    summary = (
+        f"CallCoach-AI score: {evaluation.get('overall_score', 0)}/100\n"
+        f"Compliance: {evaluation.get('category_scores', {}).get('compliance', 0)}/100\n"
+        f"Action items: {len(evaluation.get('action_items', []))}"
+    )
+    results["notes_created"].append(crm.create_task(subject="Scorecard summary", description=summary))
     return results
 
 
-def create_crm_integration(provider: str, **kwargs) -> CRMIntegration:
-    """Factory function to create a CRM integration.
-
-    Args:
-        provider: The CRM provider (salesforce or hubspot)
-        **kwargs: Additional configuration options
-
-    Returns:
-        A CRM integration instance
-    """
-    if provider.lower() == "salesforce":
-        return SalesforceIntegration(**kwargs)
-    elif provider.lower() == "hubspot":
+def create_crm_integration(provider: str, **kwargs: Any) -> HubSpotIntegration:
+    """Only HubSpot is supported - it is the one that can be verified in one click."""
+    if provider.lower() == "hubspot":
         return HubSpotIntegration(**kwargs)
-    else:
-        raise ValueError(f"Unsupported CRM provider: {provider}")
+    raise ValueError(
+        f"{provider} is not supported. CallCoach-AI ships a real HubSpot integration; "
+        "Salesforce needs a connected app whose tokens expire in about two hours."
+    )

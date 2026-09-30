@@ -20,6 +20,10 @@
 
 **No empty dashboard:** the repo ships `seed_evaluations.db`, a real snapshot of eight scored calls (produced through the same pipeline with real WhipScribe transcripts). The app restores it when the working database is empty, so every page has real data on first load. Rebuild it any time with `python scripts/seed_db.py`.
 
+**One-click delivery:** the Connect Center connects Slack, Notion, and HubSpot - each connection is verified on the spot with a real message or page, then every new scorecard is delivered automatically: score, quotes with timestamps, commitments, and the report link. OAuth when configured, one paste otherwise. Every attempt is logged, and any report can be re-sent with one button.
+
+**Try it in one click:** the hero has a "run a real 26-second sample call" button. It submits bundled audio through the live WhipScribe API and scores it with the four agents like any other call.
+
 ---
 
 ## Everything inside (13 capabilities)
@@ -46,10 +50,11 @@ Trend analysis across multiple meetings:
 - Action item lifecycle tracking
 - Speaker-level risk scoring
 
-### 4. CRM Integration
-Automatic sync to CRM systems:
-- Salesforce: tasks, opportunities, coaching notes
-- HubSpot: tasks, contacts, engagements
+### 4. HubSpot CRM delivery
+Real tasks in your own HubSpot portal, created automatically for every scored call - score, what to
+fix, commitments, and the report link. Connect once with a private-app token; the Connect Center
+verifies it against the live API before saving. Salesforce was dropped on purpose: its REST tokens
+expire every two hours, so a one-click connection could not stay connected.
 
 ### 5. Follow-Up Emails
 Automated email generation:
@@ -182,7 +187,7 @@ Features tested:
 
 ## Conclusion
 
-CallCoach-AI is the only platform that provides **real-time coaching during calls** (not just post-call), plus comprehensive CRM integration, automated follow-up emails, team benchmarking, and custom scoring rubrics.
+CallCoach-AI is the only platform that provides **real-time coaching during calls** (not just post-call), one-click delivery into Slack, Notion and HubSpot with proof of delivery, automated follow-up emails, team benchmarking, and custom scoring rubrics.
 
 These features make CallCoach-AI the most comprehensive call coaching platform available.
 

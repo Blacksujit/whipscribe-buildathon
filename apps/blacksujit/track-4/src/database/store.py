@@ -51,6 +51,15 @@ def init_db(db_path=None):
         key TEXT PRIMARY KEY,
         value TEXT
     )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT,
+        tool TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
     # One row per (job, item) so re-analyzing a recording does not duplicate items.
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_action_items_job_text "
@@ -198,3 +207,26 @@ def get_setting(key, db_path=None):
     row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
     conn.close()
     return row[0] if row else None
+
+
+def save_delivery(job_id, tool, status, detail="", db_path=None):
+    """Record a delivery attempt (tool: slack / notion / hubspot)."""
+    conn = _connect(db_path)
+    conn.execute(
+        "INSERT INTO deliveries (job_id, tool, status, detail) VALUES (?, ?, ?, ?)",
+        (job_id, tool, status, str(detail)[:500]),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_last_deliveries(db_path=None):
+    """Return the most recent delivery attempt per tool."""
+    conn = _connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT tool, status, detail, created_at FROM deliveries "
+        "WHERE id IN (SELECT MAX(id) FROM deliveries GROUP BY tool)"
+    ).fetchall()
+    conn.close()
+    return {row["tool"]: dict(row) for row in rows}

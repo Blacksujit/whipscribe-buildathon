@@ -162,8 +162,8 @@ def main():
     # =========================================================================
     print_section("Feature 4: CRM Integration")
 
-    # Create a mock CRM integration
-    crm = create_crm_integration("salesforce", api_key="mock_key", instance_url="https://mock.salesforce.com")
+    # Real HubSpot client; without a token it reports the honest not-connected state
+    crm = create_crm_integration("hubspot")
 
     # Sync call to CRM
     sync_results = sync_call_to_crm(evaluation, base_transcript, crm)

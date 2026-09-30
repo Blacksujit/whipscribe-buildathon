@@ -14,7 +14,7 @@ const features: Feature[] = [
   { id: "realtime", name: "Real-Time Coaching", description: "Live coaching during calls", status: "active", icon: "⚡" },
   { id: "postcall", name: "Post-Call Analysis", description: "4-agent scoring with evidence", status: "active", icon: "📊" },
   { id: "crosscall", name: "Cross-Call Intelligence", description: "Trend analysis across calls", status: "active", icon: "📈" },
-  { id: "crm", name: "CRM Integration", description: "Salesforce & HubSpot sync", status: "active", icon: "🔗" },
+  { id: "crm", name: "HubSpot delivery", description: "Real CRM tasks per scored call", status: "active", icon: "🔗" },
   { id: "followup", name: "Follow-Up Emails", description: "Automated email generation", status: "active", icon: "📧" },
   { id: "benchmark", name: "Team Benchmarking", description: "Compare reps", status: "active", icon: "📊" },
   { id: "rubrics", name: "Custom Rubrics", description: "Define your own scoring", status: "active", icon: "🎯" },

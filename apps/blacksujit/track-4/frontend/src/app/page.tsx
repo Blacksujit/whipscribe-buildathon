@@ -22,7 +22,7 @@ import {
   GlobeIcon,
   MicIcon,
 } from "@/components/icons";
-import { startUpload, startUrlUpload, getUploadStatus, getJobsWithScores, Job } from "@/lib/api";
+import { startUpload, startUrlUpload, getUploadStatus, getJobsWithScores, runSampleCall, Job } from "@/lib/api";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 
@@ -75,6 +75,25 @@ export default function Home() {
   const [fileName, setFileName] = useState("");
   const [recordings, setRecordings] = useState<Array<Job & { score?: number | null }>>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
+  const [sampleBusy, setSampleBusy] = useState(false);
+
+  async function handleSample() {
+    if (sampleBusy) return;
+    setSampleBusy(true);
+    const started = await runSampleCall();
+    setSampleBusy(false);
+    if (!started.success || !started.job_id) {
+      setStage("error");
+      setStatusMessage(started.error || "Could not start the sample run.");
+      return;
+    }
+    const displayName = "Sample call - Sujit's intro (26s)";
+    setFileName(displayName);
+    setUploadScore(null);
+    setStatusMessage("WhipScribe is transcribing the sample call.");
+    setStage("transcribing");
+    runPipeline(started.job_id, displayName);
+  }
 
   useEffect(() => {
     async function loadRecordings() {
@@ -226,6 +245,19 @@ export default function Home() {
             onUploadUrl={handleUrlUpload}
             onReset={handleReset}
           />
+
+          <motion.p
+            className="hero-sample"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ ...springReveal, delay: 0.5 }}
+          >
+            No recording handy?{" "}
+            <button type="button" className="link-btn" disabled={sampleBusy} onClick={handleSample}>
+              {sampleBusy ? "Starting..." : "Run a real 26-second sample call"}
+            </button>{" "}
+            - real transcription and four agents, about 30 seconds.
+          </motion.p>
 
           <motion.div
             className="d-hero-trust"

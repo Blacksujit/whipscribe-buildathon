@@ -205,7 +205,7 @@ def test_crm_integration():
     from src.api.crm import create_crm_integration
 
     try:
-        crm = create_crm_integration("salesforce", api_key="test_key", instance_url="https://test.salesforce.com")
+        crm = create_crm_integration("hubspot")
         print(f"  CRM Type: {type(crm).__name__}")
         print("  [PASS] CRM integration initialized")
         return True

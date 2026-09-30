@@ -7,7 +7,6 @@ import {
   SAMPLE_TRENDS,
   SAMPLE_COACH_DATA,
   SAMPLE_SPEAKERS,
-  SAMPLE_CONNECTIONS,
   isDemo,
 } from "./mockData";
 export interface Job {
@@ -24,15 +23,27 @@ export interface ApiJobsResponse {
   error?: string;
 }
 
-export interface ConnectionsResponse {
-  whipscribe: { connected: boolean; source: "env" | "stored" | null };
-  slack: { connected: boolean; source: "env" | "stored" | null };
-  notion: {
+export interface ToolConnection {
+  connected: boolean;
+  mode?: "oauth" | "stored" | "env" | null;
+  detail?: string | null;
+  auto?: boolean;
+  oauth_available?: boolean;
+  last_delivery?: { status?: string; detail?: string; created_at?: string } | null;
+  database_id?: string | null;
+  token_set?: boolean;
+}
+
+export interface ConnectCenterResponse {
+  whipscribe: {
     connected: boolean;
     source: "env" | "stored" | null;
-    database_id: string | null;
-    token_set: boolean;
+    account?: string;
+    plan?: string;
   };
+  slack: ToolConnection;
+  notion: ToolConnection;
+  hubspot: ToolConnection;
   llm: { provider: string | null; model: string; key_set: boolean };
 }
 
@@ -345,7 +356,7 @@ export async function startUrlUpload(url: string): Promise<UploadStartResponse> 
 
 // ------------------------------------------------------------ connections
 
-export async function getConnections(): Promise<ConnectionsResponse | null> {
+export async function getConnections(): Promise<ConnectCenterResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/api/connections`);
     if (!res.ok) {
@@ -354,10 +365,7 @@ export async function getConnections(): Promise<ConnectionsResponse | null> {
     return await res.json();
   } catch (error) {
     console.error("Failed to fetch connections:", error);
-    if (isDemo()) {
-      notifyFallback();
-      return SAMPLE_CONNECTIONS;
-    }
+    // No sample fallback here: connection status must reflect the real backend.
     return null;
   }
 }
@@ -388,6 +396,90 @@ export async function testNotion(): Promise<ActionResult> {
 
 export async function disconnectNotion(): Promise<ActionResult> {
   return postJson("/api/connections/notion", undefined, "DELETE");
+}
+
+export async function connectHubspot(token: string): Promise<ActionResult> {
+  return postJson("/api/connections/hubspot", { token });
+}
+
+export async function disconnectHubspot(): Promise<ActionResult> {
+  return postJson("/api/connections/hubspot", undefined, "DELETE");
+}
+
+export async function testToolDelivery(tool: string): Promise<ActionResult> {
+  return postJson(`/api/connections/${tool}/test`);
+}
+
+export async function setAutoDeliver(tool: string, enabled: boolean): Promise<ActionResult> {
+  return postJson(`/api/connections/${tool}/auto`, { enabled });
+}
+
+export interface DeliverResult {
+  success: boolean;
+  results?: Record<string, { ok: boolean; detail?: string }>;
+  error?: string;
+}
+
+export async function deliverJob(jobId: string, tools?: string[]): Promise<DeliverResult> {
+  try {
+    const res = await fetch(`${API_BASE}/api/deliver/${jobId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(tools ? { tools } : {}),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { success: false, error: payload.error || `HTTP ${res.status}` };
+    }
+    return payload;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unable to reach the CallCoach API",
+    };
+  }
+}
+
+export async function runSampleCall(): Promise<{ success: boolean; job_id?: string; error?: string }> {
+  return postJson("/api/sample/run");
+}
+
+export async function getOauthUrl(tool: "slack" | "notion"): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/oauth/${tool}/url`);
+    const payload = await res.json().catch(() => ({}));
+    return payload.success ? payload.url : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getSlackChannels(): Promise<Array<{ id: string; name: string; member?: boolean }>> {
+  try {
+    const res = await fetch(`${API_BASE}/api/oauth/slack/channels`);
+    const payload = await res.json().catch(() => ({}));
+    return payload.success ? payload.channels || [] : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function selectSlackChannel(channel: string): Promise<ActionResult> {
+  return postJson("/api/oauth/slack/channel", { channel });
+}
+
+export async function getNotionDatabases(): Promise<Array<{ id: string; title: string }>> {
+  try {
+    const res = await fetch(`${API_BASE}/api/oauth/notion/databases`);
+    const payload = await res.json().catch(() => ({}));
+    return payload.success ? payload.databases || [] : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function selectNotionDatabase(database: string, name?: string): Promise<ActionResult> {
+  return postJson("/api/oauth/notion/database", { database, name });
 }
 
 // ---------------------------------------------------------------- griot

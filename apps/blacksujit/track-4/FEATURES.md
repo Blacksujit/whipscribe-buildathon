@@ -31,10 +31,9 @@ Segment: "We'll definitely deliver by Q1. I promise."
 
 ### 2. CRM Integration
 Automatically sync call analysis to CRM systems:
-- **Salesforce**: Create tasks, update opportunities, coaching notes
-- **HubSpot**: Create tasks, update contacts, engagements
-- Automatic task creation from action items
-- Coaching notes synced to contact records
+- **HubSpot**: Real tasks per scored call, verified on connect with a private-app token
+- One summary task per scored call, plus one task per action item
+- Delivery verified on connect and logged per attempt
 
 ### 3. Automated Follow-Up Emails
 Generate and send follow-up emails based on call analysis:
@@ -108,7 +107,7 @@ The transcript is not summarized — it is graded:
 | Real-Time Coaching | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Post-Call Analysis | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cross-Call Intelligence | ✅ | ❌ | ❌ | ❌ | ❌ |
-| CRM Integration | ✅ | ❌ | ❌ | ❌ | ❌ |
+| HubSpot delivery | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Follow-Up Emails | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Team Benchmarking | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Custom Rubrics | ✅ | ❌ | ❌ | ❌ | ❌ |
@@ -193,7 +192,7 @@ score = manager.apply_rubric("Custom", category_scores)
 
 CallCoach-AI is the only platform that provides:
 1. **Real-time coaching during calls** (not just post-call)
-2. **Comprehensive CRM integration** (Salesforce, HubSpot)
+2. **Automated delivery to more tools** (Slack, Notion and HubSpot today)
 3. **Automated follow-up emails** (ensuring follow-through)
 4. **Team performance benchmarking** (compare reps)
 5. **Custom scoring rubrics** (flexible scoring)

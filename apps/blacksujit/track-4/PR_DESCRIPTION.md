@@ -2,6 +2,8 @@
 
 > **What changed since the last review** (reviewed 2026-09-29 01:45 UTC):
 >
+> - **One-click delivery to your tools.** The Connect Center connects Slack (OAuth or one paste), Notion (OAuth or one paste), and HubSpot (verified token). Each connection is proven with a real message or page on the spot, then every new scorecard is delivered automatically - score, quotes with timestamps, commitments, report link. Every attempt is logged and any report can be re-sent from its page.
+> - **A real sample call in one click.** The hero runs bundled 26-second audio through the live WhipScribe API end to end - transcription, four agents, delivery.
 > - **Griot - the grounded companion.** A floating chat on every page that answers from your real call library: "What did we commit to across calls?" Every claim comes back with a call, a speaker, and the exact second. It calls a real endpoint (`POST /api/ask`) that reads the stored evaluations and answers with the configured LLM. No canned Q&A - the placeholder assistant page was deleted.
 > - **Spotter is testable live.** `POST /api/spotter` returns real coaching prompts for one utterance. Try: `curl -X POST https://callcoachai.sujit.top/api/spotter -H "Content-Type: application/json" -d '{"text":"I guarantee we will deliver by Q1"}'`
 > - **The live dashboard always has real data.** The repo ships `seed_evaluations.db` - 8 real calls (real WhipScribe transcripts, LLM-scored) restored automatically when the working database is empty. No empty dashboard on first load, no mock rows.
@@ -31,6 +33,18 @@ CallCoach-AI turns calls into coaching intelligence. Three jobs, one pipeline:
 Why this stands out: every other Track 4 entry stops at one call - one recording in, one summary, one issue, or one proposal out. CallCoach-AI is the only entry that coaches *during* the call (Spotter), reads features *across* calls (Radar), and can be asked questions about the whole library (Griot).
 
 Under the hood: four scoring agents (Compliance, Tension, Clarity, Action Items), a CLI (`python -m src.main --file call.mp3`), an MCP server (`src/mcp_server.py`) with four tools, CRM sync, follow-up emails, custom rubrics, 12 languages, and exports.
+
+## Connect in one click
+
+The Connect Center verifies every connection with a real message or page the moment you connect, then delivers every new scorecard automatically:
+
+- **Slack** - OAuth ("Continue with Slack", pick a channel) or one paste; score, quotes with timestamps, commitments, and the report link land in the channel.
+- **Notion** - OAuth (pick a database) or token + database link; a page per scorecard with the quotes in context.
+- **HubSpot** - private-app token, verified against the live API; a real task per call in your portal.
+
+Every attempt is logged (`deliveries` table), each tile shows the last delivery, and any report has a "Send now" button. ShipNotes' own PR lists this as future work ("No OAuth for GitHub/Slack... not auto-pushed"); their Slack output is a clipboard copy - here every delivery is real and provable.
+
+Also live: a **one-click sample call** in the hero - bundled 26-second audio submitted through the real WhipScribe API, scored by the four agents, delivered like any other call.
 
 ## How to try it
 
@@ -83,7 +97,7 @@ Beyond the core scorecard, these are built and tested:
 1. **Real-time coaching during calls** — live prompts while the call is happening (`src/realtime/analyzer.py`)
 2. **Post-call 4-agent analysis** — Compliance, Tension, Clarity, Action Items
 3. **Cross-call intelligence** — velocity, momentum, recurring clusters, speaker risk
-4. **CRM integration** — Salesforce and HubSpot task/note creation (`src/api/crm.py`)
+4. **HubSpot CRM delivery** — real tasks in your own portal, verified on connect (`src/api/hubspot.py`, `src/api/crm.py`)
 5. **Follow-up emails** — generated from action items and risks (`src/api/followup.py`)
 6. **Team benchmarking** — rep rankings, top performers, coaching needs (`src/core/benchmark.py`)
 7. **Custom rubrics** — weighted scoring criteria per team (`src/core/rubric.py`)

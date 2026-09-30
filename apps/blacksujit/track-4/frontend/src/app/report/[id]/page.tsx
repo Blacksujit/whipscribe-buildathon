@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import { getReport, runAnalysis, ReportResult } from "@/lib/api";
+import { getReport, runAnalysis, deliverJob, getConnections, ReportResult, type ConnectCenterResponse } from "@/lib/api";
+import { SlackMark, NotionMark, HubSpotMark } from "@/components/BrandIcons";
 import PageTransition from "@/components/PageTransition";
 import ScoreRing from "@/components/charts/ScoreRing";
 import {
@@ -114,6 +115,35 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [connections, setConnections] = useState<ConnectCenterResponse | null>(null);
+  const [delivering, setDelivering] = useState(false);
+  const [deliverNotice, setDeliverNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    getConnections().then(setConnections).catch(() => setConnections(null));
+  }, []);
+
+  async function handleDeliver() {
+    if (!jobId || delivering) return;
+    setDelivering(true);
+    setDeliverNotice(null);
+    const result = await deliverJob(jobId);
+    setDelivering(false);
+    if (!result.success) {
+      setDeliverNotice({ ok: false, text: result.error || "Delivery failed." });
+      return;
+    }
+    const entries = Object.entries(result.results || {});
+    const delivered = entries.filter(([, value]) => value.ok).map(([tool]) => tool);
+    const failed = entries
+      .filter(([, value]) => !value.ok && value.detail !== "not connected")
+      .map(([tool]) => tool);
+    const text = delivered.length
+      ? `Sent to ${delivered.join(", ")}${failed.length ? ` - failed: ${failed.join(", ")}` : ""}`
+      : "Nothing is connected yet - connect a tool first.";
+    setDeliverNotice({ ok: delivered.length > 0, text });
+    getConnections().then(setConnections).catch(() => undefined);
+  }
 
   useEffect(() => {
     if (!jobId) return;
@@ -260,6 +290,38 @@ export default function ReportPage() {
               </>
             )}
           </p>
+        </motion.div>
+
+        <motion.div
+          className="deliver-row"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springReveal, delay: 0.15 }}
+        >
+          <span className="deliver-label">Deliver this scorecard</span>
+          <span className="deliver-icons" aria-hidden="true">
+            <span className={`deliver-icon ${connections?.slack.connected ? "deliver-icon-on" : ""}`}>
+              <SlackMark size={20} />
+            </span>
+            <span className={`deliver-icon ${connections?.notion.connected ? "deliver-icon-on" : ""}`}>
+              <NotionMark size={20} />
+            </span>
+            <span className={`deliver-icon ${connections?.hubspot.connected ? "deliver-icon-on" : ""}`}>
+              <HubSpotMark size={20} />
+            </span>
+          </span>
+          {connections?.slack.connected || connections?.notion.connected || connections?.hubspot.connected ? (
+            <button type="button" className="btn-secondary" disabled={delivering} onClick={handleDeliver}>
+              {delivering ? "Sending..." : "Send now"}
+            </button>
+          ) : (
+            <Link href="/connections" className="btn-secondary">Connect a tool</Link>
+          )}
+          {deliverNotice && (
+            <span className={deliverNotice.ok ? "deliver-note deliver-note-ok" : "deliver-note deliver-note-error"}>
+              {deliverNotice.text}
+            </span>
+          )}
         </motion.div>
 
         <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "60px", marginTop: "42px" }}>

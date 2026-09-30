@@ -122,7 +122,7 @@ def test_crm_integration(results):
     transcript = load_sample_transcript()
     evaluation = evaluate(transcript)
 
-    crm = create_crm_integration("salesforce", api_key="mock_key", instance_url="https://mock.salesforce.com")
+    crm = create_crm_integration("hubspot")
     sync_results = sync_call_to_crm(evaluation, transcript, crm)
 
     results.assert_true("tasks_created" in sync_results, "Tasks created key exists")

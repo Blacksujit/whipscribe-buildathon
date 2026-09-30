@@ -1,24 +1,39 @@
-"""Slack integration for Meeting QA Copilot.
+"""Slack delivery for CallCoach-AI scorecards and trend digests.
 
-Delivers quality reports and trend summaries to Slack channels.
+Two real paths:
+- Webhook: the user pastes a Slack incoming webhook (validated with a test message).
+- Bot token: after the OAuth flow, scorecards are posted via chat.postMessage.
 """
+
 import os
-import json
-import requests
 from typing import Dict, List, Optional
+
+import requests
+
+PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://callcoachai.sujit.top").rstrip("/")
 
 
 def get_slack_client():
-    """Get Slack webhook URL from settings or env."""
+    """Webhook URL from settings or env."""
     webhook_url = os.getenv("SLACK_WEBHOOK_URL") or os.getenv("SLACK_WEBHOOK")
-    # Try to get from the local settings store if available
     if not webhook_url:
         try:
             from src.database import store
+
             webhook_url = store.get_setting("slack_webhook")
         except Exception:
             pass
     return webhook_url
+
+
+def get_slack_bot():
+    """Bot token + default channel from settings (OAuth path)."""
+    try:
+        from src.database import store
+
+        return store.get_setting("slack_bot_token"), store.get_setting("slack_channel")
+    except Exception:
+        return None, None
 
 
 def send_to_slack(webhook_url: str, message: Dict) -> bool:
@@ -27,188 +42,166 @@ def send_to_slack(webhook_url: str, message: Dict) -> bool:
         response = requests.post(webhook_url, json=message, timeout=10)
         response.raise_for_status()
         return True
-    except Exception as e:
-        print(f"Slack delivery failed: {e}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Slack delivery failed: {exc}")
         return False
 
 
-def format_qa_report_for_slack(evaluation: Dict, transcript: Dict, job_id: str) -> Dict:
-    """Format a single meeting QA report for Slack."""
-    overall_score = evaluation.get("overall_score", 0)
-    category_scores = evaluation.get("category_scores", {})
-    
-    # Determine color based on score
-    if overall_score >= 80:
-        color = "#36a64f"  # green
-    elif overall_score >= 60:
-        color = "#ff9500"  # orange
-    else:
-        color = "#ff3b30"  # red
-    
-    # Build category score fields
+def send_via_token(token: str, channel: str, message: Dict):
+    """Post via chat.postMessage; returns (ok, error)."""
+    try:
+        resp = requests.post(
+            "https://slack.com/api/chat.postMessage",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={**message, "channel": channel},
+            timeout=10,
+        )
+        data = resp.json()
+        return bool(data.get("ok")), data.get("error")
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
+def _fmt_time(seconds) -> str:
+    try:
+        total = int(float(seconds))
+    except (TypeError, ValueError):
+        total = 0
+    return f"{total // 60}:{total % 60:02d}"
+
+
+def collect_top_issues(evaluation: Dict, limit: int = 4) -> List[str]:
+    """Merge the issue lists the four agents produce into readable lines."""
+    lines: List[str] = []
+    for item in (evaluation.get("compliance_risks") or [])[:2]:
+        lines.append(
+            f"*Compliance* {_fmt_time(item.get('start'))} - {item.get('speaker', 'Unknown')}: "
+            f"\"{(item.get('text') or '')[:110]}\""
+        )
+    for item in (evaluation.get("tension_signals") or [])[:1]:
+        lines.append(
+            f"*Tension* {_fmt_time(item.get('start'))} - {item.get('speaker_a', 'Unknown')}: "
+            f"\"{(item.get('text_a') or '')[:110]}\""
+        )
+    for item in (evaluation.get("clarity_issues") or [])[:2]:
+        lines.append(
+            f"*Clarity* {_fmt_time(item.get('start'))} - {item.get('speaker', 'Unknown')}: "
+            f"\"{(item.get('text') or '')[:110]}\""
+        )
+    return lines[:limit]
+
+
+def format_qa_report_for_slack(evaluation: Dict, transcript: Dict, job_id: str,
+                               call_name: Optional[str] = None) -> Dict:
+    """Format a scorecard for Slack: score, what to fix, commitments, link."""
+    score = evaluation.get("overall_score", 0)
+    categories = evaluation.get("category_scores", {})
+    color = "#36a64f" if score >= 80 else "#ff9500" if score >= 60 else "#ff3b30"
+    report_url = f"{PUBLIC_APP_URL}/report/{job_id}"
+    title = call_name or (transcript or {}).get("filename") or "Recording"
+
     fields = [
-        {
-            "title": "Overall Score",
-            "value": f"{overall_score}/100",
-            "short": True
-        },
-        {
-            "title": "Action Items",
-            "value": f"{category_scores.get('action_items', 0)}/100",
-            "short": True
-        },
-        {
-            "title": "Clarity",
-            "value": f"{category_scores.get('clarity', 0)}/100",
-            "short": True
-        },
-        {
-            "title": "Compliance",
-            "value": f"{category_scores.get('compliance', 0)}/100",
-            "short": True
-        }
+        {"title": "Overall", "value": f"{score}/100", "short": True},
+        {"title": "Compliance", "value": f"{categories.get('compliance', 0)}/100", "short": True},
+        {"title": "Clarity", "value": f"{categories.get('clarity', 0)}/100", "short": True},
+        {"title": "Tension", "value": f"{categories.get('tension', 0)}/100", "short": True},
     ]
-    
-    # Add top issues
-    top_issues = evaluation.get("top_issues", [])[:3]
-    if top_issues:
-        issue_text = "\n".join([
-            f"• *{issue.get('category', 'Issue')}* at {issue.get('timestamp', '0:00')}: {issue.get('quote', '')[:60]}..."
-            for issue in top_issues
-        ])
+
+    issues = collect_top_issues(evaluation)
+    if issues:
+        fields.append({"title": "What to fix", "value": "\n".join(issues), "short": False})
+
+    items = evaluation.get("action_items", [])[:3]
+    if items:
         fields.append({
-            "title": "Top Issues",
-            "value": issue_text,
-            "short": False
+            "title": "Commitments",
+            "value": "\n".join(f"- {(item.get('text') or '')[:90]}" for item in items),
+            "short": False,
         })
-    
-    # Add action items
-    action_items = evaluation.get("action_items", [])[:3]
-    if action_items:
-        items_text = "\n".join([
-            f"• {item.get('text', '')[:50]}..." 
-            for item in action_items
-        ])
-        fields.append({
-            "title": "Action Items",
-            "value": items_text,
-            "short": False
-        })
-    
+
     return {
-        "text": f"Meeting QA Report: {transcript.get('filename', 'Recording')}",
+        "text": f"*{title}* scored {score}/100 - <{report_url}|open the scorecard>",
         "attachments": [
             {
                 "color": color,
                 "fields": fields,
-                "footer": "Meeting QA Copilot",
-                "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png",
-                "actions": [
-                    {
-                        "type": "button",
-                        "text": "View Full Report",
-                        "url": f"https://whipscribe.com/jobs/{job_id}",
-                        "style": "primary"
-                    }
-                ]
+                "footer": "CallCoach-AI x WhipScribe",
             }
-        ]
+        ],
     }
 
 
 def format_trend_summary_for_slack(comparisons: Dict) -> Dict:
-    """Format multi-meeting trend analysis for Slack."""
+    """Format the cross-call trend summary for Slack."""
     trends = comparisons.get("trends", {})
     meetings = comparisons.get("meetings", [])
     insights = comparisons.get("insights", [])
     action_tracking = comparisons.get("action_item_tracking", {})
-    
-    # Build trend fields
-    trend_emojis = {
-        "improving": "📈",
-        "declining": "📉",
-        "stable": "➡️"
-    }
-    
+
     fields = [
-        {
-            "title": "Overall Trend",
-            "value": f"{trend_emojis.get(trends.get('overall', 'stable'), '➡️')} {trends.get('overall', 'stable').capitalize()}",
-            "short": True
-        },
-        {
-            "title": "Meetings Analyzed",
-            "value": str(len(meetings)),
-            "short": True
-        },
-        {
-            "title": "Action Item Completion",
-            "value": f"{action_tracking.get('completion_rate', 0)}%",
-            "short": True
-        }
+        {"title": "Overall trend", "value": str(trends.get("overall", "stable")).capitalize(), "short": True},
+        {"title": "Calls analyzed", "value": str(len(meetings)), "short": True},
+        {"title": "Action item completion", "value": f"{action_tracking.get('completion_rate', 0)}%", "short": True},
     ]
-    
-    # Add key insights
+
     if insights:
-        insight_text = "\n".join([f"• {insight}" for insight in insights[:3]])
         fields.append({
-            "title": "Key Insights",
-            "value": insight_text,
-            "short": False
+            "title": "Key insights",
+            "value": "\n".join(f"- {insight}" for insight in insights[:3]),
+            "short": False,
         })
-    
-    # Add per-metric trends
-    metric_trends = []
+
+    metric_lines = []
     for metric in ["action_items", "clarity", "tension", "compliance"]:
         trend = trends.get(metric, "stable")
-        emoji = trend_emojis.get(trend, "➡️")
-        metric_trends.append(f"{emoji} {metric.replace('_', ' ').title()}: {trend}")
-    
-    if metric_trends:
-        fields.append({
-            "title": "Metric Trends",
-            "value": "\n".join(metric_trends),
-            "short": False
-        })
-    
+        metric_lines.append(f"{metric.replace('_', ' ').title()}: {trend}")
+    if metric_lines:
+        fields.append({"title": "Metric trends", "value": "\n".join(metric_lines), "short": False})
+
     return {
-        "text": "📊 Meeting Quality Trend Analysis",
+        "text": "CallCoach-AI trend summary",
         "attachments": [
             {
                 "color": "#007aff",
                 "fields": fields,
-                "footer": "Meeting QA Copilot",
-                "footer_icon": "https://platform.slack-edge.com/img/default_application_icon.png"
+                "footer": "CallCoach-AI x WhipScribe",
             }
-        ]
+        ],
     }
 
 
-def deliver_qa_report_to_slack(evaluation: Dict, transcript: Dict, job_id: str) -> Optional[str]:
-    """Deliver a QA report to Slack and return success message."""
+def deliver_qa_report(evaluation: Dict, transcript: Dict, job_id: str,
+                      call_name: Optional[str] = None) -> Optional[str]:
+    """Deliver a scorecard: bot token first (OAuth), then webhook."""
+    message = format_qa_report_for_slack(evaluation, transcript, job_id, call_name)
+
+    token, channel = get_slack_bot()
+    if token and channel:
+        ok, error = send_via_token(token, channel, message)
+        if ok:
+            return f"scorecard posted to {channel}"
+        print(f"Slack bot delivery failed: {error}")
+
     webhook_url = get_slack_client()
-    if not webhook_url:
-        print("Slack webhook URL not configured")
-        return None
-    
-    message = format_qa_report_for_slack(evaluation, transcript, job_id)
-    success = send_to_slack(webhook_url, message)
-    
-    if success:
-        return "Report delivered to Slack successfully"
+    if webhook_url and send_to_slack(webhook_url, message):
+        return "scorecard posted to the Slack channel"
     return None
 
 
+def deliver_qa_report_to_slack(evaluation: Dict, transcript: Dict, job_id: str) -> Optional[str]:
+    """Backwards-compatible alias used by the export endpoint."""
+    return deliver_qa_report(evaluation, transcript, job_id)
+
+
 def deliver_trend_summary_to_slack(comparisons: Dict) -> Optional[str]:
-    """Deliver a trend summary to Slack and return success message."""
-    webhook_url = get_slack_client()
-    if not webhook_url:
-        print("Slack webhook URL not configured")
-        return None
-    
+    """Deliver a trend summary to Slack."""
     message = format_trend_summary_for_slack(comparisons)
-    success = send_to_slack(webhook_url, message)
-    
-    if success:
-        return "Trend summary delivered to Slack successfully"
+    token, channel = get_slack_bot()
+    if token and channel:
+        ok, _ = send_via_token(token, channel, message)
+        if ok:
+            return f"trend summary posted to {channel}"
+    webhook_url = get_slack_client()
+    if webhook_url and send_to_slack(webhook_url, message):
+        return "trend summary posted to the Slack channel"
     return None

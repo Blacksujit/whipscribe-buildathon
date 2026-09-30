@@ -46,13 +46,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.api.whip_api import (
     list_jobs, get_transcript, poll_job, submit_file, submit_url, get_audio_url, get_me,
+    get_session_summary, get_high_signal_moments,
 )
 from src.api.notion import NOTION_API, deliver_report
 from src.api.slack import (
+    collect_top_issues,
+    deliver_qa_report,
     deliver_qa_report_to_slack,
     deliver_trend_summary_to_slack,
+    format_qa_report_for_slack,
     send_to_slack,
+    send_via_token,
 )
+from src.api.hubspot import deliver_task as deliver_hubspot_task, verify as verify_hubspot
+from src import oauth
 from src.core.evaluator import evaluate
 from src.core.compare import compare_evaluations
 from src.database import store
@@ -81,11 +88,12 @@ app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_UPLOAD_MB", "2048")) 
 _cors_origins = [
     origin.strip()
     for origin in os.environ.get(
-        "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,https://callcoach-ai-dashboard.vercel.app,https://callcoach-ai-whhipscribe.vercel.app",
     ).split(",")
     if origin.strip()
 ]
-CORS(app, origins=_cors_origins)
+CORS(app, origins=_cors_origins if _cors_origins else "*", supports_credentials=True)
 
 
 def get_api_key():
@@ -159,9 +167,12 @@ def _stored_setting(name):
 def _slack_connection():
     stored = _stored_setting("slack_webhook")
     env = (os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("SLACK_WEBHOOK") or "").strip() or None
+    token = _stored_setting("slack_bot_token")
+    channel = _stored_setting("slack_channel")
     return {
-        "connected": bool(stored or env),
-        "source": "stored" if stored else ("env" if env else None),
+        "connected": bool(stored or env or (token and channel)),
+        "mode": "oauth" if (token and channel) else ("stored" if stored else ("env" if env else None)),
+        "detail": channel or ("webhook" if (stored or env) else None),
     }
 
 
@@ -170,12 +181,139 @@ def _notion_connection():
     env_token = (os.environ.get("NOTION_TOKEN") or "").strip() or None
     database = _stored_setting("notion_database_id") or (os.environ.get("NOTION_DATABASE_ID") or "").strip() or None
     token = stored_token or env_token
+    database_name = _stored_setting("notion_database_name")
+    # A leftover placeholder from an old env file must not read as connected.
+    if database and "your_notion" in database:
+        database = None
     return {
         "connected": bool(token and database),
-        "source": "stored" if stored_token else ("env" if env_token else None),
+        "mode": "oauth" if database_name else ("stored" if stored_token else ("env" if env_token else None)),
+        "detail": database_name or database,
         "database_id": database,
         "token_set": bool(token),
     }
+
+
+def _hubspot_connection():
+    stored = _stored_setting("hubspot_token")
+    env = (os.environ.get("HUBSPOT_TOKEN") or "").strip() or None
+    return {
+        "connected": bool(stored or env),
+        "mode": "stored" if stored else ("env" if env else None),
+        "detail": "tasks" if (stored or env) else None,
+    }
+
+
+def _auto_enabled(tool):
+    """Auto-delivery is on unless the user turned it off."""
+    return _stored_setting(f"deliver_auto_{tool}") != "0"
+
+
+def _whip_extras(api_key, job_id):
+    """Extra WhipScribe API reads per analysis: summary, key moments, audio URL."""
+    extras = {}
+    try:
+        summary = get_session_summary(api_key, job_id)
+        if summary:
+            extras["session_summary"] = summary
+    except Exception:
+        pass
+    try:
+        moments = get_high_signal_moments(api_key, job_id)
+        if moments:
+            extras["key_moments"] = moments
+    except Exception:
+        pass
+    try:
+        audio = get_audio_url(api_key, job_id)
+        if isinstance(audio, dict) and audio.get("url"):
+            extras["audio_url"] = audio["url"]
+    except Exception:
+        pass
+    return extras
+
+
+def _attach_whip_extras(evaluation, extras):
+    """Keep the WhipScribe extras on the stored record for the report page."""
+    if not isinstance(evaluation, dict) or not extras:
+        return
+    inner = evaluation.get("evaluation")
+    if not isinstance(inner, dict):
+        inner = evaluation
+    clean = {}
+    summary = extras.get("session_summary")
+    if isinstance(summary, dict):
+        clean["session_summary"] = summary.get("summary") or summary.get("text") or ""
+    elif isinstance(summary, str):
+        clean["session_summary"] = summary
+    moments = extras.get("key_moments")
+    if isinstance(moments, dict):
+        moments = moments.get("moments") or moments.get("candidates") or moments.get("clips") or []
+    if isinstance(moments, list) and moments:
+        clean["key_moments"] = moments[:5]
+    if extras.get("audio_url"):
+        clean["audio_url"] = extras["audio_url"]
+    if clean:
+        inner["whip"] = clean
+
+
+def _deliver_scorecard(tool, job_id, evaluation, transcript, name=None):
+    """Deliver one scorecard through one tool. Returns (ok, detail)."""
+    try:
+        if tool == "slack":
+            message = deliver_qa_report(evaluation, transcript, job_id, name)
+            return (True, message) if message else (False, "Slack is not connected")
+        if tool == "notion":
+            report_md = f"# Scorecard: {name or job_id}\n\nOverall score: {evaluation.get('overall_score', 0)}/100\n\n"
+            for category, score in (evaluation.get("category_scores") or {}).items():
+                report_md += f"- {category}: {score}\n"
+            issues = collect_top_issues(evaluation, limit=4)
+            if issues:
+                report_md += "\n## What to fix\n"
+                for line in issues:
+                    report_md += f"- {line.replace('*', '')}\n"
+            result = deliver_report(
+                report_md=report_md,
+                job_id=job_id,
+                scores=evaluation,
+                notion_token=_stored_setting("notion_token") or os.environ.get("NOTION_TOKEN"),
+                database_id=_stored_setting("notion_database_id") or os.environ.get("NOTION_DATABASE_ID"),
+            )
+            return True, result.get("page_url") or "page created"
+        if tool == "hubspot":
+            result = deliver_hubspot_task(
+                evaluation, job_id, call_name=name,
+                token=_stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN"),
+            )
+            return True, f"task {result.get('id')} created"
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+    return False, "unknown tool"
+
+
+def _dispatch_deliveries(job_id, evaluation, transcript, name=None):
+    """Send the scorecard to every connected tool with auto-delivery on."""
+    connections = {
+        "slack": _slack_connection()["connected"],
+        "notion": _notion_connection()["connected"],
+        "hubspot": _hubspot_connection()["connected"],
+    }
+    for tool, connected in connections.items():
+        if not connected or not _auto_enabled(tool):
+            continue
+        ok, detail = _deliver_scorecard(tool, job_id, evaluation, transcript, name)
+        try:
+            store.save_delivery(job_id, tool, "ok" if ok else "failed", detail or "")
+        except Exception:
+            pass
+
+
+def _dispatch_async(job_id, evaluation, transcript, name=None):
+    threading.Thread(
+        target=_dispatch_deliveries,
+        args=(job_id, evaluation, transcript, name),
+        daemon=True,
+    ).start()
 
 
 def _notion_headers(token):
@@ -200,18 +338,49 @@ def _notion_database_id(value):
 
 @app.route("/api/connections")
 def api_connections():
-    """Integration status. Secrets are never returned, only booleans and sources."""
+    """Integration status. Secrets are never returned, only states and sources."""
     api_key = get_api_key()
     whip_env = bool(os.environ.get("WHIPSKRIBE_API_KEY"))
     whip_stored = bool(_stored_setting("whipscribe_api_key"))
     provider, llm_key, model = get_eval_settings()
+
+    try:
+        last_deliveries = store.get_last_deliveries()
+    except Exception:
+        last_deliveries = {}
+
+    oauth_available = {
+        "slack": oauth.slack_configured(),
+        "notion": oauth.notion_configured(),
+        "hubspot": False,
+    }
+
+    def tool_block(tool, connection):
+        return {
+            **connection,
+            "auto": _auto_enabled(tool),
+            "last_delivery": last_deliveries.get(tool),
+            "oauth_available": oauth_available.get(tool, False),
+        }
+
+    whip_block = {
+        "connected": bool(api_key),
+        "source": "env" if whip_env else ("stored" if whip_stored else None),
+    }
+    if api_key:
+        try:
+            me = get_me(api_key)
+            if isinstance(me, dict):
+                whip_block["account"] = me.get("email") or me.get("name")
+                whip_block["plan"] = me.get("plan") or me.get("tier")
+        except Exception:
+            pass
+
     return jsonify({
-        "whipscribe": {
-            "connected": bool(api_key),
-            "source": "env" if whip_env else ("stored" if whip_stored else None),
-        },
-        "slack": _slack_connection(),
-        "notion": _notion_connection(),
+        "whipscribe": whip_block,
+        "slack": tool_block("slack", _slack_connection()),
+        "notion": tool_block("notion", _notion_connection()),
+        "hubspot": tool_block("hubspot", _hubspot_connection()),
         "llm": {
             "provider": provider or None,
             "model": model,
@@ -354,13 +523,19 @@ def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT):
 
         pending_items = store.get_unresolved_action_items()
         provider, llm_key, model = get_eval_settings()
+        extras = _whip_extras(api_key, job_id)
         evaluation = evaluate(
             transcript, api_key=llm_key, model=model,
             provider=provider, pending_items=pending_items,
+            session_summary=extras.get("session_summary"),
+            key_moments=extras.get("key_moments"),
+            audio_url=extras.get("audio_url"),
         )
+        _attach_whip_extras(evaluation, extras)
         store.save_evaluation(job_id, transcript, evaluation)
 
         core = _core_eval(evaluation)
+        _dispatch_async(job_id, core, transcript)
         for item in core.get("resolved_items", []):
             store.resolve_action_item(item.get("text", ""), job_id=job_id)
 
@@ -593,12 +768,21 @@ def api_analyze(job_id):
     provider, llm_key, model = get_eval_settings()
     try:
         transcript = get_transcript(api_key, job_id)
-        evaluation = evaluate(transcript, api_key=llm_key, model=model, provider=provider)
+        extras = _whip_extras(api_key, job_id)
+        evaluation = evaluate(
+            transcript, api_key=llm_key, model=model, provider=provider,
+            session_summary=extras.get("session_summary"),
+            key_moments=extras.get("key_moments"),
+            audio_url=extras.get("audio_url"),
+        )
+        _attach_whip_extras(evaluation, extras)
         store.save_evaluation(job_id, transcript, evaluation)
+        core = _core_eval(evaluation)
+        _dispatch_async(job_id, core, transcript)
         return jsonify({
             "success": True,
             "job_id": job_id,
-            "score": _core_eval(evaluation).get("overall_score", 0),
+            "score": core.get("overall_score", 0),
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -844,6 +1028,239 @@ def _generate_coaching_insights(comparisons, evaluations):
         })
 
     return insights
+
+
+# ------------------------------------------------------- delivery controls
+
+@app.route("/api/connections/hubspot", methods=["POST", "DELETE"])
+def api_connections_hubspot():
+    """Connect HubSpot with a private-app token (verified against the real API)."""
+    if request.method == "DELETE":
+        store.save_setting("hubspot_token", "")
+        return jsonify({"success": True, "message": "HubSpot disconnected."})
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("token", "")).strip()
+    if not token:
+        return jsonify({"success": False, "error": "Paste the HubSpot private-app token."}), 400
+    try:
+        verify_hubspot(token)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(exc)}), 502
+    store.save_setting("hubspot_token", token)
+    return jsonify({"success": True, "message": "Connected - the token can create tasks."})
+
+
+@app.route("/api/connections/hubspot/test", methods=["POST"])
+def api_connections_hubspot_test():
+    """Create a real test task in the connected HubSpot portal."""
+    token = _stored_setting("hubspot_token") or os.environ.get("HUBSPOT_TOKEN")
+    if not token:
+        return jsonify({"success": False, "error": "HubSpot is not connected yet."}), 400
+    try:
+        result = deliver_hubspot_task(
+            {"overall_score": 0, "summary": "Connection test from CallCoach-AI."},
+            "connection-test",
+            call_name="Connection test",
+            token=token,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(exc)}), 502
+    return jsonify({"success": True, "message": f"Test task {result.get('id')} created in HubSpot."})
+
+
+@app.route("/api/connections/<tool>/auto", methods=["POST"])
+def api_connections_auto(tool):
+    """Turn auto-delivery on or off for one tool."""
+    if tool not in ("slack", "notion", "hubspot"):
+        return jsonify({"success": False, "error": "Unknown tool."}), 404
+    payload = request.get_json(silent=True) or {}
+    enabled = bool(payload.get("enabled", True))
+    store.save_setting(f"deliver_auto_{tool}", "1" if enabled else "0")
+    return jsonify({"success": True, "auto": enabled})
+
+
+@app.route("/api/deliver/<job_id>", methods=["POST"])
+def api_deliver(job_id):
+    """Send one stored scorecard to the connected tools right now."""
+    payload = request.get_json(silent=True) or {}
+    wanted = payload.get("tools")
+
+    stored = store.get_evaluation(job_id)
+    if not stored:
+        return jsonify({"success": False, "error": "No stored evaluation for this job."}), 404
+
+    core = _core_eval(stored.get("evaluation"))
+    transcript = stored.get("transcript") or {}
+    name = stored.get("meeting_name")
+    tools = wanted if isinstance(wanted, list) and wanted else ["slack", "notion", "hubspot"]
+
+    connected = {
+        "slack": _slack_connection()["connected"],
+        "notion": _notion_connection()["connected"],
+        "hubspot": _hubspot_connection()["connected"],
+    }
+    results = {}
+    for tool in tools:
+        if tool not in connected:
+            results[tool] = {"ok": False, "detail": "unknown tool"}
+            continue
+        if not connected[tool]:
+            results[tool] = {"ok": False, "detail": "not connected"}
+            continue
+        ok, detail = _deliver_scorecard(tool, job_id, core, transcript, name)
+        results[tool] = {"ok": ok, "detail": detail}
+        try:
+            store.save_delivery(job_id, tool, "ok" if ok else "failed", detail or "")
+        except Exception:
+            pass
+    return jsonify({"success": True, "results": results})
+
+
+# ---------------------------------------------------------------- oauth
+
+def _oauth_redirect_uri(tool):
+    base = os.environ.get("OAUTH_REDIRECT_BASE") or request.url_root.rstrip("/")
+    return f"{base}/api/oauth/{tool}/callback"
+
+
+def _oauth_page(tool, ok, message):
+    """Tiny landing page for the OAuth popup; notifies the opener and closes."""
+    status = "ok" if ok else "error"
+    script = (
+        "if (window.opener) { window.opener.postMessage("
+        f"{{source:'callcoach-oauth',tool:'{tool}',status:'{status}'}}, '*'); }}"
+        "setTimeout(function(){window.close();}, 1200);"
+    )
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'><title>CallCoach-AI</title></head>"
+        f"<body style='font-family:sans-serif;padding:40px;line-height:1.5'>"
+        f"<h2>{'Connected' if ok else 'Connection failed'}</h2><p>{message}</p>"
+        f"<script>{script}</script>"
+        "<p><a href='/connections'>Back to the Connect Center</a></p></body></html>"
+    )
+
+
+@app.route("/api/oauth/slack/url")
+def api_oauth_slack_url():
+    if not oauth.slack_configured():
+        return jsonify({"success": False, "error": "Slack OAuth is not configured on the server."}), 400
+    return jsonify({"success": True, "url": oauth.slack_authorize_url(_oauth_redirect_uri("slack"))})
+
+
+@app.route("/api/oauth/slack/callback")
+def api_oauth_slack_callback():
+    code = request.args.get("code")
+    if not code:
+        return _oauth_page("slack", False, f"Slack authorization failed: {request.args.get('error', 'missing code')}")
+    try:
+        data = oauth.slack_exchange(code, _oauth_redirect_uri("slack"))
+        store.save_setting("slack_bot_token", data["access_token"])
+        store.save_setting("slack_workspace", data.get("team", ""))
+        return _oauth_page("slack", True, "Slack authorized. Pick a channel back in the Connect Center.")
+    except Exception as exc:  # noqa: BLE001
+        return _oauth_page("slack", False, str(exc))
+
+
+@app.route("/api/oauth/slack/channels")
+def api_oauth_slack_channels():
+    token = _stored_setting("slack_bot_token")
+    if not token:
+        return jsonify({"success": False, "error": "Slack is not authorized yet."}), 400
+    try:
+        return jsonify({"success": True, "channels": oauth.slack_channels(token)})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(exc)}), 502
+
+
+@app.route("/api/oauth/slack/channel", methods=["POST"])
+def api_oauth_slack_channel():
+    payload = request.get_json(silent=True) or {}
+    channel = str(payload.get("channel", "")).strip()
+    token = _stored_setting("slack_bot_token")
+    if not channel or not token:
+        return jsonify({"success": False, "error": "Authorize Slack and pick a channel first."}), 400
+    ok, error = send_via_token(
+        token, channel,
+        {"text": "CallCoach-AI connected - scorecards will land in this channel."},
+    )
+    if not ok:
+        return jsonify({"success": False, "error": f"Slack rejected the message: {error}. Invite the app to the channel and retry."}), 502
+    store.save_setting("slack_channel", channel)
+    return jsonify({"success": True, "message": f"Connected to {channel} - test message delivered."})
+
+
+@app.route("/api/oauth/notion/url")
+def api_oauth_notion_url():
+    if not oauth.notion_configured():
+        return jsonify({"success": False, "error": "Notion OAuth is not configured on the server."}), 400
+    return jsonify({"success": True, "url": oauth.notion_authorize_url(_oauth_redirect_uri("notion"))})
+
+
+@app.route("/api/oauth/notion/callback")
+def api_oauth_notion_callback():
+    code = request.args.get("code")
+    if not code:
+        return _oauth_page("notion", False, f"Notion authorization failed: {request.args.get('error', 'missing code')}")
+    try:
+        data = oauth.notion_exchange(code, _oauth_redirect_uri("notion"))
+        store.save_setting("notion_token", data["access_token"])
+        store.save_setting("notion_workspace", data.get("workspace", ""))
+        return _oauth_page("notion", True, "Notion authorized. Pick a database back in the Connect Center.")
+    except Exception as exc:  # noqa: BLE001
+        return _oauth_page("notion", False, str(exc))
+
+
+@app.route("/api/oauth/notion/databases")
+def api_oauth_notion_databases():
+    token = _stored_setting("notion_token")
+    if not token:
+        return jsonify({"success": False, "error": "Notion is not authorized yet."}), 400
+    try:
+        return jsonify({"success": True, "databases": oauth.notion_databases(token)})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(exc)}), 502
+
+
+@app.route("/api/oauth/notion/database", methods=["POST"])
+def api_oauth_notion_database():
+    payload = request.get_json(silent=True) or {}
+    database = _notion_database_id(str(payload.get("database", "")))
+    name = str(payload.get("name", "")).strip()
+    token = _stored_setting("notion_token")
+    if not database or not token:
+        return jsonify({"success": False, "error": "Authorize Notion and pick a database first."}), 400
+    try:
+        result = deliver_report(
+            report_md="# Connected\n\nCallCoach-AI will deliver every new scorecard to this database.",
+            job_id="connection-test",
+            scores={"overall_score": 0},
+            notion_token=token,
+            database_id=database,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": str(exc)}), 502
+    store.save_setting("notion_database_id", database)
+    store.save_setting("notion_database_name", name or database)
+    return jsonify({"success": True, "message": "Connected - a confirmation page was created.", "page_url": result.get("page_url")})
+
+
+@app.route("/api/sample/run", methods=["POST"])
+def api_sample_run():
+    """Transcribe and score the bundled 26-second sample call (real API usage)."""
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No WhipScribe key configured on the server."}), 401
+    sample_path = os.path.join(PROJECT_DIR, "assets", "sample-call.mp3")
+    if not os.path.exists(sample_path):
+        return jsonify({"success": False, "error": "Sample audio is missing on the server."}), 500
+    try:
+        job_id = submit_file(api_key, sample_path)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"success": False, "error": f"WhipScribe rejected the sample upload: {exc}"}), 502
+    _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the sample call.")
+    threading.Thread(target=_process_upload, args=(api_key, job_id), daemon=True).start()
+    return jsonify({"success": True, "job_id": job_id, "stage": "transcribing"})
 
 
 @app.route("/api/export/notion", methods=["POST"])
