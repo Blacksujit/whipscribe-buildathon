@@ -55,6 +55,7 @@ from src.api.slack import (
     deliver_qa_report_to_slack,
     deliver_trend_summary_to_slack,
     format_qa_report_for_slack,
+    get_slack_client,
     send_to_slack,
     send_via_token,
 )
@@ -431,7 +432,7 @@ def api_connections_slack():
         "text": "CallCoach-AI is connected. Scores and trend summaries will land in this channel.",
     }
     if not send_to_slack(webhook, message):
-        return jsonify({"success": False, "error": "Slack did not accept the test message. Check the webhook and try again."}), 502
+        return jsonify({"success": False, "error": "Slack did not accept the test message. Check that the webhook is still active and try again."}), 400
 
     store.save_setting("slack_webhook", webhook)
     return jsonify({"success": True, "message": "Connected - test message delivered to Slack."})
@@ -439,12 +440,19 @@ def api_connections_slack():
 
 @app.route("/api/connections/slack/test", methods=["POST"])
 def api_connections_slack_test():
-    """Send a test message through the configured Slack webhook."""
-    webhook = _stored_setting("slack_webhook") or os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("SLACK_WEBHOOK")
+    """Send a real test message through whichever Slack path is connected."""
+    token, channel = _stored_setting("slack_bot_token"), _stored_setting("slack_channel")
+    if token and channel:
+        ok, error = send_via_token(token, channel, {"text": "Test from CallCoach-AI - delivery is working."})
+        if ok:
+            return jsonify({"success": True, "message": f"Test message delivered to {channel}."})
+        return jsonify({"success": False, "error": f"Slack rejected the message: {error}"}), 400
+
+    webhook = get_slack_client()
     if not webhook:
         return jsonify({"success": False, "error": "Slack is not connected yet."}), 400
     if not send_to_slack(webhook, {"text": "Test from CallCoach-AI - delivery is working."}):
-        return jsonify({"success": False, "error": "Slack did not accept the message."}), 502
+        return jsonify({"success": False, "error": "Slack did not accept the message - the webhook may be revoked. Reconnect it in the Connect Center."}), 400
     return jsonify({"success": True, "message": "Test message delivered."})
 
 
@@ -1053,7 +1061,7 @@ def api_connections_hubspot():
     try:
         verify_hubspot(token)
     except Exception as exc:  # noqa: BLE001
-        return jsonify({"success": False, "error": str(exc)}), 502
+        return jsonify({"success": False, "error": str(exc)}), 400
     store.save_setting("hubspot_token", token)
     return jsonify({"success": True, "message": "Connected - the token can create tasks."})
 
@@ -1192,7 +1200,7 @@ def api_oauth_slack_channel():
         {"text": "CallCoach-AI connected - scorecards will land in this channel."},
     )
     if not ok:
-        return jsonify({"success": False, "error": f"Slack rejected the message: {error}. Invite the app to the channel and retry."}), 502
+        return jsonify({"success": False, "error": f"Slack rejected the message: {error}. Invite the app to the channel and retry."}), 400
     store.save_setting("slack_channel", channel)
     return jsonify({"success": True, "message": f"Connected to {channel} - test message delivered."})
 
