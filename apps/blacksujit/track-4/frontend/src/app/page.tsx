@@ -194,15 +194,6 @@ export default function Home() {
     <main className="site-shell">
      <Navbar />
 
-     {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-       <div className="demo-banner">
-         <span className="demo-banner__text">
-           Fallback on: if the backend is asleep (free tier), pages show a small &quot;sample preview&quot;
-           label and switch back to live data when it wakes.
-         </span>
-       </div>
-     )}
-
      <section className="d-hero-v2">
         <div className="d-hero-v2-inner">
           <div className="d-hero-v2-copy">

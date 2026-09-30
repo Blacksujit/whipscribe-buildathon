@@ -1362,8 +1362,14 @@ def api_export_trends():
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
-        debug=os.environ.get("FLASK_DEBUG") == "1",
-    )
+    port = int(os.environ.get("PORT", 5000))
+    try:
+        from waitress import serve
+
+        print(f"CallCoach-AI API on http://0.0.0.0:{port} - waitress (production WSGI server)")
+        serve(app, host="0.0.0.0", port=port, threads=8)
+    except ImportError:
+        # Only reached if requirements.txt was not installed; gunicorn is used in
+        # production (Procfile / backend.Dockerfile).
+        print("waitress is missing - install requirements.txt. Falling back to the Flask dev server.")
+        app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
