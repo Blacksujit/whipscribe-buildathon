@@ -892,7 +892,14 @@ def api_analyze_all():
     provider, llm_key, model = get_eval_settings()
     try:
         all_jobs = list_jobs(api_key, limit=100)
-        done_jobs = [j for j in all_jobs if j.get("status") == "done"]
+        if isinstance(all_jobs, dict):
+            all_jobs = all_jobs.get("jobs", [])
+        done_jobs = [
+            j for j in all_jobs
+            if isinstance(j, dict) and j.get("status") == "done" and (j.get("audio_duration_seconds") or 0) >= 8
+        ]
+        # Longest conversations first: they carry the most signal.
+        done_jobs.sort(key=lambda j: -(j.get("audio_duration_seconds") or 0))
         evaluated = 0
         for job in done_jobs[:20]:
             jid = job.get("job_id")
