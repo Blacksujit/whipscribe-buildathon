@@ -134,38 +134,27 @@ python -m src.realtime.server --http
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     CallCoach-AI                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Real-Time  │  │   Post-Call  │  │   Cross-Call │      │
-│  │   Coaching   │  │   Analysis   │  │ Intelligence │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│         │                  │                  │              │
-│         └──────────────────┼──────────────────┘              │
-│                            │                                 │
-│                   ┌────────┴────────┐                        │
-│                   │  Coaching Engine │                        │
-│                   └────────┬────────┘                        │
-│                            │                                 │
-│         ┌──────────────────┼──────────────────┐              │
-│         │                  │                  │              │
-│  ┌──────┴──────┐  ┌───────┴───────┐  ┌──────┴──────┐       │
-│  │     CRM     │  │  Follow-Up    │  │   Custom    │       │
-│  │ Integration │  │    Emails     │  │   Rubrics   │       │
-│  └─────────────┘  └───────────────┘  └─────────────┘       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+CallCoach-AI is two processes that share one pipeline: a **Next.js dashboard**
+(the UI) and a **Flask API** (everything else). The API ingests audio through
+WhipScribe, scores it with four LLM agents, stores the result in SQLite, and
+exposes three products over the same data - Spotter, Radar, and Griot.
+
+
+![Arcitecture](./assets/mermaid-diagram%20(2).png)
+
+**The flow for one recording:** upload (or paste a link) → WhipScribe
+transcribes → the four agents score it → the result is stored with its action
+items and WhipScribe's own summary/quotes → the scorecard is auto-delivered to
+every connected tool. Spotter works before any of that, on live utterances;
+Radar and Griot read the stored library afterward.
 
 ---
 
 ## Test Results
 
 ```
-52 tests passed, 0 failed
+106 assertions passed, 0 failed
+(test_complete.py: 59 · test_comprehensive.py: 47)
 
 Features tested:
 - Real-Time Coaching
@@ -181,6 +170,8 @@ Features tested:
 - AI Coaching Assistant
 - Export Functionality
 - MCP Integration
+- Conversation Dynamics
+- Commitment Ledger
 ```
 
 ---

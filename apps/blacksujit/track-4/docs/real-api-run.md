@@ -34,7 +34,7 @@ extracted action items.
 - The WhipScribe API path is real: upload, poll, timestamped transcript; the per-job view
   links resolve on whipscribe.com.
 - The evaluation runs on the real transcript, not sample data ("Evaluation complete (LLM)").
-- The offline suites (`test_comprehensive.py`, `test_complete.py` — 103 assertions) cover the
+- The offline suites (`test_comprehensive.py`, `test_complete.py` — 106 assertions) cover the
   rest deterministically without keys.
 
 ## Live backend evaluations (same day)

@@ -1,8 +1,8 @@
 # Track 4 - CallCoach-AI x WhipScribe Workflow
 
-> **What changed since the last review** (reviewed 2026-09-29 01:45 UTC):
+> **What changed since the last review** (reviewed 2026-10-01):
 >
-> - **Deeper reads on every call (new).** The four agents now come with: **conversation dynamics** (talk balance, overlapping starts, thinking pauses, questions per speaker - computed from real timestamps), **WhipScribe's own read** (the platform's summary, named quotes and topics shown next to ours), a **cross-call commitment ledger** (every promise, deduplicated, aged, with repeats flagged), a **custom-rubric rescore** (reweight the four categories and rescore instantly), and **Markdown export**. 110 test assertions pass.
+> - **Deeper reads on every call (new).** The four agents now come with: **conversation dynamics** (talk balance, overlapping starts, thinking pauses, questions per speaker - computed from real timestamps), **WhipScribe's own read** (the platform's summary, named quotes and topics shown next to ours), a **cross-call commitment ledger** (every promise, deduplicated, aged, with repeats flagged), a **custom-rubric rescore** (reweight the four categories and rescore instantly), and **Markdown export**. 106 test assertions pass.
 > - **One-click delivery to your tools.** The Connect Center connects Slack (OAuth or one paste), Notion (OAuth or one paste), and HubSpot (verified token). Each connection is proven with a real message or page on the spot, then every new scorecard is delivered automatically - score, quotes with timestamps, commitments, report link. Every attempt is logged and any report can be re-sent from its page.
 > - **A real sample call in one click.** The hero runs bundled 26-second audio through the live WhipScribe API end to end - transcription, four agents, delivery.
 > - **Griot - the grounded companion.** A floating chat on every page that answers from your real call library: "What did we commit to across calls?" Every claim comes back with a call, a speaker, and the exact second. It calls a real endpoint (`POST /api/ask`) that reads the stored evaluations and answers with the configured LLM. No canned Q&A - the placeholder assistant page was deleted.
@@ -10,7 +10,7 @@
 > - **The live dashboard always has real data.** The repo ships `seed_evaluations.db` - 8 real calls (real WhipScribe transcripts, LLM-scored) restored automatically when the working database is empty. No empty dashboard on first load, no mock rows.
 > - **Unscored recordings are now actionable.** Opening a recording with no stored evaluation offers "Run the 4-agent analysis" instead of a sample report.
 > - **Sample-data fallback is labeled.** When the free-tier backend sleeps, a chip shows "Sample preview - backend unreachable" instead of silently swapping in sample data.
-> - Earlier fixes still stand: deployment fixed (the live URL was 404, now it serves the dashboard), 103 test assertions passing, fake links removed.
+> - Earlier fixes still stand: deployment fixed (the live URL was 404, now it serves the dashboard), fake links removed.
 
 ## Track record
 
@@ -75,10 +75,10 @@ python app.py
 python -m src.main --sample  # uses bundled sample transcript, no keys needed
 ```
 
-### End-to-end tests (103 assertions, all passing)
+### End-to-end tests (106 assertions, all passing)
 ```bash
-python test_comprehensive.py   # 51 passed — pipeline, cross-call, coaching, MCP
-python test_complete.py        # 52 passed — all 13 features end to end
+python test_comprehensive.py   # 47 passed — pipeline, cross-call, coaching, MCP
+python test_complete.py        # 59 passed — all 13 features end to end
 ```
 
 ## Screenshots (live, real data)
@@ -126,8 +126,8 @@ Beyond the core scorecard, these are built and tested:
 - Speaker-level risk scoring
 - Slack and Notion integrations with live validation
 - MCP server for assistant integration (4 tools)
-- Full Next.js dashboard (6 routes + the Griot widget on every page) deployed to Vercel; when the backend is asleep it shows labeled sample data instead of empty pages
-- 103 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
+- Full Next.js dashboard (8 routes + the Griot widget on every page) deployed to Vercel; when the backend is asleep it shows labeled sample data instead of empty pages
+- 106 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
 - Real WhipScribe API run (2026-09-30): upload → poll → 7-segment transcript → LLM evaluation, job `7ebaeca0-9076-4c14-97be-a8b1948c8482` — evidence in [`docs/real-api-run.md`](docs/real-api-run.md)
 - Deployed backend evaluated **8 real recordings** (real WhipScribe transcripts, LLM-scored, shipped as `seed_evaluations.db`) - the live dashboard renders the real score chart, coaching insights, and speaker analysis: [`docs/screenshots/live-trends.png`](docs/screenshots/live-trends.png), [`docs/screenshots/live-report.png`](docs/screenshots/live-report.png)
 
@@ -168,7 +168,7 @@ Beyond the core scorecard, these are built and tested:
 - [x] No invented API behaviour — every WhipScribe API call matches the docs or a real response (verified via `e2e_test.py`)
 
 ### Finishing
-- [x] Full flow works end to end from clean install (`python test_complete.py` — 52 tests pass; `test_comprehensive.py` — 51 more)
+- [x] Full flow works end to end from clean install (`python test_complete.py` — 59 tests pass; `test_comprehensive.py` — 47 more)
 - [x] Someone other than me tested it during Track 1 review — incorporated their feedback on the upload UX copy
 - [x] README says what does not work (section 4 above)
 - [x] Install and run instructions work on a non-Windows machine (Render deploy configured with `render.yaml`, Vercel config in `vercel.json`)
