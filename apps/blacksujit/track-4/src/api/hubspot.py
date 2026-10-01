@@ -30,14 +30,22 @@ def verify(token: str) -> Dict[str, Any]:
         )
     except requests.RequestException as exc:
         raise RuntimeError(f"Could not reach HubSpot: {exc}") from exc
-    if resp.status_code in (401, 403):
+
+    if resp.status_code == 401:
         raise RuntimeError(
-            "HubSpot rejected the token. Create a private app with the "
-            "crm.objects.tasks read+write scope and paste its token."
+            "HubSpot rejected the token (401). Copy the access token again from the private app's "
+            "Auth tab - it may have been rotated."
+        )
+    if resp.status_code == 403:
+        raise RuntimeError(
+            "The token is valid, but this private app has no Tasks scope yet. In HubSpot open "
+            "Settings (gear) -> Integrations -> Private Apps (not Projects) -> your app -> Scopes "
+            "tab -> search 'tasks' -> tick Tasks Read and Write -> Save. The token stays the same, "
+            "so just press Connect again once it is saved."
         )
     if resp.status_code >= 400:
         raise RuntimeError(
-            f"HubSpot rejected the token (HTTP {resp.status_code}). Check that it is a "
+            f"HubSpot rejected the request (HTTP {resp.status_code}). Check that the token is a "
             "private-app token with the crm.objects.tasks scope."
         )
     return resp.json()
