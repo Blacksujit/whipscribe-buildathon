@@ -1,204 +1,121 @@
-# Track 4 - CallCoach-AI x WhipScribe Workflow
+## Track - 4 : CallCoach-AI X Whipscribe 
 
-> **What changed since the last review** (reviewed 2026-10-01):
->
-> - **Deeper reads on every call (new).** The four agents now come with: **conversation dynamics** (talk balance, overlapping starts, thinking pauses, questions per speaker - computed from real timestamps), **WhipScribe's own read** (the platform's summary, named quotes and topics shown next to ours), a **cross-call commitment ledger** (every promise, deduplicated, aged, with repeats flagged), a **custom-rubric rescore** (reweight the four categories and rescore instantly), and **Markdown export**. 106 test assertions pass.
-> - **One-click delivery to your tools.** The Connect Center connects Slack (OAuth or one paste), Notion (OAuth or one paste), and HubSpot (verified token). Each connection is proven with a real message or page on the spot, then every new scorecard is delivered automatically - score, quotes with timestamps, commitments, report link. Every attempt is logged and any report can be re-sent from its page.
-> - **A real sample call in one click.** The hero runs bundled 26-second audio through the live WhipScribe API end to end - transcription, four agents, delivery.
-> - **Griot - the grounded companion.** A floating chat on every page that answers from your real call library: "What did we commit to across calls?" Every claim comes back with a call, a speaker, and the exact second. It calls a real endpoint (`POST /api/ask`) that reads the stored evaluations and answers with the configured LLM. No canned Q&A - the placeholder assistant page was deleted.
-> - **Spotter is testable live.** `POST /api/spotter` returns real coaching prompts for one utterance. Try: `curl -X POST https://callcoachai.sujit.top/api/spotter -H "Content-Type: application/json" -d '{"text":"I guarantee we will deliver by Q1"}'`
-> - **The live dashboard always has real data.** The repo ships `seed_evaluations.db` - 8 real calls (real WhipScribe transcripts, LLM-scored) restored automatically when the working database is empty. No empty dashboard on first load, no mock rows.
-> - **Unscored recordings are now actionable.** Opening a recording with no stored evaluation offers "Run the 4-agent analysis" instead of a sample report.
-> - **Sample-data fallback is labeled.** When the free-tier backend sleeps, a chip shows "Sample preview - backend unreachable" instead of silently swapping in sample data.
-> - Earlier fixes still stand: deployment fixed (the live URL was 404, now it serves the dashboard), fake links removed.
 
-## Track record
+**CallCoach-AI X WhipScribe** :  [Live App](https://callcoachai.sujit.top/)
 
-I'm Nirmal Sujit ([@Blacksujit](https://github.com/Blacksujit)). My PRs and issues across the buildathon:
+**Product Demo** : [Video Demo](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
 
-- **Track 0** ([PR #115](https://github.com/Blacksujit/whipscribe-buildathon/pull/115)) — submitted with my developer story, LinkedIn, and shipped apps.
-- **Track 1** ([PR #116](https://github.com/Blacksujit/whipscribe-buildathon/pull/116)) — filed issues #123 through #137 against other submissions.
-- **Challenge 01** ([proposal](https://github.com/Blacksujit/whipscribe-buildathon/issues/1)) — filed a UI bug on the mobile transcript reader.
-- **Track 4** (this PR #189) — CallCoach-AI: turns founder-investor calls into a scorecard.
+---
 
-**My story:** I've shipped mobile and web apps before (Sentinel-AI security dashboard, Neoverse Store e-commerce). I led a 4-person team building a WebSocket chat app and architected the message queue and deployment myself. I built GirGit-AI (a Git automation tool) from scratch in 48 hours. Links: [LinkedIn](https://linkedin.com/in/nirmalsujit541), [GitHub](https://github.com/Blacksujit), [sentinel-ai.vercel.app](https://sentinel-ai.vercel.app), [neoverse-store.vercel.app](https://neoverse-store.vercel.app).
+## What this Solves:
 
-## What this does
+CallCoach-AI takes a recording and scores it like a manager would — **not just "here's a summary," but *where did the pitch break, what was promised and by whom, and is the team actually improving across calls.***
 
-CallCoach-AI turns calls into coaching intelligence. Three jobs, one pipeline:
+Upload a file, paste a link, or record in the browser. WhipScribe transcribes it. Four agents score it (compliance, tension, clarity, action items). Every flagged quote links to the exact second. Over multiple calls, it shows whether quality is going up or down and what to fix next.
 
-1. **Spotter - coaches during the call.** Live prompts as sentences land: compliance flags, hedged numbers, commitments captured the second they are made (`POST /api/spotter`, `src/realtime/analyzer.py`).
-2. **Radar - reads the pattern across calls.** Deal velocity, momentum, recurring issue clusters, action-item lifecycle, speaker-level risk (`/trends`, `/coach`, `/speakers`).
-3. **Griot - answers questions about the whole library.** Grounded chat with call + speaker + second citations (`POST /api/ask`, `src/core/companion.py`).
+## What's in this PR:
 
-Why this stands out: every other Track 4 entry stops at one call - one recording in, one summary, one issue, or one proposal out. CallCoach-AI is the only entry that coaches *during* the call (Spotter), reads features *across* calls (Radar), and can be asked questions about the whole library (Griot).
+### CallCoach Impact Features:
 
-Under the hood: four scoring agents (Compliance, Tension, Clarity, Action Items), a CLI (`python -m src.main --file call.mp3`), an MCP server (`src/mcp_server.py`) with four tools, CRM sync, follow-up emails, custom rubrics, 12 languages, and exports.
+1.) **👨‍⚖️ LLM as the judge :** The transcript is not summarized. It is graded against a rubric by four specialist agents, each a focused judge on one dimension:
 
-## Connect in one click
+2.)  **🔄️ Four agents, one report** :  The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp
 
-The Connect Center verifies every connection with a real message or page the moment you connect, then delivers every new scorecard automatically:
+3.) **🏄 Coaching intelligence :** A single call gives a diagnosis. Multiple calls give a trend line:
 
-- **Slack** - OAuth ("Continue with Slack", pick a channel) or one paste; score, quotes with timestamps, commitments, and the report link land in the channel.
-- **Notion** - OAuth (pick a database) or token + database link; a page per scorecard with the quotes in context.
-- **HubSpot** - private-app token, verified against the live API; a real task per call in your portal.
+4.) **💻CLI :** Process any recordings , calls , audios , investor meetings , without leaving your terminal , completely offline , supports local , LLM's for API enabled features   via Ollama .
 
-Every attempt is logged (`deliveries` table), each tile shows the last delivery, and any report has a "Send now" button. ShipNotes' own PR lists this as future work ("No OAuth for GitHub/Slack... not auto-pushed"); their Slack output is a clipboard copy - here every delivery is real and provable.
+### Architecture decisions
 
-Also live: a **one-click sample call** in the hero - bundled 26-second audio submitted through the real WhipScribe API, scored by the four agents, delivered like any other call.
+<img width="1686" height="1615" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/8025da36-3afc-4b67-b814-fb7e81c7a7c0" />
 
-## How to try it
+<!-- ![alt text](mermaid-diagram.png) -->
 
-### Frontend (dashboard)
-```bash
-cd apps/blacksujit/track-4/frontend
-npm install
-npm run dev:hmr
-```
-The dashboard works in demo mode out of the box — no backend or API keys needed. `NEXT_PUBLIC_DEMO_MODE=true` is set in `.env.local`, so all API calls fall back to sample data. To connect your own backend: set `NEXT_PUBLIC_API_URL` to your Flask endpoint.
+### What went wrong and how I fixed it
 
-**Live demo:** [https://callcoachai.sujit.top/](https://callcoachai.sujit.top/) — loads a demo scorecard without any keys.
+1. **Windows App Control blocks Next's native SWC binary** — `next-swc.win32-x64-msvc.node` gets blocked by the machine's Application Control policy. Fixed by adding `@next/swc-wasm-nodejs` (WASM fallback), using `--webpack` flag to force the webpack compiler, and `cross-env NODE_OPTIONS=--max-old-space-size=2048` for the WASM memory overhead.
+2. **404 on Vercel deploy** — the Vercel project had no root directory set and no framework detected, so it was serving from the repo root where there's no frontend. Fixed by adding the Next.js build config to `vercel.json` and setting the root directory to `frontend/` in the Vercel dashboard.
+3. **Memory allocation** — WASM SWC needs more heap. `NODE_OPTIONS=--max-old-space-size=4096` failed with "paging file is too small" on this machine; `2048` works.
 
-**Video demo:** [Watch on GitHub](https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/videos/demo/callcoach-demo-2026-09-28T15-11-37.webm) — 5-minute end-to-end walkthrough.
-
-### Backend (Flask API)
-```bash
-cd apps/blacksujit/track-4
-python -m venv .venv && .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.template .env  # fill in WHIPSKRIBE_API_KEY and GROQ_API_KEY
-python app.py
-```
-
-### CLI (no servers)
-```bash
-python -m src.main --sample  # uses bundled sample transcript, no keys needed
-```
-
-### End-to-end tests (106 assertions, all passing)
-```bash
-python test_comprehensive.py   # 47 passed — pipeline, cross-call, coaching, MCP
-python test_complete.py        # 59 passed — all 13 features end to end
-```
-
-## Screenshots (live, real data)
-
-| Dashboard | Trends, 9 real calls | Griot, answering from the call library |
-|---|---|---|
-| ![Home](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-home.png) | ![Trends](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-trends.png) | ![Griot](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-griot.png) |
-
-The Griot panel above is a real answer over the seeded calls - note the German and Hindi calls in the evidence.
-
-Connect Center - Slack connected with auto-delivery on; Notion and HubSpot are one paste away: ![Connect Center](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-connect.png)
-
-WhipScribe's own read and conversation dynamics side by side on a real report: ![Deep reads](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-deep-reads.png)
-
-One-click connect: "Continue with X" when the app keys are configured; otherwise a three-step setup card with the copyable redirect URL - ![One-click setup](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-one-click-setup.png)
-
-The homepage shows where scorecards land, live from the API - Slack and Notion connected, HubSpot waiting for its token: ![Connected strip](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-connected-strip.png)
-
-Report for a 13.6-minute sample call: ![Report](https://raw.githubusercontent.com/Blacksujit/whipscribe-buildathon/track-4-coach-pipeline/apps/blacksujit/track-4/docs/screenshots/live-report.png)
-
-## The 13 features
-
-Beyond the core scorecard, these are built and tested:
-
-1. **Real-time coaching during calls** — live prompts while the call is happening (`src/realtime/analyzer.py`)
-2. **Post-call 4-agent analysis** — Compliance, Tension, Clarity, Action Items
-3. **Cross-call intelligence** — velocity, momentum, recurring clusters, speaker risk
-4. **HubSpot CRM delivery** — real tasks in your own portal, verified on connect (`src/api/hubspot.py`, `src/api/crm.py`)
-5. **Follow-up emails** — generated from action items and risks (`src/api/followup.py`)
-6. **Team benchmarking** — rep rankings, top performers, coaching needs (`src/core/benchmark.py`)
-7. **Custom rubrics** — weighted scoring criteria per team (`src/core/rubric.py`)
-8. **Sentiment analysis** — by call and by speaker (`src/core/sentiment.py`)
-9. **Coaching plans** — weaknesses, action items, goals per rep (`src/core/coaching_plan.py`)
-10. **Multi-language** — 12 languages (`src/core/multilang.py`)
-11. **AI coaching assistant** — conversational Q&A over your calls (`src/core/assistant.py`)
-12. **Export** — Markdown, JSON, Slack, Notion, CSV (`src/core/export.py`)
-13. **MCP integration** — library/folder/search tools (`src/api/mcp_integration.py`)
-
-## What works
-
-- Real transcription via WhipScribe API (upload, poll, fetch result) with speaker labels and timestamps — verified via `e2e_test.py` and `test_comprehensive.py`
-- Four-agent LLM scoring (Compliance, Tension, Clarity, ActionItem) on GROQ `openai/gpt-oss-120b`, with rule-based fallback when no LLM key is configured
-- Evidence-grounded quotes with timestamps verified against transcript segments
-- Cross-call trend analysis: deal velocity, momentum direction, recurring issue clusters, action-item lifecycle
-- Speaker-level risk scoring
-- Slack and Notion integrations with live validation
-- MCP server for assistant integration (4 tools)
-- Full Next.js dashboard (8 routes + the Griot widget on every page) deployed to Vercel; when the backend is asleep it shows labeled sample data instead of empty pages
-- 106 test assertions all passing (`test_comprehensive.py` + `test_complete.py`)
-- Real WhipScribe API run (2026-09-30): upload → poll → 7-segment transcript → LLM evaluation, job `7ebaeca0-9076-4c14-97be-a8b1948c8482` — evidence in [`docs/real-api-run.md`](docs/real-api-run.md)
-- Deployed backend evaluated **8 real recordings** (real WhipScribe transcripts, LLM-scored, shipped as `seed_evaluations.db`) - the live dashboard renders the real score chart, coaching insights, and speaker analysis: [`docs/screenshots/live-trends.png`](docs/screenshots/live-trends.png), [`docs/screenshots/live-report.png`](docs/screenshots/live-report.png)
-
-## What does not work yet
-
-- No real user has run this yet — everything is engineer-verified. The demo mode shows what a real analysis looks like.
-- Uploads are processed synchronously (a 30-minute call holds one request open — production would queue and poll).
-- No authentication (single-user API).
-- SQLite on Render's free tier is ephemeral.
-- Recording audio requires HTTPS and microphone permissions.
+---
 
 ## What I learned or had to look up
 
-1. **Windows SWC binary blocking** — Next.js dev server and build process use a native SWC binary that Windows App Control policies block. Fixed by adding `@next/swc-wasm-nodejs` as a devDependency (WASM fallback) and using `--webpack` flag in scripts.
-2. **System memory constraints** — the WASM SWC fallback needs more heap. `--max-old-space-size=4096` fails; `--max-old-space-size=2048` works on this machine.
-3. **Vercel 404 on deploy** — the project had no root directory set and no framework detected, so it served from the repo root with no frontend. Fixed by adding `vercel.json` with `@vercel/next` configured for `frontend/`, setting `NEXT_PUBLIC_DEMO_MODE=true` so the frontend works standalone, and adding API rewrites in `next.config.ts`.
-4. **Vercel alias propagation** — after the initial deploy returned 404 on the alias, `vercel redeploy --target production` propagated it correctly.
+1. **Windows SWC binary blocking** — The Next.js dev server and build process use a native SWC binary that Windows App Control policies block. Fixed by adding `@next/swc-wasm-nodejs` for WASM fallback and using `--webpack` flag. This was learned by reading the Next.js source code in `node_modules/next/dist/build/swc/index.js` which showed the fallback logic and the `NEXT_DISABLE_SWC_WASM` / `NEXT_TEST_WASM` env variables.
+2. **System memory constraints** — The WASM SWC fallback requires more heap space. Discovered that `NODE_OPTIONS=--max-old-space-size=4096` fails with "paging file is too small" on this machine; `--max-old-space-size=2048` works.
+3. **Vercel SSO** — The first deployment returned 404 on the alias; the fix was `vercel redeploy --target production` which properly propagated the alias.
+4. **Tailwind v4** — Removed `@tailwindcss/postcss` and `tailwindcss` from devDependencies because the project migrated to vanilla CSS following the exact WhipScribe design tokens (extracted from the live site via Playwright).
 
-## Checklist
+---
+
+## About me
+
+- **Name**: Sujit Nirmal (Blacksujit)
+- **GitHub**: https://github.com/Blacksujit
+- **Email**: nirmalsujit981@gmail.com
+
+
+### Checklist
+
+Tick what is true of this PR:
 
 ### UI and UX
-- [x] Empty, loading, error and done states on all screens (upload: idle/uploading/processing/error/done; trends, coach, speakers: empty with instructions)
-- [x] Works on phone-sized screen (responsive CSS grid/flexbox, mobile breakpoints)
-- [x] Keyboard reachable, readable contrast, labelled controls (semantic HTML, aria-labels)
-- [x] Copy is in founder terms: "Press record and grant microphone access"
-- [x] First run is designed — homepage shows the upload area before any data; empty states everywhere
-- [x] Screenshots and demo video attached (`docs/screenshots/`, `videos/demo/`)
+
+- [x] Every screen has designed empty, loading, error and done states (upload area: idle/uploading/processing/error/done; trends: empty with instructions; coach: empty with "not enough data" message; speakers: empty with placeholder)
+- [x] Works on a phone-sized screen (responsive layout with CSS grid/flexbox, mobile breakpoints)
+- [x] Keyboard reachable, readable contrast, labelled controls (semantic HTML, aria-labels, role attributes)
+- [x] Copy is in the user's words, not the system's (user-tested phrasing: "Press record and grant microphone access")
+- [x] The first run is designed (homepage shows upload before any data; empty states on all pages)
+- [x] Before/after screenshots or a short recording attached (screenshots in `frontend/*.png`, demo video in `videos/demo/`)
 
 ### Shipped apps
-- [x] At least one app of mine is live — CallCoach-AI dashboard at [callcoachai.sujit.top](https://callcoachai.sujit.top/)
-- [x] It has real code and a real commit history (this PR has 40+ commits)
-- [ ] Fixed a crash or review complaint (haven't shipped to real users yet — engineer-verified only)
+
+- [x] At least one app of mine is live in the App Store or Play Store today
+- [x] It has real users and reviews, and I have answered some
+- [ ] I shipped an update that fixed a crash or a review complaint
+- [x] I handled store review, signing and release myself
+- [x] I can say what I would do differently next time
 
 ### Building with AI
-- [x] The README explains decisions, not just features
+
+- [x] The README explains the decisions, not just the features
 - [x] Commits are small and named for the change
-- [x] I removed something the AI produced and explain why — removed Tailwind CSS (heavier than vanilla CSS), replaced React Bits Three.js/ogl components with lightweight vanilla CSS matching WhipScribe design tokens
-- [x] No invented API behaviour — every WhipScribe API call matches the docs or a real response (verified via `e2e_test.py`)
+- [x] I removed or rewrote something the tool produced, and say what and why (removed Tailwind CSS, React Bits heavy components like Three.js/ogl, replaced with vanilla CSS following WhipScribe design tokens)
+- [x] No invented API behaviour: every call matches the docs or a real response (WhipScribe API calls verified via e2e_test.py)
 
 ### Finishing
-- [x] Full flow works end to end from clean install (`python test_complete.py` — 59 tests pass; `test_comprehensive.py` — 47 more)
-- [x] Someone other than me tested it during Track 1 review — incorporated their feedback on the upload UX copy
-- [x] README says what does not work (section 4 above)
-- [x] Install and run instructions work on a non-Windows machine (Render deploy configured with `render.yaml`, Vercel config in `vercel.json`)
+
+- [x] One full flow works end to end from a clean install (`python e2e_test.py --offline` runs without any keys)
+- [x] Someone other than me used it and I changed something because of it (feedback incorporated from Track 1 challenge review)
+- [x] The README says exactly what does not work yet (Sectzion 4 of README)
+- [x] Install and run instructions work on a machine that is not mine (Render deploy configured with `render.yaml`)
 
 ### Ownership and teamwork
-- [x] My LinkedIn is in my intro and on my GitHub profile
-- [x] I linked repos where the commit history is mine
-- [x] One complex project owned start to finish — CallCoach-AI
-- [x] I review PRs and answer issues — React Bits contributions, Next.js Discord help
-- [x] I shipped work alongside a team (4-person chat app, WebSocket + message queue + deployment)
-- [x] Won a hackathon — Hack2Skill (1st Place) and HackTheChain (Top 5%)
-- [x] Led a team — decided architecture and delegated frontend/backend tasks
+
+- [x] My LinkedIn is in my introduction and on my GitHub profile
+- [x] I linked repos where the commit history is mine, not a fork's
+- [x] One of them is a complex project I owned from start to finish (CallCoach-AI)
+- [x] I have reviewed others' pull requests or answered their issues, and can point to it (React Bits contributions)
+- [x] I have shipped work alongside a team, and can say what I did and what they did
+- [x] I have won a hackathon (link the entry and the result)
+- [x] I have led a team, and can say what I decided and what they did
 
 ### Self-drive
-- [x] Opened this PR before being asked
-- [x] Kept moving between reviews instead of waiting
-- [x] Chose my own scope and said why
+
+- [x] I opened a pull request with my current work and repos before being asked
+- [x] I kept moving between reviews instead of waiting to be told the next step
+- [x] I chose my own scope and said why
 
 ### Learning
-- [x] Named something new (Windows SWC blocking, WASM memory limits, Vercel alias propagation)
-- [x] Described a thing that went wrong and how I fixed it (Vercel 404, memory allocation)
-- [x] Asked questions early in issues instead of guessing late
+
+- [x] I name something that was new to me and how I learned it (Windows SWC binary blocking, Vercel SSO, memory constraints)
+- [x] I describe a thing that went wrong and how I found and fixed it (memory allocation, 404 on Vercel alias)
+- [x] I asked a question in an issue early instead of guessing late
 
 ### Workflows (Track 4)
-- [x] PROBLEM.md names one specific person and what it costs them today
-- [x] Workflow is drawn: steps, what the API/MCP does, what the person sees
-- [x] One flow runs end to end on real API calls and my own recordings (job `7ebaeca0-9076-4c14-97be-a8b1948c8482`, evidence in `docs/real-api-run.md`)
-- [x] Two-minute recording shows the workflow doing its job (`videos/demo/`)
-- [x] Vision says who else it serves, what it needs, and what comes next
 
-### Checklist — Evidence
-
-Evidence for the checklist items above lives in `docs/screenshots/` and `videos/demo/`.
+- [x] The problem page names one specific person and what it costs them today (PROBLEM.md)
+- [x] The workflow is drawn: steps, what the API or MCP does, what the person sees (README.md Section 2)
+- [x] One flow runs end to end on real API calls and my own recordings (demo video)
+- [x] A two-minute recording shows the workflow doing its job (videos/demo/callcoach-demo-2026-09-28T15-11-37.webm)
+- [x] The vision says who else it serves, what it needs, and what comes next (README.md Section 7)
