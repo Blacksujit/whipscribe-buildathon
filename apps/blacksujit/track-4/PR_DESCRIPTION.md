@@ -1,4 +1,4 @@
-## Track - 4 : CallCoach-AI X Whipscribe 
+## Track - 4 : CallCoach-AI X Whipscribe
 
 
 **CallCoach-AI X WhipScribe** :  [Live App](https://callcoachai.sujit.top/)
@@ -18,18 +18,92 @@ Upload a file, paste a link, or record in the browser. WhipScribe transcribes it
 ### CallCoach Impact Features:
 
 1.) **👨‍⚖️ LLM as the judge :** The transcript is not summarized. It is graded against a rubric by four specialist agents, each a focused judge on one dimension:
+   - **Compliance** - was every promise, guarantee, and commitment checked and tracked?
+   - **Tension** - where did the investor hesitate, and what was said right before?
+   - **Clarity** - was the ask clear, the narrative consistent, the numbers concrete?
+   - **Action Items** - what was promised, by whom, and will any of it land?
 
-2.)  **🔄️ Four agents, one report** :  The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp
+2.) **🔄️ Four agents, one report** : The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp. Every quote is verified against a real transcript segment before it is shown - no fabricated evidence, no guessed timestamps.
 
 3.) **🏄 Coaching intelligence :** A single call gives a diagnosis. Multiple calls give a trend line:
+   - Deal velocity and momentum - is the pitch sharpening, or repeating the same flaw?
+   - Recurring issue clusters and action-item closure across calls.
+   - Speaker-level risk, plus a coaching plan and a custom-rubric rescore.
+   - **Spotter** coaches *during* the call and **Griot** answers any question about the whole library with call + speaker + second citations.
 
-4.) **💻CLI :** Process any recordings , calls , audios , investor meetings , without leaving your terminal , completely offline , supports local , LLM's for API enabled features   via Ollama .
+4.) **🔌 One-click Connect Center :** Slack, Notion, and HubSpot with OAuth (or paste) and live verification - a real test message, page, or task is sent the moment you connect. Every new scorecard auto-delivers (score, quotes, commitments, report link), every attempt is logged, and any report can be re-sent.
 
-### Architecture decisions
+5.) **📦 No empty dashboard :** Ships `seed_evaluations.db` - 8 real scored calls restored automatically, plus a one-click 26-second sample call that runs the live WhipScribe API end to end.
 
-<img width="1686" height="1615" alt="mermaid-diagram" src="https://github.com/user-attachments/assets/8025da36-3afc-4b67-b814-fb7e81c7a7c0" />
+6.) **💻 CLI + MCP :** Process any recordings, calls, audios, investor meetings, without leaving your terminal, completely offline - supports local LLMs via Ollama. An MCP server exposes `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, and `export_meeting_report`.
 
-<!-- ![alt text](mermaid-diagram.png) -->
+### Architecture
+
+```mermaid
+flowchart LR
+    U["User"]
+
+    subgraph INPUT["Input Layer"]
+        FILE["Upload file"]
+        URL["Paste link"]
+        REC["Record in-browser"]
+    end
+
+    U --> FILE
+    U --> URL
+    U --> REC
+
+    subgraph FRONTEND["Frontend - Next.js (Vercel)"]
+        PAGES["Dashboard · Live · Trends · Coach · Speakers · Report · Connect Center"]
+        WIDGET["Griot chat (floating, every page)"]
+    end
+
+    FILE --> PAGES
+    URL --> PAGES
+    REC --> PAGES
+    PAGES --> WIDGET
+
+    subgraph BACKEND["Backend - Flask API (Render)"]
+        API["app.py  /api/* routes"]
+        EVAL["evaluator.py - four LLM judges + rule-based fallback"]
+        INSIGHT["compare · metrics · sentiment · dynamics · commitments · rubric"]
+        STORE[("SQLite (evaluations · action_items · settings · deliveries)")]
+        API --> EVAL
+        API --> INSIGHT
+        EVAL --> STORE
+        INSIGHT --> STORE
+    end
+
+    PAGES -->|"HTTP /api/* (rewrite)"| API
+
+    subgraph EXTERNAL["External APIs"]
+        WHIP["WhipScribe API - submit file/URL → poll → transcript + speakers + timestamps + summary · insights · key moments"]
+        GROQ["Groq API (openai/gpt-oss-120b) - LLM-as-a-judge + OpenAI / Anthropic / Ollama alternates"]
+    end
+
+    API -->|"transcribe"| WHIP
+    WHIP -->|"transcript JSON"| EVAL
+    EVAL -->|"grading prompt"| GROQ
+    GROQ -->|"scores + evidence"| EVAL
+
+    subgraph DELIVERY["Delivery Layer"]
+        SLACK["Slack (OAuth or webhook)"]
+        NOTION["Notion (OAuth or token + database)"]
+        HUB["HubSpot (private-app token → tasks)"]
+    end
+
+    EVAL -->|"scorecard"| SLACK
+    EVAL -->|"scorecard"| NOTION
+    EVAL -->|"tasks"| HUB
+
+    subgraph AUX["Other entry points"]
+        CLI["CLI (python -m src.main)"]
+        MCPSRV["MCP server (4 tools)"]
+    end
+
+    CLI --> EVAL
+    MCPSRV --> STORE
+```
 
 ### What went wrong and how I fixed it
 
@@ -87,7 +161,7 @@ Tick what is true of this PR:
 
 - [x] One full flow works end to end from a clean install (`python e2e_test.py --offline` runs without any keys)
 - [x] Someone other than me used it and I changed something because of it (feedback incorporated from Track 1 challenge review)
-- [x] The README says exactly what does not work yet (Sectzion 4 of README)
+- [x] The README says exactly what does not work yet (Section 4 of README)
 - [x] Install and run instructions work on a machine that is not mine (Render deploy configured with `render.yaml`)
 
 ### Ownership and teamwork
