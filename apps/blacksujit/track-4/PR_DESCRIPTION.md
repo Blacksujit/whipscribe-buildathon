@@ -17,15 +17,15 @@ Upload a file, paste a link, or record in the browser. WhipScribe transcribes it
 
 ### CallCoach Impact Features:
 
-1.) **👨‍⚖️ LLM as the judge :** The transcript is not summarized. It is graded against a rubric by four specialist agents, each a focused judge on one dimension:
+1.) **⚖️ LLM as the judge :** The transcript is not summarized. It is graded against a rubric by four specialist agents, each a focused judge on one dimension:
    - **Compliance** - was every promise, guarantee, and commitment checked and tracked?
    - **Tension** - where did the investor hesitate, and what was said right before?
    - **Clarity** - was the ask clear, the narrative consistent, the numbers concrete?
    - **Action Items** - what was promised, by whom, and will any of it land?
 
-2.) **🔄️ Four agents, one report** : The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp. Every quote is verified against a real transcript segment before it is shown - no fabricated evidence, no guessed timestamps.
+2.)  **📊 Four agents, one report** :  The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp. Every quote is verified against a real transcript segment before it is shown - no fabricated evidence, no guessed timestamps.
 
-3.) **🏄 Coaching intelligence :** A single call gives a diagnosis. Multiple calls give a trend line:
+3.) **📈 Coaching intelligence :** A single call gives a diagnosis. Multiple calls give a trend line:
    - Deal velocity and momentum - is the pitch sharpening, or repeating the same flaw?
    - Recurring issue clusters and action-item closure across calls.
    - Speaker-level risk, plus a coaching plan and a custom-rubric rescore.
