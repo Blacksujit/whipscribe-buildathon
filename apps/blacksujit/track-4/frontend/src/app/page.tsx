@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import ConnectedTools from "@/components/ConnectedTools";
 import PageTransition from "@/components/PageTransition";
 import BlurText from "@/components/reactbits/BlurText/BlurText";
 import SpotlightCard from "@/components/reactbits/SpotlightCard/SpotlightCard";
@@ -22,7 +23,7 @@ import {
   GlobeIcon,
   MicIcon,
 } from "@/components/icons";
-import { startUpload, startUrlUpload, getUploadStatus, getJobsWithScores, Job } from "@/lib/api";
+import { startUpload, startUrlUpload, getUploadStatus, getJobsWithScores, runSampleCall, Job } from "@/lib/api";
 
 const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 
@@ -75,6 +76,25 @@ export default function Home() {
   const [fileName, setFileName] = useState("");
   const [recordings, setRecordings] = useState<Array<Job & { score?: number | null }>>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
+  const [sampleBusy, setSampleBusy] = useState(false);
+
+  async function handleSample() {
+    if (sampleBusy) return;
+    setSampleBusy(true);
+    const started = await runSampleCall();
+    setSampleBusy(false);
+    if (!started.success || !started.job_id) {
+      setStage("error");
+      setStatusMessage(started.error || "Could not start the sample run.");
+      return;
+    }
+    const displayName = "Sample call - Sujit's intro (26s)";
+    setFileName(displayName);
+    setUploadScore(null);
+    setStatusMessage("WhipScribe is transcribing the sample call.");
+    setStage("transcribing");
+    runPipeline(started.job_id, displayName);
+  }
 
   useEffect(() => {
     async function loadRecordings() {
@@ -173,9 +193,9 @@ export default function Home() {
   return (
     <PageTransition>
     <main className="site-shell">
-      <Navbar />
+     <Navbar />
 
-      <section className="d-hero-v2">
+     <section className="d-hero-v2">
         <div className="d-hero-v2-inner">
           <div className="d-hero-v2-copy">
             <h1 className="d-hero-v2-h1 d-hero-v2-h1-sm" style={{ display: "block" }}>
@@ -218,6 +238,19 @@ export default function Home() {
             onReset={handleReset}
           />
 
+          <motion.p
+            className="hero-sample"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ ...springReveal, delay: 0.5 }}
+          >
+            No recording handy?{" "}
+            <button type="button" className="link-btn" disabled={sampleBusy} onClick={handleSample}>
+              {sampleBusy ? "Starting..." : "Run a real 26-second sample call"}
+            </button>{" "}
+            - real transcription and four agents, about 30 seconds.
+          </motion.p>
+
           <motion.div
             className="d-hero-trust"
             initial={{ opacity: 0, y: 20 }}
@@ -246,6 +279,8 @@ export default function Home() {
         </div>
       </section>
 
+      <ConnectedTools />
+
       {/* The four agents */}
       <section className="section">
         <div className="container-wide">
@@ -271,6 +306,63 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Three pillars */}
+      <section className="section container-wide">
+        <AnimatedContent>
+          <p className="section-label">What this does</p>
+          <h2>Spotter, Radar, and Griot.</h2>
+          <p className="body-muted">
+            Three jobs, one pipeline: coach the call while it happens, read the pattern across calls,
+            and answer any question about what was said - with the quotes to prove it.
+          </p>
+        </AnimatedContent>
+        <div className="pillar-grid">
+          <SpotlightCard className="pillar-card pillar-card-spotter">
+            <p className="pillar-kicker">During the call</p>
+            <h3>Spotter</h3>
+            <p>
+              Live coaching prompts as sentences land: compliance flags, hedged numbers, commitments
+              captured the second they are made.
+            </p>
+          </SpotlightCard>
+          <SpotlightCard className="pillar-card pillar-card-radar">
+            <p className="pillar-kicker">Across calls</p>
+            <h3>Radar</h3>
+            <p>
+              Deal velocity, momentum, recurring issue clusters, action-item lifecycle, and speaker-level
+              risk - read from every scored call you have.
+            </p>
+            <Link href="/trends" className="pillar-link">Open Radar</Link>
+          </SpotlightCard>
+          <SpotlightCard className="pillar-card pillar-card-griot">
+            <p className="pillar-kicker">Ask anything</p>
+            <h3>Griot</h3>
+            <p>
+              Your call library, answering questions. Every claim comes back with a call, a speaker, and
+              the exact second.
+            </p>
+            <button
+              type="button"
+              className="pillar-link pillar-link-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent("griot:open"))}
+            >
+              Ask Griot
+            </button>
+          </SpotlightCard>
+        </div>
+        <p className="pillar-foot">
+          Under the hood: CRM sync, follow-up emails, team benchmarking, custom rubrics, sentiment
+          trends, 12 languages, export formats, and an MCP server - 103 test assertions, all passing.{" "}
+          <a
+            href="https://github.com/Blacksujit/whipscribe-buildathon/blob/track-4-coach-pipeline/apps/blacksujit/track-4/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            See all of it
+          </a>
+        </p>
       </section>
 
       {/* Library */}

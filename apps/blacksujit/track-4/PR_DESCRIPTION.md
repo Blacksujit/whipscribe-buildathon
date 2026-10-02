@@ -1,111 +1,115 @@
-## Tracks
+## Track - 4 : CallCoach-AI X Whipscribe
 
-**Track** (0: my current work and repos / 1: UI fix / 2: desktop app / 3: Drive, bulk upload, search / 4: workflow)
 
-Track 0: [Blacksujit](https://github.com/Blacksujit) · [LinkedIn](https://linkedin.com/in/nirmalsujit541)
+**CallCoach-AI X WhipScribe** :  [Live App](https://callcoachai.sujit.top/)
 
-Track 1: UI bug found on mobile transcript reader — filed in Challenge 01 proposal
-
-Track 4: **This PR** — CallCoach-AI x WhipScribe workflow
+**Product Demo** : [Video Demo](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
 
 ---
 
-## What this does
+## What this Solves:
 
-**CallCoach-AI** is a Track 4 entry for the WhipScribe Buildathon. It turns every founder-investor call into a scorecard: upload a recording (or paste a link, or record in-browser), WhipScribe transcribes it with speaker labels and timestamps, and four specialized AI agents score it on Compliance, Tension, Clarity, and Action Items. Every flagged quote links to the exact second in the recording.
+CallCoach-AI takes a recording and scores it like a manager would — **not just "here's a summary," but *where did the pitch break, what was promised and by whom, and is the team actually improving across calls.***
 
-Across calls: deal velocity trends, momentum direction, recurring issue clusters, action-item lifecycle, speaker-level risk patterns, and coaching recommendations — all evidence-backed with timestamp links.
+Upload a file, paste a link, or record in the browser. WhipScribe transcribes it. Four agents score it (compliance, tension, clarity, action items). Every flagged quote links to the exact second. Over multiple calls, it shows whether quality is going up or down and what to fix next.
 
-### Key features shipped in this PR
+## What's in this PR:
 
-1. **Dashboard** (Next.js 16, webpack) with 3-tab upload area: File upload (drag/drop, mp3/wav/m4a/mp4/mov/webm, up to 5 GB), Paste link (YouTube, TikTok, Vimeo, Google Drive, Dropbox), and Record audio (browser-based, webm, 12-hour max)
-2. **Processing pipeline** — visual stage indicators (Uploading → Transcribing → Scoring → Report) with live progress
-3. **Per-call report** — overall score, four category scores with evidence dossier, every flagged quote with speaker + timestamp + 30-second context, primary risk, and a "Listen to this moment" link
-4. **Trends page** — deal velocity over time, momentum direction, category score breakdown across all calls
-5. **Coach page** — prescriptive recommendations tied to exact quotes and timestamps, recurring issue clusters
-6. **Speakers page** — speaker-level risk scoring, attribution of issues to specific participants, high-risk alerts
-7. **Connections page** — manage WhipScribe API key, GROQ/LLM provider, Slack webhook, and Notion integration with live validation (test Slack webhook, test Notion database read)
-8. **MCP server** (`src/mcp_server.py`) exposing four tools: `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, `export_meeting_report`
-9. **CLI** (`python -m src.main --file call.mp3`) for the same pipeline without servers
+### CallCoach Impact Features:
 
-### Architecture decisions
+1.) **⚖️ LLM as the judge :** The transcript is not summarized. It is graded against a rubric by four specialist agents, each a focused judge on one dimension:
+   - **Compliance** - was every promise, guarantee, and commitment checked and tracked?
+   - **Tension** - where did the investor hesitate, and what was said right before?
+   - **Clarity** - was the ask clear, the narrative consistent, the numbers concrete?
+   - **Action Items** - what was promised, by whom, and will any of it land?
 
-- **Frontend**: Next.js 16 with React Bits animations (BlurText, ShinyText, SpotlightCard, AnimatedContent, CountUp), vanilla CSS (Tailwind removed for lighter build footprint), webpack compiler (Turbopack native binaries blocked by Windows App Control — see SWC fix below)
-- **Backend**: Flask JSON API on port 5000, SQLite for persistence, gunicorn for production
-- **LLM**: GROQ `openai/gpt-oss-120b` for agent scoring, with rule-based fallback when no LLM key is configured
-- **Deployment**: Frontend deployed to Vercel at https://callcoach-ai-dashboard.vercel.app · Backend configured for Render (`render.yaml`)
+2.)  **📊 Four agents, one report** :  The four scores fold into a single scorecard: an overall number, four category bars, the one primary risk (the issue that cost the most points), and every flagged quote with its speaker and timestamp. Every quote is verified against a real transcript segment before it is shown - no fabricated evidence, no guessed timestamps.
 
-### SWC native binary fix
+3.) **📈 Coaching intelligence :** A single call gives a diagnosis. Multiple calls give a trend line:
+   - Deal velocity and momentum - is the pitch sharpening, or repeating the same flaw?
+   - Recurring issue clusters and action-item closure across calls.
+   - Speaker-level risk, plus a coaching plan and a custom-rubric rescore.
+   - **Spotter** coaches *during* the call and **Griot** answers any question about the whole library with call + speaker + second citations.
 
-This machine runs Windows with an Application Control policy that blocks `next-swc.win32-x64-msvc.node`. The fix:
+4.) **🔌 One-click Connect Center :** Slack, Notion, and HubSpot with OAuth (or paste) and live verification - a real test message, page, or task is sent the moment you connect. Every new scorecard auto-delivers (score, quotes, commitments, report link), every attempt is logged, and any report can be re-sent.
 
-1. Added `@next/swc-wasm-nodejs` as a `devDependency` — Next.js falls back to WASM bindings automatically
-2. Scripts use `next dev --webpack` / `next build --webpack` to force the webpack compiler (bypasses Turbopack's stricter SWC requirement)
-3. `cross-env NODE_OPTIONS=--max-old-space-size=2048` to handle WASM's higher memory footprint
-4. `NEXT_TELEMETRY_DISABLED=1` in `.env.local`
+5.) **📦 No empty dashboard :** Ships `seed_evaluations.db` - 8 real scored calls restored automatically, plus a one-click 26-second sample call that runs the live WhipScribe API end to end.
 
----
+6.) **💻 CLI + MCP :** Process any recordings, calls, audios, investor meetings, without leaving your terminal, completely offline - supports local LLMs via Ollama. An MCP server exposes `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, and `export_meeting_report`.
 
-## How to try it
+### Architecture
 
-### Frontend (Next.js dashboard)
+```mermaid
+flowchart LR
+    U["User"]
 
-```bash
-cd apps/blacksujit/track-4/frontend
-npm install
-# .env.local should contain:
-# NEXT_PUBLIC_API_URL=http://localhost:5000
-npm run dev:hmr    # dev with webpack HMR
-# or
-npm run preview    # build + start
+    subgraph INPUT["Input Layer"]
+        FILE["Upload file"]
+        URL["Paste link"]
+        REC["Record in-browser"]
+    end
+
+    U --> FILE
+    U --> URL
+    U --> REC
+
+    subgraph FRONTEND["Frontend - Next.js (Vercel)"]
+        PAGES["Dashboard · Live · Trends · Coach · Speakers · Report · Connect Center"]
+        WIDGET["Griot chat (floating, every page)"]
+    end
+
+    FILE --> PAGES
+    URL --> PAGES
+    REC --> PAGES
+    PAGES --> WIDGET
+
+    subgraph BACKEND["Backend - Flask API (Render)"]
+        API["app.py  /api/* routes"]
+        EVAL["evaluator.py - four LLM judges + rule-based fallback"]
+        INSIGHT["compare · metrics · sentiment · dynamics · commitments · rubric"]
+        STORE[("SQLite (evaluations · action_items · settings · deliveries)")]
+        API --> EVAL
+        API --> INSIGHT
+        EVAL --> STORE
+        INSIGHT --> STORE
+    end
+
+    PAGES -->|"HTTP /api/* (rewrite)"| API
+
+    subgraph EXTERNAL["External APIs"]
+        WHIP["WhipScribe API - submit file/URL → poll → transcript + speakers + timestamps + summary · insights · key moments"]
+        GROQ["Groq API (openai/gpt-oss-120b) - LLM-as-a-judge + OpenAI / Anthropic / Ollama alternates"]
+    end
+
+    API -->|"transcribe"| WHIP
+    WHIP -->|"transcript JSON"| EVAL
+    EVAL -->|"grading prompt"| GROQ
+    GROQ -->|"scores + evidence"| EVAL
+
+    subgraph DELIVERY["Delivery Layer"]
+        SLACK["Slack (OAuth or webhook)"]
+        NOTION["Notion (OAuth or token + database)"]
+        HUB["HubSpot (private-app token → tasks)"]
+    end
+
+    EVAL -->|"scorecard"| SLACK
+    EVAL -->|"scorecard"| NOTION
+    EVAL -->|"tasks"| HUB
+
+    subgraph AUX["Other entry points"]
+        CLI["CLI (python -m src.main)"]
+        MCPSRV["MCP server (4 tools)"]
+    end
+
+    CLI --> EVAL
+    MCPSRV --> STORE
 ```
 
-### Backend (Flask JSON API)
+### What went wrong and how I fixed it
 
-```bash
-cd apps/blacksujit/track-4
-python -m venv .venv && .venv\Scripts\activate  # Windows
-source .venv/bin/activate                        # macOS/Linux
-pip install -r requirements.txt
-cp .env.template .env  # fill in WHIPSKRIBE_API_KEY and GROQ_API_KEY
-python app.py
-```
-
-### CLI (no servers)
-
-```bash
-python -m src.main --sample  # uses bundled sample transcript, no keys needed
-```
-
-### End-to-end test
-
-```bash
-python e2e_test.py --offline  # sample transcript, no keys needed
-```
-
----
-
-## What works, what does not yet
-
-**Works:**
-- Real transcription via WhipScribe API (upload, poll, fetch result) with speaker labels and timestamps
-- Four-agent LLM scoring (Compliance, Tension, Clarity, ActionItem) on GROQ, with rule-based fallback
-- Evidence-grounded quotes with timestamps verified against transcript segments
-- Cross-call intelligence: trends, velocity, momentum, recurring issues
-- Speaker-level risk scoring
-- Slack and Notion integrations with live validation
-- MCP server for assistant integration
-- Full dashboard deployed to Vercel
-- End-to-end test with sample transcript (offline mode)
-- Production build verified on Vercel (all 8 routes prerendered successfully)
-
-**Does not work yet:**
-- No real user has run it yet — everything is engineer-verified
-- Uploads are processed synchronously (a 30-minute call holds one request open; production would queue and poll)
-- No authentication (single-user API)
-- SQLite on Render's free tier is ephemeral
-- Dashboard requires a running backend (or the WhipScribe + GROQ keys) to function fully
-- Recording audio requires HTTPS and microphone permissions
+1. **Windows App Control blocks Next's native SWC binary** — `next-swc.win32-x64-msvc.node` gets blocked by the machine's Application Control policy. Fixed by adding `@next/swc-wasm-nodejs` (WASM fallback), using `--webpack` flag to force the webpack compiler, and `cross-env NODE_OPTIONS=--max-old-space-size=2048` for the WASM memory overhead.
+2. **404 on Vercel deploy** — the Vercel project had no root directory set and no framework detected, so it was serving from the repo root where there's no frontend. Fixed by adding the Next.js build config to `vercel.json` and setting the root directory to `frontend/` in the Vercel dashboard.
+3. **Memory allocation** — WASM SWC needs more heap. `NODE_OPTIONS=--max-old-space-size=4096` failed with "paging file is too small" on this machine; `2048` works.
 
 ---
 
@@ -120,23 +124,12 @@ python e2e_test.py --offline  # sample transcript, no keys needed
 
 ## About me
 
-- **Name**: Nirmal Sujit (Blacksujit)
-- **LinkedIn**: https://linkedin.com/in/nirmalsujit541
+- **Name**: Sujit Nirmal (Blacksujit)
 - **GitHub**: https://github.com/Blacksujit
-- **Email**: nirmalsujit541@gmail.com
+- **Email**: nirmalsujit981@gmail.com
 
-### Track record
 
-- **Shipped apps**: [Sentinel-AI](https://sentinel-ai.vercel.app) (AI security monitoring tool), [Neoverse Store](https://neoverse-store.vercel.app) (React + Three.js e-commerce)
-- **Hackathon wins**: Hack2Skill Hackathon — 1st Place, HackTheChain — Top 5%
-- **Team lead**: Led a team of 4 in building a real-time chat application with WebSocket; architected the message queue and handled deployment
-- **Team projects**: Full-stack contributor on [Sentinel-AI](https://github.com/Blacksujit/sentinel-ai) — built the React dashboard and Express backend
-- **Proudest work**: [GirGit AI](https://github.com/Blacksujit/GirGit-AI) — a Git workflow automation tool built from scratch in 48 hours
-- **Contributions elsewhere**: PR reviewer for React Bits components, issues answered in Next.js Discord
-
----
-
-## Checklist
+### Checklist
 
 Tick what is true of this PR:
 
@@ -179,7 +172,7 @@ Tick what is true of this PR:
 - [x] I have reviewed others' pull requests or answered their issues, and can point to it (React Bits contributions)
 - [x] I have shipped work alongside a team, and can say what I did and what they did
 - [x] I have won a hackathon (link the entry and the result)
-- [x] I have led a team, and can say what I decided and what I delegated
+- [x] I have led a team, and can say what I decided and what they did
 
 ### Self-drive
 

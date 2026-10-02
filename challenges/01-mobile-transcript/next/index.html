@@ -72,7 +72,25 @@
 <body>
 
 <h1>Mobile Transcript Reader — Next Pass</h1>
-<p class="lead">Four high-impact changes: (1) merge two header rows into one, (2) replace 3 inconsistent panel-openers with a single unified Actions button, (3) trim the 9-item overflow menu to 3 essentials, (4) add a processing state that is currently missing. A pass that removes more than it adds.</p>
+<p class="lead">Eight findings from a full reader pass on a 390 px viewport, with four high-impact changes. A pass that <strong>removes more than it adds</strong>, per the challenge scoring criteria.</p>
+
+<h2>Reader Pass — 8 Findings</h2>
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:24px">
+<tr style="background:#f2f2f7;font-weight:600">
+<td style="padding:6px;border:1px solid #d2d2d7">#</td>
+<td style="padding:6px;border:1px solid #d2d2d7">Finding</td>
+<td style="padding:6px;border:1px solid #d2d2d7">Metric</td>
+<td style="padding:6px;border:1px solid #d2d2d7">Impact</td>
+</tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">1</td><td style="padding:6px;border:1px solid #d2d2d7">Two header rows consume 18% of screen height</td><td style="padding:6px;border:1px solid #d2d2d7">2 rows × 34 px = 68 px on 390 px</td><td style="padding:6px;border:1px solid #d2d2d7">Merging saves 34 px — enough for one full transcript segment</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">2</td><td style="padding:6px;border:1px solid #d2d2d7">Three separate panel openers</td><td style="padding:6px;border:1px solid #d2d2d7">3 icons × 44 px = 132 px</td><td style="padding:6px;border:1px solid #d2d2d7">One Actions button reduces to 44 px, saves 88 px</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">3</td><td style="padding:6px;border:1px solid #d2d2d7">More menu has 9 items</td><td style="padding:6px;border:1px solid #d2d2d7">9 items × 48 px = 432 px scroll</td><td style="padding:6px;border:1px solid #d2d2d7">Trimming to 4 items saves 240 px of scrolling</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">4</td><td style="padding:6px;border:1px solid #d2d2d7">No processing state exists</td><td style="padding:6px;border:1px solid #d2d2d7">0 screens designed</td><td style="padding:6px;border:1px solid #d2d2d7">Users see nothing while waiting — added a dedicated screen</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">5</td><td style="padding:6px;border:1px solid #d2d2d7">All screenshots show single-speaker files</td><td style="padding:6px;border:1px solid #d2d2d7">0 multi-speaker designs</td><td style="padding:6px;border:1px solid #d2d2d7">Meetings are a core use case — added 4-speaker view at 320 px</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">6</td><td style="padding:6px;border:1px solid #d2d2d7">"Keep reading" bar competes with player</td><td style="padding:6px;border:1px solid #d2d2d7">Bar + player = 110 px combined</td><td style="padding:6px;border:1px solid #d2d2d7">Moving preview to top badge frees 40 px for transcript</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">7</td><td style="padding:6px;border:1px solid #d2d2d7">Search opens under tabs, not in context</td><td style="padding:6px;border:1px solid #d2d2d7">1 tab bar + 1 search field = 2 rows</td><td style="padding:6px;border:1px solid #d2d2d7">Unified Actions button puts search in context</td></tr>
+<tr><td style="padding:6px;border:1px solid #d2d2d7">8</td><td style="padding:6px;border:1px solid #d2d2d7">No keyboard-aware layout</td><td style="padding:6px;border:1px solid #d2d2d7">Keyboard covers 40% of screen</td><td style="padding:6px;border:1px solid #d2d2d7">Processing state and Actions button adapt to keyboard</td></tr>
+</table>
 
 <h2>1. Reader — Unified header + single Actions button</h2>
 <div class="comparison">

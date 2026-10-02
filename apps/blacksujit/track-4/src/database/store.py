@@ -51,6 +51,15 @@ def init_db(db_path=None):
         key TEXT PRIMARY KEY,
         value TEXT
     )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id TEXT,
+        tool TEXT,
+        status TEXT,
+        detail TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )""")
     # One row per (job, item) so re-analyzing a recording does not duplicate items.
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_action_items_job_text "
@@ -58,6 +67,41 @@ def init_db(db_path=None):
     )
     conn.commit()
     conn.close()
+
+
+def seed_if_missing(db_path=None):
+    """Restore the shipped seed DB when the working DB has no evaluations.
+
+    Deployed containers start with an empty SQLite file (the DB is excluded from
+    the image), so a fresh container restores the real evaluation snapshot that
+    ships with the repo. Runtime writes then accumulate on top of it.
+    """
+    target = db_path or DB_PATH
+    try:
+        conn = _connect(target)
+        count = conn.execute("SELECT COUNT(*) FROM evaluations").fetchone()[0]
+        conn.close()
+    except Exception:
+        count = 0
+    if count:
+        return count
+
+    seed = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "seed_evaluations.db",
+    )
+    if not os.path.exists(seed):
+        return 0
+    try:
+        import shutil
+
+        shutil.copyfile(seed, target)
+        conn = _connect(target)
+        count = conn.execute("SELECT COUNT(*) FROM evaluations").fetchone()[0]
+        conn.close()
+        return count
+    except Exception:
+        return 0
 
 
 def save_evaluation(job_id, transcript, evaluation, meeting_name=None, db_path=None):
@@ -132,6 +176,17 @@ def get_unresolved_action_items(db_path=None):
     return [{"text": r["text"], "owner": r["owner"]} for r in rows]
 
 
+def get_all_action_items(db_path=None):
+    """Fetch every tracked action item with its job and status."""
+    conn = _connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT job_id, text, owner, status, created_at, resolved_at FROM action_items ORDER BY created_at ASC"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def resolve_action_item(text, job_id=None, db_path=None):
     """Mark a pending action item as resolved based on its text."""
     conn = _connect(db_path)
@@ -163,3 +218,26 @@ def get_setting(key, db_path=None):
     row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
     conn.close()
     return row[0] if row else None
+
+
+def save_delivery(job_id, tool, status, detail="", db_path=None):
+    """Record a delivery attempt (tool: slack / notion / hubspot)."""
+    conn = _connect(db_path)
+    conn.execute(
+        "INSERT INTO deliveries (job_id, tool, status, detail) VALUES (?, ?, ?, ?)",
+        (job_id, tool, status, str(detail)[:500]),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_last_deliveries(db_path=None):
+    """Return the most recent delivery attempt per tool."""
+    conn = _connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT tool, status, detail, created_at FROM deliveries "
+        "WHERE id IN (SELECT MAX(id) FROM deliveries GROUP BY tool)"
+    ).fetchall()
+    conn.close()
+    return {row["tool"]: dict(row) for row in rows}

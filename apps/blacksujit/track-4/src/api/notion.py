@@ -9,6 +9,8 @@ import requests
 
 NOTION_API = "https://api.notion.com/v1"
 
+PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "https://callcoachai.sujit.top").rstrip("/")
+
 
 def deliver_report(
     report_md: str,
@@ -47,9 +49,10 @@ def deliver_report(
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
     overall = scores.get("overall_score", 0)
+    report_url = f"{PUBLIC_APP_URL}/report/{job_id}"
 
     # Split report into Notion blocks (simple paragraph-per-line approach)
-    children = []
+    children = [_block("paragraph", f"Open the live scorecard: {report_url}")]
     for line in report_md.strip().splitlines():
         if not line.strip():
             continue
@@ -68,22 +71,27 @@ def deliver_report(
             clean = line.replace("**", "").replace("`", "")
             children.append(_block("paragraph", clean))
 
-    body = {
-        "parent": {"database_id": db_id},
-        "properties": {
-            "Name": {
-                "title": [
-                    {"text": {"content": f"Meeting QA - {timestamp}"}}
-                ]
-            },
-            "Score": {"number": overall},
-            "Job ID": {"rich_text": [{"text": {"content": str(job_id)}}]},
-            "Date": {"date": {"start": datetime.now().isoformat()[:10]}},
-        },
-        "children": children,
+    name_property = {"title": [{"text": {"content": f"CallCoach-AI scorecard - {timestamp}"}}]}
+    rich_properties = {
+        "Name": name_property,
+        "Score": {"number": overall},
+        "Job ID": {"rich_text": [{"text": {"content": str(job_id)}}]},
+        "Date": {"date": {"start": datetime.now().isoformat()[:10]}},
     }
 
-    resp = requests.post(f"{NOTION_API}/pages", headers=headers, json=body, timeout=30)
+    def _create_page(properties):
+        body = {
+            "parent": {"database_id": db_id},
+            "properties": properties,
+            "children": children,
+        }
+        return requests.post(f"{NOTION_API}/pages", headers=headers, json=body, timeout=30)
+
+    resp = _create_page(rich_properties)
+    if resp.status_code == 400:
+        # The target database may not have Score / Job ID / Date properties;
+        # create the page with the title only so delivery still works.
+        resp = _create_page({"Name": name_property})
     resp.raise_for_status()
     result = resp.json()
     return {"page_url": result.get("url"), "page_id": result.get("id")}

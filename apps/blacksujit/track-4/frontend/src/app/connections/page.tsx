@@ -1,48 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PageHeader from "@/components/PageHeader";
 import PageTransition from "@/components/PageTransition";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
-import {
-  WaveformIcon,
-  MessageIcon,
-  DocumentIcon,
-  SparkIcon,
-  LinkIcon,
-  AlertIcon,
-  CheckCircleIcon,
-} from "@/components/icons";
+import { SlackMark, NotionMark, HubSpotMark, WhipScribeMark } from "@/components/BrandIcons";
+import { CheckCircleIcon, AlertIcon, SparkIcon } from "@/components/icons";
 import {
   getConnections,
+  getOauthConfig,
   testWhipscribe,
   connectSlack,
-  testSlack,
+  testToolDelivery,
   disconnectSlack,
   connectNotion,
-  testNotion,
   disconnectNotion,
-  type ConnectionsResponse,
-  type ActionResult,
+  connectHubspot,
+  disconnectHubspot,
+  setAutoDeliver,
+  getOauthUrl,
+  getSlackChannels,
+  selectSlackChannel,
+  getNotionDatabases,
+  selectNotionDatabase,
+  type ConnectCenterResponse,
+  type OauthConfig,
+  type ToolConnection,
 } from "@/lib/api";
 
-function useAction() {
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ActionResult | null>(null);
-
-  const run = useCallback(async (fn: () => Promise<ActionResult>, after?: () => Promise<void>) => {
-    setBusy(true);
-    setResult(null);
-    const res = await fn();
-    setResult(res);
-    if (res.success && after) await after();
-    setBusy(false);
-  }, []);
-
-  return { busy, result, run };
-}
+type ToolKey = "slack" | "notion" | "hubspot";
+type Notice = { tool: ToolKey | "whipscribe"; ok: boolean; text: string };
 
 function StatusPill({ connected }: { connected: boolean }) {
   return (
@@ -53,57 +41,172 @@ function StatusPill({ connected }: { connected: boolean }) {
   );
 }
 
-function ResultBanner({ result }: { result: ActionResult | null }) {
-  if (!result) return null;
+function NoticeLine({ notice }: { notice: Notice | null }) {
+  if (!notice) return null;
   return (
-    <div className={result.success ? "status-banner status-banner-ok" : "status-banner status-banner-error"} role="status">
-      {result.success ? <CheckCircleIcon size={14} /> : <AlertIcon size={14} />}{" "}
-      {result.success ? result.message || "Done." : result.error || "Something went wrong."}
+    <div
+      className={notice.ok ? "status-banner status-banner-ok" : "status-banner status-banner-error"}
+      role="status"
+    >
+      {notice.ok ? <CheckCircleIcon size={14} /> : <AlertIcon size={14} />} {notice.text}
     </div>
   );
 }
 
-function ConnectionCard({
+function AutoToggle({
+  enabled,
+  onToggle,
+}: {
+  enabled: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <label className="switch">
+      <input type="checkbox" checked={enabled} onChange={(event) => onToggle(event.target.checked)} />
+      <span className="switch-track" aria-hidden="true">
+        <span className="switch-knob" />
+      </span>
+      <span className="switch-label">Deliver every new scorecard automatically</span>
+    </label>
+  );
+}
+
+function OauthSetup({
+  name,
+  config,
+}: {
+  name: string;
+  config: OauthConfig["slack"] | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!config || config.available) return null;
+  return (
+    <div className="oauth-setup">
+      <button type="button" className="link-btn" onClick={() => setOpen((value) => !value)}>
+        {open ? "Hide one-click setup" : "Set up one-click connect"}
+      </button>
+      {open && (
+        <div className="oauth-steps">
+          <p>
+            One-time setup (about two minutes). After this, the button is a single click for everyone -
+            no tokens, no copy-paste.
+          </p>
+          <ol>
+            <li>
+              Create the {name} app:{" "}
+              <a href={config.setup_url} target="_blank" rel="noopener noreferrer">
+                {config.setup_url.replace("https://", "")}
+              </a>
+            </li>
+            <li className="oauth-copy-row">
+              <span>Add this redirect URL in the app:</span>
+              <code>{config.redirect_uri}</code>
+              <button
+                type="button"
+                className="copy-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(config.redirect_uri);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </li>
+            <li className="oauth-copy-row">
+              <span>
+                Add these two keys to the server's environment (on Render: Environment, then Save - the
+                service restarts itself), and one-click is live for everyone:
+              </span>
+              <code>{config.env.join(", ")}</code>
+              <button
+                type="button"
+                className="copy-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(config.env.join(", "));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    setCopied(false);
+                  }
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </li>
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeliveryTile({
+  tool,
+  connection,
   icon,
-  title,
-  description,
-  connected,
-  source,
+  valueLine,
   children,
 }: {
+  tool: ToolKey;
+  connection: ToolConnection | undefined;
   icon: ReactNode;
-  title: string;
-  description: string;
-  connected: boolean;
-  source?: "env" | "stored" | null;
+  valueLine: string;
   children: ReactNode;
 }) {
-  const sourceNote =
-    source === "env" ? "set in the server environment" : source === "stored" ? "saved from this dashboard" : null;
+  const connected = Boolean(connection?.connected);
+  const last = connection?.last_delivery;
   return (
-    <div className="card connection-card">
-      <div className="connection-head">
-        <span className="connection-icon" aria-hidden="true">{icon}</span>
-        <div style={{ minWidth: 0 }}>
-          <h2 className="connection-title">{title}</h2>
-          {sourceNote && <span className="source-note">{sourceNote}</span>}
-        </div>
-        <span style={{ marginLeft: "auto" }}>
-          <StatusPill connected={connected} />
+    <div className={`card connect-tile connect-tile-${tool}`}>
+      <div className="connect-tile-head">
+        <span className="connect-tile-icon" aria-hidden="true">
+          {icon}
         </span>
+        <div className="connect-tile-title">
+          <h2>{tool === "hubspot" ? "HubSpot" : tool === "slack" ? "Slack" : "Notion"}</h2>
+          <span className="connect-tile-value">{valueLine}</span>
+        </div>
+        <StatusPill connected={connected} />
       </div>
-      <p className="connection-desc">{description}</p>
-      <div className="connection-body">{children}</div>
+
+      {connected && (
+        <div className="connect-tile-meta">
+          {connection?.detail && <span className="connect-tile-detail">{connection.detail}</span>}
+          <span className="connect-tile-last">
+            {last
+              ? `Last delivery ${last.status === "ok" ? "delivered" : "failed"} - ${last.created_at || ""}`
+              : "No deliveries yet"}
+          </span>
+        </div>
+      )}
+
+      {children}
     </div>
   );
 }
 
 export default function ConnectionsPage() {
-  const [data, setData] = useState<ConnectionsResponse | null>(null);
+  const [data, setData] = useState<ConnectCenterResponse | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [webhook, setWebhook] = useState("");
+  const [openForm, setOpenForm] = useState<ToolKey | null>(null);
+  const [oauthStage, setOauthStage] = useState<Record<string, "idle" | "waiting" | "pick">>({});
+  const [channels, setChannels] = useState<Array<{ id: string; name: string }>>([]);
+  const [databases, setDatabases] = useState<Array<{ id: string; title: string }>>([]);
+  const [picked, setPicked] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [oauthConfig, setOauthConfig] = useState<OauthConfig | null>(null);
+
+  const [slackWebhook, setSlackWebhook] = useState("");
   const [notionToken, setNotionToken] = useState("");
   const [notionDatabase, setNotionDatabase] = useState("");
+  const [hubspotToken, setHubspotToken] = useState("");
 
   const refresh = useCallback(async () => {
     const result = await getConnections();
@@ -117,11 +220,86 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     refresh();
+    getOauthConfig().then(setOauthConfig).catch(() => setOauthConfig(null));
   }, [refresh]);
 
-  const whipAction = useAction();
-  const slackAction = useAction();
-  const notionAction = useAction();
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const payload = event.data;
+      if (!payload || payload.source !== "callcoach-oauth") return;
+      const tool = payload.tool as "slack" | "notion" | "hubspot";
+      if (payload.status === "ok") {
+        if (tool === "hubspot") {
+          setNotice({ tool, ok: true, text: "HubSpot connected - scorecard tasks will land in that portal." });
+          refresh();
+          return;
+        }
+        setOauthStage((state) => ({ ...state, [tool]: "pick" }));
+        setPicked("");
+        if (tool === "slack") getSlackChannels().then(setChannels);
+        if (tool === "notion") getNotionDatabases().then(setDatabases);
+        refresh();
+      } else {
+        setNotice({ tool, ok: false, text: "Authorization failed - give it another try." });
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [refresh]);
+
+  async function startOauth(tool: "slack" | "notion" | "hubspot") {
+    setBusy(tool);
+    const url = await getOauthUrl(tool);
+    setBusy(null);
+    if (!url) {
+      setNotice({
+        tool,
+        ok: false,
+        text: "One-click authorization is not set up on the server yet - use the paste option, or ask the admin to add the client keys.",
+      });
+      setOpenForm(tool);
+      return;
+    }
+    const popup = window.open(url, "callcoach-oauth", "width=560,height=700");
+    if (!popup) {
+      setNotice({ tool, ok: false, text: "Your browser blocked the popup - allow popups and retry." });
+      return;
+    }
+    setOauthStage((state) => ({ ...state, [tool]: "waiting" }));
+  }
+
+  async function toggleAuto(tool: ToolKey, enabled: boolean) {
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            [tool]: { ...current[tool], auto: enabled },
+          }
+        : current
+    );
+    await setAutoDeliver(tool, enabled);
+  }
+
+  async function runTest(tool: ToolKey) {
+    setBusy(tool);
+    const result = await testToolDelivery(tool);
+    setBusy(null);
+    setNotice({ tool, ok: result.success, text: result.message || result.error || "Done." });
+    refresh();
+  }
+
+  async function disconnect(tool: ToolKey) {
+    setBusy(tool);
+    const result =
+      tool === "slack"
+        ? await disconnectSlack()
+        : tool === "notion"
+        ? await disconnectNotion()
+        : await disconnectHubspot();
+    setBusy(null);
+    setNotice({ tool, ok: result.success, text: result.message || result.error || "Disconnected." });
+    refresh();
+  }
 
   if (loadError) {
     return (
@@ -131,7 +309,7 @@ export default function ConnectionsPage() {
           <PageHeader
             eyebrow="Connections"
             title="Cannot reach the API."
-            subtitle="Start the Flask backend with python app.py, then reload this page."
+            subtitle="The dashboard is up; the backend is not answering right now. It sleeps on the free tier - give it about 30 seconds."
           />
           <button className="btn-secondary" onClick={() => refresh()}>Try again</button>
         </section>
@@ -145,191 +323,379 @@ export default function ConnectionsPage() {
       <Navbar />
       <section className="section-wide section-pad">
         <PageHeader
-          eyebrow="Connections"
-          title="Link the tools that get your scores."
-          subtitle="Connect once - reports and trend summaries land where your team already works. Server keys stay on the server; nothing here asks for the WhipScribe key."
+          eyebrow="Connect"
+          title="Connect once. Every scorecard lands where your team works."
+          subtitle="Pick a tool, click connect, and we verify it immediately with a real message or page. No webhook jargon - each step is spelled out, and everything is delivered for real."
         />
 
-        <div className="connections-grid">
-          {/* WhipScribe */}
+        <div className="connect-grid">
+          {/* Slack */}
           <AnimatedContent>
-            <ConnectionCard
-              icon={<WaveformIcon size={20} />}
-              title="WhipScribe"
-              description="Transcription, speakers and timestamps for every upload. Nothing to paste here - the key lives on the server."
-              connected={Boolean(data?.whipscribe.connected)}
-              source={data?.whipscribe.source ?? null}
+            <DeliveryTile
+              tool="slack"
+              connection={data?.slack}
+              icon={<SlackMark />}
+              valueLine="Scorecards, commitments and trend summaries posted into a channel you choose."
             >
-              <div className="connection-actions">
-                <button
-                  className="btn-secondary"
-                  disabled={whipAction.busy || !data?.whipscribe.connected}
-                  onClick={() => whipAction.run(testWhipscribe)}
-                >
-                  {whipAction.busy ? "Checking..." : "Verify connection"}
-                </button>
-                {!data?.whipscribe.connected && (
-                  <span className="section-subtitle" style={{ margin: 0 }}>
-                    Add the key to <code>.env</code> and restart the API.
-                  </span>
-                )}
-              </div>
-              <ResultBanner result={whipAction.result} />
-            </ConnectionCard>
+              {data?.slack.connected ? (
+                <>
+                  <AutoToggle enabled={data?.slack.auto !== false} onToggle={(next) => toggleAuto("slack", next)} />
+                  <div className="connect-actions">
+                    <button className="btn-secondary" disabled={busy === "slack"} onClick={() => runTest("slack")}>
+                      {busy === "slack" ? "Sending..." : "Send test message"}
+                    </button>
+                    <button className="btn-secondary" disabled={busy === "slack"} onClick={() => disconnect("slack")}>
+                      Disconnect
+                    </button>
+                  </div>
+                </>
+              ) : oauthStage.slack === "pick" ? (
+                <div className="connect-form">
+                  <label htmlFor="slack-channel">Pick the channel</label>
+                  <select
+                    id="slack-channel"
+                    className="settings-input"
+                    value={picked}
+                    onChange={(event) => setPicked(event.target.value)}
+                  >
+                    <option value="">Choose a channel...</option>
+                    {channels.map((channel) => (
+                      <option key={channel.id} value={channel.id}>#{channel.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn-primary"
+                    disabled={!picked || busy === "slack"}
+                    onClick={async () => {
+                      setBusy("slack");
+                      const result = await selectSlackChannel(picked);
+                      setBusy(null);
+                      setNotice({ tool: "slack", ok: result.success, text: result.message || result.error || "Done." });
+                      if (result.success) {
+                        setOauthStage((state) => ({ ...state, slack: "idle" }));
+                        refresh();
+                      }
+                    }}
+                  >
+                    {busy === "slack" ? "Posting..." : "Connect this channel"}
+                  </button>
+                </div>
+              ) : oauthStage.slack === "waiting" ? (
+                <p className="connect-hint">Waiting for Slack to authorize in the popup...</p>
+              ) : (
+                <div className="connect-form">
+                  {oauthConfig?.slack?.available ? (
+                    <button className="btn-primary" disabled={busy === "slack"} onClick={() => startOauth("slack")}>
+                      Continue with Slack
+                    </button>
+                  ) : (
+                    <OauthSetup name="Slack" config={oauthConfig?.slack} />
+                  )}
+                  <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "slack" ? null : "slack")}>
+                    {oauthConfig?.slack?.available ? "or paste a link instead" : "Connect with a link"}
+                  </button>
+                  {openForm === "slack" && (
+                    <div className="connect-paste">
+                      <label htmlFor="slack-webhook">The special link Slack gives you</label>
+                      <input
+                        id="slack-webhook"
+                        className="settings-input"
+                        type="url"
+                        value={slackWebhook}
+                        onChange={(event) => setSlackWebhook(event.target.value)}
+                        placeholder="https://hooks.slack.com/services/..."
+                      />
+                      <button
+                        className="btn-primary"
+                        disabled={!slackWebhook.trim() || busy === "slack"}
+                        onClick={async () => {
+                          setBusy("slack");
+                          const result = await connectSlack(slackWebhook.trim());
+                          setBusy(null);
+                          setNotice({ tool: "slack", ok: result.success, text: result.message || result.error || "Done." });
+                          if (result.success) {
+                            setOpenForm(null);
+                            setSlackWebhook("");
+                            refresh();
+                          }
+                        }}
+                      >
+                        {busy === "slack" ? "Connecting..." : "Connect Slack"}
+                      </button>
+                      <p className="connect-steps">
+                        Fastest route:{" "}
+                        <a href="https://my.slack.com/services/new/incoming-webhook/" target="_blank" rel="noopener noreferrer">
+                          open Slack&apos;s webhook page
+                        </a>{" "}
+                        - pick the channel, copy the link it shows you, paste it above. We send one test
+                        message before saving it.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <NoticeLine notice={notice?.tool === "slack" ? notice : null} />
+            </DeliveryTile>
           </AnimatedContent>
 
-          {/* AI scoring */}
-          <AnimatedContent delay={0.05}>
-            <ConnectionCard
-              icon={<SparkIcon size={20} />}
-              title="AI scoring"
-              description="Four agents score every call. The provider and key are configured on the server."
-              connected={Boolean(data?.llm.key_set)}
-              source={null}
+          {/* Notion */}
+          <AnimatedContent delay={0.06}>
+            <DeliveryTile
+              tool="notion"
+              connection={data?.notion}
+              icon={<NotionMark />}
+              valueLine="Every scorecard written into a Notion database as a page, with the quotes in context."
             >
-              <div className="connection-actions">
+              {data?.notion.connected ? (
+                <>
+                  <AutoToggle enabled={data?.notion.auto !== false} onToggle={(next) => toggleAuto("notion", next)} />
+                  <div className="connect-actions">
+                    <button className="btn-secondary" disabled={busy === "notion"} onClick={() => runTest("notion")}>
+                      {busy === "notion" ? "Writing..." : "Create test page"}
+                    </button>
+                    <button className="btn-secondary" disabled={busy === "notion"} onClick={() => disconnect("notion")}>
+                      Disconnect
+                    </button>
+                  </div>
+                </>
+              ) : oauthStage.notion === "pick" ? (
+                <div className="connect-form">
+                  <label htmlFor="notion-database">Pick the database</label>
+                  <select
+                    id="notion-database"
+                    className="settings-input"
+                    value={picked}
+                    onChange={(event) => setPicked(event.target.value)}
+                  >
+                    <option value="">Choose a database...</option>
+                    {databases.map((database) => (
+                      <option key={database.id} value={database.id}>{database.title}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn-primary"
+                    disabled={!picked || busy === "notion"}
+                    onClick={async () => {
+                      setBusy("notion");
+                      const name = databases.find((database) => database.id === picked)?.title;
+                      const result = await selectNotionDatabase(picked, name);
+                      setBusy(null);
+                      setNotice({ tool: "notion", ok: result.success, text: result.message || result.error || "Done." });
+                      if (result.success) {
+                        setOauthStage((state) => ({ ...state, notion: "idle" }));
+                        refresh();
+                      }
+                    }}
+                  >
+                    {busy === "notion" ? "Creating page..." : "Connect this database"}
+                  </button>
+                  <p className="connect-steps">
+                    Nothing in the list? Share a database with the CallCoach integration inside Notion first,
+                    then reload this page.
+                  </p>
+                </div>
+              ) : oauthStage.notion === "waiting" ? (
+                <p className="connect-hint">Waiting for Notion to authorize in the popup...</p>
+              ) : (
+                <div className="connect-form">
+                  {oauthConfig?.notion?.available ? (
+                    <button className="btn-primary" disabled={busy === "notion"} onClick={() => startOauth("notion")}>
+                      Continue with Notion
+                    </button>
+                  ) : (
+                    <OauthSetup name="Notion" config={oauthConfig?.notion} />
+                  )}
+                  <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "notion" ? null : "notion")}>
+                    {oauthConfig?.notion?.available ? "or paste a token instead" : "Connect with a token"}
+                  </button>
+                  {openForm === "notion" && (
+                    <div className="connect-paste">
+                      <label htmlFor="notion-token">Integration token</label>
+                      <input
+                        id="notion-token"
+                        className="settings-input"
+                        type="password"
+                        value={notionToken}
+                        onChange={(event) => setNotionToken(event.target.value)}
+                        placeholder="ntn_... or secret_..."
+                      />
+                      <label htmlFor="notion-database-link">Database link</label>
+                      <input
+                        id="notion-database-link"
+                        className="settings-input"
+                        type="text"
+                        value={notionDatabase}
+                        onChange={(event) => setNotionDatabase(event.target.value)}
+                        placeholder="Paste the database URL from Notion"
+                      />
+                      <button
+                        className="btn-primary"
+                        disabled={!notionToken.trim() || !notionDatabase.trim() || busy === "notion"}
+                        onClick={async () => {
+                          setBusy("notion");
+                          const result = await connectNotion(notionToken.trim(), notionDatabase.trim());
+                          setBusy(null);
+                          setNotice({ tool: "notion", ok: result.success, text: result.message || result.error || "Done." });
+                          if (result.success) {
+                            setOpenForm(null);
+                            setNotionToken("");
+                            setNotionDatabase("");
+                            refresh();
+                          }
+                        }}
+                      >
+                        {busy === "notion" ? "Connecting..." : "Connect Notion"}
+                      </button>
+                      <p className="connect-steps">
+                        Fastest route:{" "}
+                        <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
+                          create a Notion integration
+                        </a>{" "}
+                        (one click), copy its token, then Share the database with it and paste the database
+                        link above.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <NoticeLine notice={notice?.tool === "notion" ? notice : null} />
+            </DeliveryTile>
+          </AnimatedContent>
+
+          {/* HubSpot */}
+          <AnimatedContent delay={0.12}>
+            <DeliveryTile
+              tool="hubspot"
+              connection={data?.hubspot}
+              icon={<HubSpotMark />}
+              valueLine="A real CRM task per analyzed call - score, what to fix, commitments, and the report link."
+            >
+              {data?.hubspot.connected ? (
+                <>
+                  <AutoToggle enabled={data?.hubspot.auto !== false} onToggle={(next) => toggleAuto("hubspot", next)} />
+                  <div className="connect-actions">
+                    <button className="btn-secondary" disabled={busy === "hubspot"} onClick={() => runTest("hubspot")}>
+                      {busy === "hubspot" ? "Creating..." : "Create test task"}
+                    </button>
+                    <button className="btn-secondary" disabled={busy === "hubspot"} onClick={() => disconnect("hubspot")}>
+                      Disconnect
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="connect-form">
+                  {oauthConfig?.hubspot?.available ? (
+                    <button className="btn-primary" disabled={busy === "hubspot"} onClick={() => startOauth("hubspot")}>
+                      Continue with HubSpot
+                    </button>
+                  ) : (
+                    <OauthSetup name="HubSpot" config={oauthConfig?.hubspot} />
+                  )}
+                  <button className="link-btn" type="button" onClick={() => setOpenForm(openForm === "hubspot" ? null : "hubspot")}>
+                    {oauthConfig?.hubspot?.available ? "or paste a private-app token instead" : "Connect with a token"}
+                  </button>
+                  {openForm === "hubspot" && (
+                    <div className="connect-paste">
+                      <label htmlFor="hubspot-token">Private app token</label>
+                      <input
+                        id="hubspot-token"
+                        className="settings-input"
+                        type="password"
+                        value={hubspotToken}
+                        onChange={(event) => setHubspotToken(event.target.value)}
+                        placeholder="pat-..."
+                      />
+                      <button
+                        className="btn-primary"
+                        disabled={!hubspotToken.trim() || busy === "hubspot"}
+                        onClick={async () => {
+                          setBusy("hubspot");
+                          const result = await connectHubspot(hubspotToken.trim());
+                          setBusy(null);
+                          setNotice({ tool: "hubspot", ok: result.success, text: result.message || result.error || "Done." });
+                          if (result.success) {
+                            setOpenForm(null);
+                            setHubspotToken("");
+                            refresh();
+                          }
+                        }}
+                      >
+                        {busy === "hubspot" ? "Checking..." : "Connect HubSpot"}
+                      </button>
+                      <p className="connect-steps">
+                        Fastest route:{" "}
+                        <a href="https://app.hubspot.com/l/private-apps/" target="_blank" rel="noopener noreferrer">
+                          open HubSpot private apps
+                        </a>{" "}
+                        - create one, add the Tasks read+write scope, copy its token, paste it above. We
+                        verify it against the live API before saving.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <NoticeLine notice={notice?.tool === "hubspot" ? notice : null} />
+            </DeliveryTile>
+          </AnimatedContent>
+        </div>
+
+        {/* Under the hood */}
+        <div className="connect-under">
+          <AnimatedContent delay={0.18}>
+            <div className="card connect-mini">
+              <div className="connect-tile-head">
+                <span className="connect-tile-icon" aria-hidden="true"><WhipScribeMark /></span>
+                <div className="connect-tile-title">
+                  <h2>WhipScribe</h2>
+                  <span className="connect-tile-value">
+                    Transcription, speakers, timestamps, summaries and key moments for every call.
+                  </span>
+                </div>
+                <StatusPill connected={Boolean(data?.whipscribe.connected)} />
+              </div>
+              <div className="connect-actions">
+                <button
+                  className="btn-secondary"
+                  disabled={busy === "whipscribe" || !data?.whipscribe.connected}
+                  onClick={async () => {
+                    setBusy("whipscribe");
+                    const result = await testWhipscribe();
+                    setBusy(null);
+                    setNotice({ tool: "whipscribe", ok: result.success, text: result.message || result.error || "Done." });
+                  }}
+                >
+                  {busy === "whipscribe" ? "Checking..." : "Verify connection"}
+                </button>
+                {data?.whipscribe.account && <span className="source-note">{data.whipscribe.account}</span>}
+                {data?.whipscribe.plan && <span className="source-note">plan: {data.whipscribe.plan}</span>}
+              </div>
+              <NoticeLine notice={notice?.tool === "whipscribe" ? notice : null} />
+            </div>
+          </AnimatedContent>
+
+          <AnimatedContent delay={0.24}>
+            <div className="card connect-mini">
+              <div className="connect-tile-head">
+                <span className="connect-tile-icon" aria-hidden="true"><SparkIcon size={22} /></span>
+                <div className="connect-tile-title">
+                  <h2>AI scoring</h2>
+                  <span className="connect-tile-value">Four agents read every transcript. The model runs on the server.</span>
+                </div>
+                <StatusPill connected={Boolean(data?.llm.key_set)} />
+              </div>
+              <div className="connect-actions">
                 <span className="pill">
                   {data?.llm.provider ? `${data.llm.provider} - ${data.llm.model}` : "No provider set"}
                 </span>
               </div>
-            </ConnectionCard>
-          </AnimatedContent>
-
-          {/* Slack */}
-          <AnimatedContent delay={0.1}>
-            <ConnectionCard
-              icon={<MessageIcon size={20} />}
-              title="Slack"
-              description="Scores, commitments and trend summaries posted into a channel you choose."
-              connected={Boolean(data?.slack.connected)}
-              source={data?.slack.source ?? null}
-            >
-              {data?.slack.connected ? (
-                <div className="connection-actions">
-                  <button
-                    className="btn-secondary"
-                    disabled={slackAction.busy}
-                    onClick={() => slackAction.run(testSlack)}
-                  >
-                    {slackAction.busy ? "Sending..." : "Send test message"}
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    disabled={slackAction.busy}
-                    onClick={() => slackAction.run(disconnectSlack, refresh)}
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="settings-field">
-                    <label htmlFor="slack-webhook">Incoming webhook URL</label>
-                    <input
-                      id="slack-webhook"
-                      className="settings-input"
-                      type="url"
-                      value={webhook}
-                      onChange={(e) => setWebhook(e.target.value)}
-                      placeholder="https://hooks.slack.com/services/..."
-                    />
-                  </div>
-                  <div className="connection-actions">
-                    <button
-                      className="btn-primary"
-                      disabled={slackAction.busy || !webhook.trim()}
-                      onClick={() => slackAction.run(() => connectSlack(webhook.trim()), refresh)}
-                    >
-                      {slackAction.busy ? "Connecting..." : "Connect Slack"}
-                    </button>
-                    <span className="section-subtitle" style={{ margin: 0 }}>
-                      Slack: Apps - Incoming Webhooks - Add to a channel, then paste the URL. We send a test message before saving.
-                    </span>
-                  </div>
-                </>
-              )}
-              <ResultBanner result={slackAction.result} />
-            </ConnectionCard>
-          </AnimatedContent>
-
-          {/* Notion */}
-          <AnimatedContent delay={0.15}>
-            <ConnectionCard
-              icon={<DocumentIcon size={20} />}
-              title="Notion"
-              description="Every report can be written into a Notion database as a new page."
-              connected={Boolean(data?.notion.connected)}
-              source={data?.notion.source ?? null}
-            >
-              {data?.notion.connected ? (
-                <div className="connection-actions">
-                  <button
-                    className="btn-secondary"
-                    disabled={notionAction.busy}
-                    onClick={() => notionAction.run(testNotion)}
-                  >
-                    {notionAction.busy ? "Writing..." : "Create test page"}
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    disabled={notionAction.busy}
-                    onClick={() => notionAction.run(disconnectNotion, refresh)}
-                  >
-                    Disconnect
-                  </button>
-                  {data.notion.database_id && (
-                    <span className="source-note">database {data.notion.database_id.slice(0, 8)}...</span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="settings-field">
-                    <label htmlFor="notion-token">Integration token</label>
-                    <input
-                      id="notion-token"
-                      className="settings-input"
-                      type="password"
-                      value={notionToken}
-                      onChange={(e) => setNotionToken(e.target.value)}
-                      placeholder="ntn_... or secret_..."
-                    />
-                  </div>
-                  <div className="settings-field">
-                    <label htmlFor="notion-database">Database link</label>
-                    <input
-                      id="notion-database"
-                      className="settings-input"
-                      type="text"
-                      value={notionDatabase}
-                      onChange={(e) => setNotionDatabase(e.target.value)}
-                      placeholder="Paste the database URL from Notion"
-                    />
-                  </div>
-                  <div className="connection-actions">
-                    <button
-                      className="btn-primary"
-                      disabled={notionAction.busy || !notionToken.trim() || !notionDatabase.trim()}
-                      onClick={() => notionAction.run(() => connectNotion(notionToken.trim(), notionDatabase.trim()), refresh)}
-                    >
-                      {notionAction.busy ? "Connecting..." : "Connect Notion"}
-                    </button>
-                    <span className="section-subtitle" style={{ margin: 0 }}>
-                      Share the database with your integration first (Share - your integration).
-                    </span>
-                  </div>
-                </>
-              )}
-              <ResultBanner result={notionAction.result} />
-            </ConnectionCard>
+            </div>
           </AnimatedContent>
         </div>
 
-        <AnimatedContent delay={0.2}>
-          <p className="section-subtitle" style={{ marginTop: 26 }}>
-            <LinkIcon size={14} /> Server-side settings live in <code>.env</code>: WHIPSKRIBE_API_KEY, GROQ_API_KEY,
-            SLACK_WEBHOOK_URL, NOTION_TOKEN. Connections made here are stored on the API and never exposed back to the browser.
-          </p>
-        </AnimatedContent>
+        <p className="connect-foot">
+          Delivery is proven, not promised: every attempt is logged and the last result is shown on each tile.
+          Server-side settings live in <code>.env</code> on the API host.
+        </p>
       </section>
     </main>
     </PageTransition>
