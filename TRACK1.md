@@ -53,3 +53,39 @@ actual, and a screenshot. Proposals on the high-value ones.
 
 Screenshots for every issue live in `screenshots/` and are referenced from each
 issue body via raw GitHub URLs.
+
+### Screenshot mapping and quality audit
+
+| Issue | Screenshot file | Dimensions | Status | Notes |
+|-------|----------------|------------|--------|-------|
+| #190 | t1-issue-190-mobile-hero.png | 390x844 | OK | Proper mobile screenshot |
+| #191 | t1-issue-191-demo-files.png | 390x844 | OK | Proper mobile screenshot |
+| #218 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #219 | t1-issue-pricing-order.png | 1052x662 | OK | Proper desktop screenshot |
+| #220 | t1-issue-mobile-hero-full.png | 628x915 | FIXED | Was 375x13241 (broken full-page scroll capture, nearly identical to directory.png). Replaced with proper viewport screenshot of hero section. |
+| #220 | t1-issue-pricing-full.png | 1244x5950 | NEEDS RE-CAPTURE | 93.4% white, mostly blank full-page scroll capture. Should be a targeted screenshot showing the four conflicting first-transcript prices. |
+| #221 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #222 | t1-issue-mobile-hero-overlays.png | 390x844 | OK | Proper mobile screenshot |
+| #223 | t1-issue-transcript-recent-loading.png | 1052x662 | DUPLICATE | Identical to t1-issue-transcript-full.png (same MD5). Needs separate screenshot showing the "Recent transcripts" endless Loading state when signed out. |
+| #224 | t1-issue-transcript-full.png | 1052x662 | DUPLICATE | Identical to t1-issue-transcript-recent-loading.png (same MD5). Needs separate screenshot showing the "Your notes" empty state ("Empty" text). |
+| #225 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #226 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #227 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #228 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #229 | t1-issue-security.png | 390x844 | OK | Proper mobile screenshot |
+| #230 | t1-issue-docs-escapes.png | 390x844 | OK | Proper mobile screenshot |
+| #231 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #232 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #233 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #234 | t1-issue-bulk-durations.png | 390x844 | OK | Proper mobile screenshot |
+| #235 | t1-issue-connectors.png | 390x844 | OK | Proper mobile screenshot |
+| #236 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #237 | t1-issue-directory.png | 628x915 | FIXED | Was 375x13241 (broken: 97%+ blank, single solid-color band at 70%). Replaced with proper viewport screenshot showing the directory section with mangled counts and loading state. |
+| #238 | t1-issue-directory.png | 628x915 | FIXED | Was 375x13241 (broken: 97%+ blank, single solid-color band). The image was not added properly — it was nearly identical to t1-issue-mobile-hero-full.png (0.1% pixel difference) and showed a failed full-page scroll capture with no rendered content in 70-95% of the image. Replaced with proper screenshot showing "26shows", "2niches", and conflicting "Updated" dates. |
+| #239 | t1-issue-docs-errors.png | 390x844 | ADDED | Was missing from screenshots/ folder (existed in repo root only). Added to screenshots/ for proper GitHub raw URL referencing. |
+| #240 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+| #241 | _(not filed — needs screenshot)_ | — | MISSING | No screenshot captured for this issue |
+
+### Key findings
+
+1. **Issue #238 (`t1-issue-directory.png`)**: The screenshot was 375x13241 pixels (15.7x taller than a standard phone screenshot). Content analysis showed 97%+ of the image was white or a single solid-color band — a failed full-page scroll capture where lazy-loaded content never rendered. The image was also nearly identical to `t1-issue-mobile-hero-full.png` (only 0.1% pixel difference), meaning two different issues shared a broken screenshot of the wrong page section. Fixed by replacing both files with proper viewport screenshots captured at the correct scroll positions.
