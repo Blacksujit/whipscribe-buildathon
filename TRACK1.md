@@ -4,6 +4,39 @@ All issues filed against the live product on **both phone and laptop**, followin
 the `ui-bug` / `proposal` templates, each with device/browser, steps, expected vs
 actual, and a screenshot. Proposals on the high-value ones.
 
+## Batch 3 (filed 2026-10-03) — 30 verified issues, one targeted screenshot each
+
+- #242 — [desktop][mobile] POST /api/v1/transcribe/url creates a job with no X-API-Key, though /docs says the key is "required on every request" and there is "no free tier"
+- #243 — [desktop] /docs says "CORS is open for GET and POST from browser origins" but the API sends no Access-Control-Allow-Origin and answers preflight with 405
+- #244 — [desktop] GET /api/v1/me for an anonymous caller returns retention_days 36500 and concrete_tier "enterprise"; /docs promises 3 days for guests
+- #245 — [desktop] API errors don't follow the documented {"error","code"} shape: validation returns FastAPI {"detail":[…]}, and auth codes AUTH_REQUIRED / INVALID_API_KEY are undocumented
+- #246 — [desktop] Every documented "Make a clip" endpoint (POST /jobs/{id}/clips, GET /clips/{id}, GET /shorts, retrim, DELETE) returns a route-level 404 and is missing from the API schema
+- #247 — [desktop] /docs prints endpoint paths as /v1/... (Idempotency, Bulk/Drive, no-speech, clip poll) while the base URL is /api/v1; /v1/... paths 404
+- #248 — [desktop][mobile] Transcript pages send the transcript's title and URL to Google Ads remarketing on load, before any cookie choice
+- #249 — [desktop][mobile] Analytics, session replay, Google Ads remarketing and the OpenAI pixel all fire before the cookie notice is answered, and the notice has no "Reject"
+- #250 — [desktop][mobile] No security headers on any page: /pricing checkout can be framed by any site (no X-Frame-Options/CSP), no HSTS, nginx version exposed
+- #251 — [desktop] Pasting a dead link opens "UPLOAD COMPLETE — Where should we send your transcript?" after the job has already failed
+- #252 — [desktop][mobile] Hero "Paste link" and "Record audio" tabs cannot be reached with the keyboard
+- #253 — [mobile] Rejected paste link shows a full progress bar labelled "0%" under "Upload audio / Transcribe / Read it here", and a toast covers the header
+- #254 — [desktop] /pricing scrolls sideways on a 1440px laptop: hidden "Use cases" mega-menu extends the page to 1552px
+- #255 — [desktop][mobile] Footer "Product" column renders three links glued together — "Free audio toolsAll tools A–Z" with a stray "Z" wrapping
+- #256 — [desktop][mobile] /pricing shows ₹2,793.28 for the $24 pack, which is the rupee price of $29
+- #257 — [desktop][mobile] Pricing FAQ says "Razorpay charges in USD", but the pack and Workspace buttons open a Paddle checkout that adds GST
+- #258 — [desktop][mobile] /pricing contacts applyjobs.ai:5003 on every load, and the yearly checkout sends the buyer's email there, not to whipscribe.com/pay
+- #259 — [desktop][mobile] Comparison table shows Workspace already cheaper than packs at 40 h, while the text below says packs win under about 50 h
+- #260 — [desktop][mobile] Checkout and FAQ sell "WhipScribe Pro", "Team" and "paying monthly", none of which appear on the pricing cards
+- #261 — [desktop][mobile] /account and every unknown URL return raw JSON {"error":"not found"} with no 404 page or navigation
+- #262 — [desktop][mobile] Four footer "Explore" links (Audio technology hub, Video technology hub, Podcast directory, Playbooks) lead to a bare HTTP 410 "Gone" page
+- #263 — [desktop][mobile] Security page tells visitors "Audio kept 36500 days on your plan", contradicting its own 3 / 30 / 365-day retention table
+- #264 — [desktop][mobile] robots.txt blocks /podcasts and calls it "HTTP 410 Gone", yet /podcasts is live, linked in the footer and listed in two sitemaps
+- #265 — [desktop] /pricing, /terms, /privacy, /security, /contact-sales and /feedback have no canonical URL; /terms and /privacy have no meta description
+- #266 — [desktop][mobile] "Questions this recording answers" on the Linux demo leads with two Progressive insurance ad questions and presents the ad copy as answers
+- #267 — [desktop][mobile] Linux demo header says "64m 18s" (homepage "1h 04m") but the audio is 66:18 — the listed length is 2 minutes short
+- #268 — [desktop] Sidebar "Word file" / "Subtitles (SRT)" open a "Welcome back" sign-in wall, but the header Download button gives the same .docx to signed-out visitors
+- #269 — [desktop][mobile] Single-narrator audiobook demos claim "4 speakers" / "2 speakers" and attribute quotes to fictional characters as if they spoke
+- #270 — [desktop][mobile] French demo (Candide) is served as lang="en" with no lang on the French transcript or summary — screen readers read it with English pronunciation
+- #271 — [desktop][mobile] Audiobook demo transcripts lose capitalization and punctuation — Candide is all lowercase with no full stops ("m le baron de thunder ten tronck")
+
 ## Latest batch (filed 2026-10-03) + new batch
 
 - #230 — [desktop] /docs renders literal backslash escapes in field names
