@@ -4,7 +4,23 @@ All issues filed against the live product on **both phone and laptop**, followin
 the `ui-bug` / `proposal` templates, each with device/browser, steps, expected vs
 actual, and a screenshot. Proposals on the high-value ones.
 
-## Latest batch (filed 2026-10-03)
+## Latest batch (filed 2026-10-03) + new batch
+
+- #230 — [desktop] /docs renders literal backslash escapes in field names
+  (`word_timestamps`, `claim_token`, `job_id`)
+- #231 — [desktop] /docs branded "PREVIEW · subject to change" while homepage sells "Business APIs" as shipping
+- #232 — [desktop] /docs auth table header malformed (`X-API-Key: <key>required` is one glued cell)
+- #233 — [desktop] /docs requires "$50 minimum" key balance but smallest pack is $4
+- #234 — [desktop] /bulk shows "measuring durations…" that never resolves with no files selected
+- #235 — [desktop][mobile] /connectors renders "Dropbox — Coming soon" as an inert card identical to live cards
+- #236 — [desktop][mobile] /connectors grid mixes three interaction models (button / link / inert)
+- #237 — [desktop][mobile] Homepage directory shows "Loading the directory…" indefinitely
+- #238 — [desktop][mobile] Directory counts mangled ("26shows", "2niches") with two conflicting "Updated" dates
+- #239 — [desktop] /docs "Use it" panel renders an empty code block instead of an example
+- #240 — [desktop][mobile] Homepage surfaces "You're all set — add minutes to begin" before any account/upload
+- #241 — [desktop] "AI notetaker — Shipping" badge contradicts "rolling out this week" prose
+
+## Previous batch (filed 2026-10-03)
 
 - #218 — [desktop] "Trusted by people at these organizations" marquee repeats the same six logos three times
 - #219 — [desktop] Pricing page lists tiers out of order; the 1,000-minute tier is buried after Workspace
