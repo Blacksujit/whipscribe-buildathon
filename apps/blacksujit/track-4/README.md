@@ -1,112 +1,125 @@
-# CallCoach-AI x WhipScribe
+<div align="center">
 
-**Every investor call, scored, with the quotes to prove it.**
+# CallCoach-AI
 
-[Live app](https://callcoachai.sujit.top/) · [Demo video](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm) · [Problem](PROBLEM.md) · [Decisions & what I threw away](DECISIONS.md) · [What I learned about the WhipScribe API](docs/LEARNING.md)
+### Every investor call, scored, with the quotes to prove it.
 
-A seed-stage founder takes 15-20 investor calls a week and re-listens to almost
-none of them. CallCoach-AI turns each recording into a scorecard a mentor would
-write. It says where the pitch broke, what was promised and by whom, and the
-**exact second** it happened. You can press ▶ and hear it.
+Drop in a call recording. CallCoach-AI tells you where the pitch broke, what you promised, and the exact second it happened. Press play to hear it.
+
+**[Try it live →](https://callcoachai.sujit.top/)** &nbsp;·&nbsp; [Watch the demo](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
+
+[![CI](https://github.com/Blacksujit/callcoach-ai-whhipscribe/actions/workflows/ci.yml/badge.svg)](https://github.com/Blacksujit/callcoach-ai-whhipscribe/actions/workflows/ci.yml)
+
+<img src="docs/screenshots/readme-home.png" alt="CallCoach-AI home page: Every investor call, scored, with the quotes to prove it" width="900">
+
+</div>
 
 ---
 
-## The flow (one recording)
+## Why
+
+A founder raising a round takes 15–20 investor calls a week, and almost never listens to one again. Feedback arrives as a feeling: *"that one went well."*
+
+So the same weak answer survives a dozen pitches. Promises made on a call get forgotten. And there's no way to tell whether the pitch is getting better or just getting repeated.
+
+CallCoach-AI gives every call the review a good mentor would, in under a minute, with the evidence attached.
+
+## What you get
+
+### A scorecard you can listen to
+
+One score, four categories, and the single biggest risk on the call. Every flagged moment has a **▶ Hear it** button that plays the recording from that exact second. You don't have to take the AI's word for it.
+
+<img src="docs/screenshots/readme-report.png" alt="Call report: overall score, primary risk, and flagged quotes with Hear it buttons on a timeline" width="900">
+
+| Category | What it catches |
+|---|---|
+| **Compliance** | Promises you can't keep: guaranteed returns, hard dates, "definitely" |
+| **Tension** | Where the other side hesitated, and what you said just before |
+| **Clarity** | Hedging, a vague ask, numbers that change between calls |
+| **Action items** | Who promised what, and whether it was followed up |
+
+### Spotter: check a line before you say it
+
+Type or dictate what you're about to say. Spotter flags risky wording and suggests a safer version you can copy.
+
+<img src="docs/screenshots/readme-spotter.png" alt="Spotter flagging 'I guarantee you'll double your return' and suggesting a safer version" width="900">
+
+### Trends and Griot: see the pattern, ask anything
+
+See whether your calls are trending up or down, and which issues keep coming back. **Griot**, the chat on every page, answers questions across all your calls, such as *"What did we promise about pricing?"*. Each answer links to the call and second it came from.
+
+<img src="docs/screenshots/readme-griot.png" alt="Trends chart with the Griot chat answering from cited moments across calls" width="900">
+
+### Lands where you work
+
+Every new scorecard goes to **Slack**, **Notion** or **HubSpot** automatically. Each connection is tested with a real message, page or task before it's saved.
+
+## Try it
+
+1. Open **[callcoachai.sujit.top](https://callcoachai.sujit.top/)**.
+2. Click **Score a sample call** to open a real, fully scored call instantly.
+3. Or **upload your own**: audio or video, a file or a link. You watch it go from transcribing to scored to done.
+
+No sign-up needed to try it.
+
+> The server sleeps when idle. If the first load says *"Waking up the analysis server…"*, give it about 20 seconds.
+
+## How it works
 
 ```
-record / upload / paste a link
-  → WhipScribe transcribes (speakers, segment timestamps)             [WhipScribe REST API]
-  → four judges score it: Compliance · Tension · Clarity · Action Items  [LLM, src/core/evaluator.py]
-  → every quote is checked against the transcript; ones that can't be found are marked unverified
-  → report: score, the one primary risk, a call timeline you can play
-  → scorecard delivered to Slack / Notion / HubSpot (if connected)
-  → Griot answers questions across all your calls with cited moments  [WhipScribe MCP server]
+Your recording
+   │
+   ▼
+WhipScribe ─── transcript, speakers, timestamps
+   │
+   ▼
+Four AI reviewers ─── compliance · tension · clarity · action items
+   │
+   ▼
+Quote check ─── every flagged line is matched back to the transcript
+   │
+   ▼
+Your scorecard ─── score, top risk, playable evidence  →  Slack · Notion · HubSpot
 ```
 
-**Try it in one click:** the home page's **Score a sample call** opens a real
-report from the seeded library (8 calls scored through this pipeline). The live
-sample does the whole thing end to end instead: a bundled 26-second recording
-goes through the WhipScribe API and the four judges while you watch each stage.
-Nothing to sign up for.
+- **Evidence over opinion.** Every quote is checked against the transcript. A line that can't be found is marked unverified and never shown as fact.
+- **Your library, searchable.** Griot searches your calls through the [WhipScribe](https://whipscribe.com) MCP server and only answers from what was actually said.
+- **Private by default.** Audio is transcribed by WhipScribe and never used to train models.
 
-## What you can do
-
-| | What it does | Where |
-|---|---|---|
-| **Report** | Overall + four category scores, the primary risk, every flagged quote with speaker and time. A timeline of the whole call, colour-coded by judge; **▶ Hear it** plays the audio from that second. Deep links: `/report/<id>?t=42` | `/report/[id]`, `GET /api/report/<id>`, `GET /api/audio/<id>` |
-| **Spotter** | Type (or dictate) a line *before* you say it on a call. It flags guarantees, hard delivery promises and dismissive phrasing, and suggests a safer version | `/spotter`, `POST /api/spotter` |
-| **Radar** | Across calls: score trend, recurring issues, action-item follow-through, speaker risk | `/trends`, `/coach`, `/speakers` |
-| **Griot** | The chat bubble on every page. It answers from *your* calls, retrieved through the **WhipScribe MCP server** (`clips_search_transcript`, `clips_get_high_signal`), and cites call · speaker · second. Every answer is labelled with where it came from (MCP or the local index), and each citation opens the report at that moment | `POST /api/ask`, `src/api/whip_mcp.py` |
-| **Connect** | Slack, Notion, HubSpot. Each connection is verified with a real message, page or task before it's saved | `/connections` |
-
-## How WhipScribe is used (for real)
-
-| Capability | Endpoint / tool | Used for |
-|---|---|---|
-| Transcribe a file or link | `POST /api/v1/transcribe`, `/transcribe/url` (with `Idempotency-Key`) | every upload |
-| Poll + fetch | `GET /jobs/{id}`, `GET /jobs/{id}/result` | segments, speakers, timestamps |
-| Audio | `GET /jobs/{id}/audio/url` (signed, 1 h) | the report player, via a fresh-URL redirect |
-| Insights | `GET /jobs/{id}/insights` | session summary and quotes (degrades with a reason when locked) |
-| MCP: search | `clips_search_transcript` | Griot retrieval across the library |
-| MCP: key moments | `clips_prepare` → `clips_get_high_signal` | key-moment markers on the timeline |
-
-The 37 tools the MCP server exposes are listed in
-[docs/whipscribe-mcp-tools.md](docs/whipscribe-mcp-tools.md). The REST routes
-that are documented but returned 404 are written up in
-[docs/LEARNING.md](docs/LEARNING.md).
-
-## Run it
+## Run it yourself
 
 ```bash
-# backend (Flask, port 5000)
+# Backend: Flask API on :5000
 pip install -r requirements.txt
-cp .env.template .env          # WHIPSCRIBE_API_KEY, LLM_PROVIDER + its key
+cp .env.template .env        # add WHIPSCRIBE_API_KEY and an LLM key (e.g. GROQ_API_KEY)
 python app.py
 
-# frontend (Next.js, port 3000)
+# Frontend: Next.js on :3000
 cd frontend && npm ci
 BACKEND_URL=http://localhost:5000 npm run dev:hmr
-
-# tests: offline, no keys; network calls are blocked by tests/conftest.py
-python -m pytest -q             # 139 passed
 ```
 
-CI runs the pytest suite plus a frontend type-check and lint on every push
-(`.github/workflows/ci.yml`).
+```bash
+python -m pytest -q          # 139 tests, run offline, no keys needed
+```
 
-## Quality bar (measured)
+Stack: Next.js · Flask · SQLite · WhipScribe API + MCP · Groq / OpenAI / Anthropic.
 
-- **Tests:** 139 offline pytest tests: scoring arithmetic, quote grounding,
-  WhipScribe client parsing against recorded real responses, the MCP fallback,
-  and every Flask route against the seed library.
-- **Accessibility:** axe-core 4.10 reports 0 serious or critical violations on
-  home, report, spotter, coach, trends, speakers and connections.
-- **Mobile:** no horizontal overflow at 390 px or 320 px; primary tap targets
-  are at least 44 px.
-- **States:** every page has designed loading (skeletons), empty, error (with
-  retry) and offline states. If the server is slow to start, the page says
-  "Waking up the analysis server…" instead of showing a spinner forever.
+## What's next
 
-## What doesn't work yet
+- **Team view:** one coach reviewing every rep's calls side by side.
+- **Saved libraries:** today the free hosting resets uploaded calls on each deploy. The demo library is always there; persistent storage comes next.
+- **Calendar hook:** score a call automatically when the meeting ends.
 
-- **Your uploads don't survive a redeploy.** The free Render plan has no
-  persistent disk, so the SQLite library resets on each deploy. The 8-call seed
-  library is restored on boot.
-- **Speaker names are sometimes missing.** When WhipScribe returns a
-  transcript without speaker labels, quotes and key moments show no speaker
-  rather than a guessed one.
-- **Key-moment titles** come from WhipScribe's `clips_get_high_signal` and can
-  read like raw transcript fragments.
-- **The first request after the server sleeps takes about 20 s.** This is the
-  Render free-plan cold start.
-- **No one but me has run it end to end yet.** That's the next step before any
-  new feature.
+## More
 
-## Architecture
+- [Decisions: what was built, what was cut, and why](DECISIONS.md)
+- [What we learned building on the WhipScribe API](docs/LEARNING.md)
+- [The problem, in detail](PROBLEM.md)
 
-Two processes share one pipeline: a **Next.js** app (Vercel) and a **Flask**
-API (Render). The API transcribes through WhipScribe, scores with four LLM
-judges, stores results in SQLite, and serves Spotter, Radar and Griot from the
-same data.
+<div align="center">
 
-![Architecture](./assets/mermaid-diagram%20(2).png)
+Built by **[Sujit Nirmal](https://github.com/Blacksujit)** on [WhipScribe](https://whipscribe.com).
+
+</div>
