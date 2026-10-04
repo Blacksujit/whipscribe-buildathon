@@ -35,3 +35,33 @@ backend.log
 
 # Frontend working files
 frontend/test-results/
+.vercel
+
+node_modules
+
+# Test / tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Stray shell / editor artifacts
+$null
+*.log
+.commandcode/
+.cursor/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local SQLite databases (the shipped seed snapshot stays tracked)
+*.db
+*.db-wal
+*.db-shm
+!seed_evaluations.db
+
+# Ad-hoc screenshots in the frontend root (real ones live in docs/screenshots/)
+frontend/*.png
+
+# HyperFrames studio caches
+videos/**/.thumbnails/

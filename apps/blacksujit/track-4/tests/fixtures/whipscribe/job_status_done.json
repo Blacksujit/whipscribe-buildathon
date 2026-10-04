@@ -1,0 +1,18 @@
+{
+ "job_id": "bcfcea2d-b6d7-4cff-b75c-d5e3628ec5e7",
+ "status": "done",
+ "progress": 100,
+ "queue_position": 0,
+ "created_at": 1790699958.143038,
+ "completed_at": 1790699980.8565123,
+ "audio_duration_seconds": 819.36,
+ "processing_seconds": 22.323049783706665,
+ "error": null,
+ "tier": 2,
+ "source": "api",
+ "original_filename": "Sample_Call_ENG_MA.mp3",
+ "filename": "Sample Call ENG MA",
+ "title_source": "qwen-flash",
+ "speech_detected": true,
+ "speech_ratio": 0.6822397969146651
+}

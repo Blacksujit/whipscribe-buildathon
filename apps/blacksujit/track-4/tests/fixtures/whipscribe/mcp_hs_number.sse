@@ -1,0 +1,3 @@
+event: message
+data: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"sentences\": [{\"idx\": 16, \"start\": 50.22, \"end\": 54.28, \"text\": \"Plus, you can raise it up to $100 in Visa gift cards when your role is in a slump.\", \"speaker\": null, \"is_question\": false, \"has_hook\": false, \"has_number\": true, \"energy_avg\": 1376.4}, {\"idx\": 36, \"start\": 108.46, \"end\": 110.5, \"text\": \"205-5-0-0-1.\", \"speaker\": null, \"is_question\": false, \"has_hook\": false, \"has_number\": true, \"energy_avg\": 1067.4}, {\"idx\": 39, \"start\": 118.18, \"end\": 118.74, \"text\": \"020301.\", \"speaker\": null, \"is_question\": false, \"has_hook\": false, \"has_number\": true, \"energy_avg\": 1255.7}]}"}],"isError":false}}
+

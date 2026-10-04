@@ -106,10 +106,69 @@ SYSTEM_PROMPT = (
 )
 
 
+def local_citations(question: str, evaluations: list[dict], job_id: str | None = None,
+                    limit: int = 8) -> list[dict[str, Any]]:
+    """Local index: keyword search over the stored transcripts' segments.
+
+    Same citation shape as the WhipScribe MCP retrieval, so the UI renders
+    both identically: {job_id, meeting_name, speaker, start, end, quote}.
+    """
+    from src.api.whip_mcp import query_terms
+
+    terms = query_terms(question)
+    if not terms:
+        return []
+    hits = []
+    for row in evaluations or []:
+        if job_id and row.get("job_id") != job_id:
+            continue
+        transcript = row.get("transcript")
+        if isinstance(transcript, str):
+            try:
+                transcript = json.loads(transcript)
+            except (ValueError, TypeError):
+                transcript = {}
+        for seg in (transcript or {}).get("segments", []) or []:
+            text = (seg.get("text") or "").strip()
+            low = text.lower()
+            score = sum(1 for t in terms if t in low)
+            if not score:
+                continue
+            hits.append((score, {
+                "job_id": row.get("job_id"),
+                "meeting_name": row.get("meeting_name") or (row.get("job_id") or "")[:8],
+                "speaker": seg.get("speaker"),
+                "start": round(float(seg.get("start") or 0), 2),
+                "end": round(float(seg["end"]), 2) if seg.get("end") is not None else None,
+                "quote": text[:280],
+            }))
+    hits.sort(key=lambda h: -h[0])
+    return [h[1] for h in hits[:limit]]
+
+
+def render_citations_text(citations: list[dict[str, Any]], source: str) -> str:
+    if not citations:
+        return ""
+    lines = [f"TRANSCRIPT MATCHES (retrieved from {source}; exact words said on the call):"]
+    for c in citations:
+        lines.append(
+            f'- {c.get("meeting_name")} @ {_fmt_time(c.get("start") or 0)} '
+            f'({c.get("speaker") or "Unknown"}): "{c.get("quote")}"'
+        )
+    return "\n".join(lines)
+
+
 def ask(question: str, evidence: dict[str, Any], provider: str | None = None,
-        api_key: str | None = None, model: str | None = None) -> dict[str, Any]:
-    """Answer a question over the evidence; LLM when possible, data-derived otherwise."""
-    if not evidence.get("calls"):
+        api_key: str | None = None, model: str | None = None,
+        citations: list[dict[str, Any]] | None = None, source: str = "local-index") -> dict[str, Any]:
+    """Answer a question over the evidence; LLM when possible, data-derived otherwise.
+
+    ``citations`` are transcript sentences retrieved for this question (from
+    the WhipScribe MCP search or the local index) and are given to the model
+    alongside the stored scorecards.
+    """
+    citations = citations or []
+    if not evidence.get("calls") and not citations:
         return {
             "answer": "No scored calls yet. Open a recording on the home page and run the analysis first - then I can answer from it.",
             "mode": "empty",
@@ -120,18 +179,20 @@ def ask(question: str, evidence: dict[str, Any], provider: str | None = None,
         try:
             from src.core.evaluator import call_llm
 
+            matches = render_citations_text(citations, source)
             prompt = (
                 f"{SYSTEM_PROMPT}\n\nEVIDENCE:\n{render_evidence_text(evidence)}\n\n"
-                f"QUESTION: {question}\n\nANSWER:"
+                + (f"{matches}\n\n" if matches else "")
+                + f"QUESTION: {question}\n\nANSWER:"
             )
             answer = call_llm(provider, api_key, model, prompt)
             return {"answer": answer.strip(), "mode": "llm", "sources": _extract_sources(answer, evidence)}
         except Exception as exc:  # noqa: BLE001
-            result = _data_answer(question, evidence)
+            result = _data_answer(question, evidence, citations)
             result["note"] = f"LLM unavailable ({type(exc).__name__}); answered from the stored data."
             return result
 
-    return _data_answer(question, evidence)
+    return _data_answer(question, evidence, citations)
 
 
 def _fold(text: str) -> str:
@@ -166,11 +227,21 @@ def _extract_sources(answer: str, evidence: dict[str, Any]) -> list[dict[str, An
     return sources[:6]
 
 
-def _data_answer(question: str, evidence: dict[str, Any]) -> dict[str, Any]:
+def _data_answer(question: str, evidence: dict[str, Any],
+                 citations: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Honest data-derived answer when no LLM key is configured."""
     q = question.lower()
     calls = evidence.get("calls", [])
     lines: list[str] = []
+
+    if citations:
+        lines.append("Where this comes up on your calls:")
+        for c in citations[:6]:
+            lines.append(
+                f'- {c.get("meeting_name")} @ {_fmt_time(c.get("start") or 0)} '
+                f'({c.get("speaker") or "Unknown"}): "{c.get("quote")}"'
+            )
+        return {"answer": "\n".join(lines), "mode": "data", "sources": []}
 
     if any(word in q for word in ("commit", "promise", "action", "follow")):
         lines.append("Commitments found across scored calls:")

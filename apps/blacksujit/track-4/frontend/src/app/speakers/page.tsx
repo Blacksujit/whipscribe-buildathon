@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -8,6 +8,15 @@ import { getSpeakers, SpeakersResponse, SpeakerStat } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
 import PageHeader from "@/components/PageHeader";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import {
+  ColdStartNotice,
+  EmptyState,
+  ErrorState,
+  OfflineBanner,
+  PageSkeleton,
+  SampleDataBadge,
+  useSampleFallback,
+} from "@/components/states";
 import {
   ShieldCheckIcon,
   WaveformIcon,
@@ -44,20 +53,23 @@ function IssueIcon({ type, size = 14 }: { type: string; size?: number }) {
 }
 
 function getSpeakerInitials(name: string): string {
-  const parts = name.split(" ");
+  // Ignore role suffixes like "Alex (Founder)" so the avatar reads "AL", not "A(".
+  const base = name.replace(/\(.*?\)/g, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").trim();
+  const parts = base.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-  return name.substring(0, 2).toUpperCase();
+  return (parts[0] || name).substring(0, 2).toUpperCase();
 }
 
-function getAvatarBg(name: string): string {
+// Background/foreground pairs chosen to keep initials at >= 4.5:1 contrast.
+function getAvatarColors(name: string): { background: string; color: string } {
   const colors = [
-    "var(--brand)",
-    "var(--cat-clarity)",
-    "var(--cat-tension)",
-    "var(--cat-actions)",
-    "var(--brand-700)",
+    { background: "var(--brand)", color: "#14532d" },
+    { background: "#4f46e5", color: "#ffffff" },
+    { background: "var(--cat-tension)", color: "#0f172a" },
+    { background: "var(--cat-actions)", color: "#0f172a" },
+    { background: "var(--brand-700)", color: "#0f172a" },
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -69,44 +81,60 @@ function getAvatarBg(name: string): string {
 export default function SpeakersPage() {
   const [data, setData] = useState<SpeakersResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const isSample = useSampleFallback();
+
+  const applySpeakers = useCallback((result: SpeakersResponse | null) => {
+    setData(result);
+    setLoading(false);
+  }, []);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    getSpeakers().then(applySpeakers);
+  }, [applySpeakers]);
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const result = await getSpeakers();
-      setData(result);
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
+    getSpeakers().then(applySpeakers);
+  }, [applySpeakers]);
 
   if (loading) {
     return (
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <div className="skeleton skeleton-title" />
-          <div className="skeleton skeleton-line" style={{ width: "42%" }} />
-          <div className="card" style={{ marginTop: 24 }}>
-            <div className="skeleton skeleton-row" />
-            <div className="skeleton skeleton-row" />
-            <div className="skeleton skeleton-row" />
-          </div>
+          <OfflineBanner />
+          <PageSkeleton rows={3} label="Loading speaker patterns" />
+          <ColdStartNotice active={loading} />
         </div>
       </main>
     );
   }
 
-  if (!data || !data.success) {
+  if (!data) {
     return (
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <PageHeader
-            eyebrow="Speakers"
+          <OfflineBanner onReconnect={load} />
+          <PageHeader eyebrow="Speakers" title="Who says what, across calls." />
+          <ErrorState title="Could not load speaker patterns." onRetry={load} />
+        </div>
+      </main>
+    );
+  }
+
+  if (!data.success || (data.speakers || []).length === 0) {
+    return (
+      <main className="site-shell">
+        <Navbar />
+        <div className="section-wide section-pad">
+          <SampleDataBadge show={isSample} />
+          <PageHeader eyebrow="Speakers" title="Who says what, across calls." />
+          <EmptyState
+            icon={<UsersIcon size={24} />}
             title="Not enough calls yet."
-            subtitle={data?.error || "Speaker patterns appear once two or more calls are scored."}
-            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+            body={data.error || "Speaker patterns appear once two or more calls are scored."}
+            action={<Link href="/" className="btn-primary">Upload a call</Link>}
           />
         </div>
       </main>
@@ -122,6 +150,8 @@ export default function SpeakersPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
+        <OfflineBanner onReconnect={load} />
+        <SampleDataBadge show={isSample} />
         <PageHeader
           eyebrow="Speakers"
           title="Who the issues come from."
@@ -141,7 +171,7 @@ export default function SpeakersPage() {
               return (
                 <AnimatedContent key={speaker.name} delay={0.05 * i}>
                   <div className="speaker-card">
-                    <div className="speaker-avatar" style={{ background: getAvatarBg(speaker.name) }}>
+                    <div className="speaker-avatar" style={getAvatarColors(speaker.name)}>
                       {getSpeakerInitials(speaker.name)}
                     </div>
                     <div className="speaker-info">

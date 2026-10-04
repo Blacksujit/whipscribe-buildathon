@@ -1,0 +1,5 @@
+{
+ "_fixture_note": "Error body shape from https://whipscribe.com/docs error table (402 transcript_locked).",
+ "error": "The finished transcript is paywalled for this account.",
+ "code": "transcript_locked"
+}

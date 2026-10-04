@@ -1,0 +1,3 @@
+event: message
+data: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"sentences\": [{\"idx\": 12, \"start\": 30.92, \"end\": 36.32, \"text\": \"purposes. Ms. Janini, the reason I'm calling is because you may be eligible for a price protected\", \"speaker\": null, \"is_question\": false, \"has_hook\": true, \"has_number\": false, \"energy_avg\": 980.0}]}"}],"isError":false}}
+

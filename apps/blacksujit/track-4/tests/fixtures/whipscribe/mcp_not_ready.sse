@@ -1,0 +1,3 @@
+event: message
+data: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": false, \"error\": {\"code\": \"clips_not_ready\", \"message\": \"features not yet computed; call clips_prepare first\", \"retryable\": false}, \"beta_notice\": \"Whipscribe MCP is in beta. Endpoints, response shapes, and quotas may change without notice. Beta credits can be invalidated without notice. Not suitable for production use cases where transcription failure has legal, safety, or financial consequences. Full terms: https://whipscribe.com/terms.\"}"}],"isError":false}}
+

@@ -1,0 +1,7 @@
+{
+ "email": null,
+ "tier": "guest",
+ "concrete_tier": "pro",
+ "retention_days": 36500,
+ "signed_in": false
+}

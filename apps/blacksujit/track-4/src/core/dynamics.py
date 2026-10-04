@@ -92,8 +92,14 @@ def analyze_dynamics(transcript: Dict[str, Any]) -> Dict[str, Any]:
         })
 
     top = speakers[0] if speakers else None
+    named = [s for s in speakers if s["name"] != "Unknown"]
     verdict = ""
-    if top:
+    if not named:
+        verdict = (
+            "No speaker labels in this transcript - it was transcribed before diarization was enabled. "
+            "Re-transcribe this recording to get talk balance."
+        )
+    elif top:
         if top["talk_share"] >= 65:
             verdict = (
                 f"{top['name']} held the floor {top['talk_share']}% of the call. "

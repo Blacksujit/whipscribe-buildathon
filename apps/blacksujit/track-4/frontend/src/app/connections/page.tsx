@@ -7,6 +7,7 @@ import PageTransition from "@/components/PageTransition";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
 import { SlackMark, NotionMark, HubSpotMark, WhipScribeMark } from "@/components/BrandIcons";
 import { CheckCircleIcon, AlertIcon, SparkIcon } from "@/components/icons";
+import { ColdStartNotice, ErrorState, OfflineBanner, PageSkeleton } from "@/components/states";
 import {
   getConnections,
   getOauthConfig,
@@ -120,7 +121,7 @@ function OauthSetup({
             </li>
             <li className="oauth-copy-row">
               <span>
-                Add these two keys to the server's environment (on Render: Environment, then Save - the
+                Add these two keys to the server&apos;s environment (on Render: Environment, then Save - the
                 service restarts itself), and one-click is live for everyone:
               </span>
               <code>{config.env.join(", ")}</code>
@@ -194,6 +195,7 @@ function DeliveryTile({
 export default function ConnectionsPage() {
   const [data, setData] = useState<ConnectCenterResponse | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [openForm, setOpenForm] = useState<ToolKey | null>(null);
   const [oauthStage, setOauthStage] = useState<Record<string, "idle" | "waiting" | "pick">>({});
   const [channels, setChannels] = useState<Array<{ id: string; name: string }>>([]);
@@ -208,8 +210,8 @@ export default function ConnectionsPage() {
   const [notionDatabase, setNotionDatabase] = useState("");
   const [hubspotToken, setHubspotToken] = useState("");
 
-  const refresh = useCallback(async () => {
-    const result = await getConnections();
+  const applyConnections = useCallback((result: ConnectCenterResponse | null) => {
+    setRetrying(false);
     if (result) {
       setData(result);
       setLoadError(false);
@@ -218,10 +220,12 @@ export default function ConnectionsPage() {
     }
   }, []);
 
+  const refresh = useCallback(() => getConnections().then(applyConnections), [applyConnections]);
+
   useEffect(() => {
-    refresh();
+    getConnections().then(applyConnections);
     getOauthConfig().then(setOauthConfig).catch(() => setOauthConfig(null));
-  }, [refresh]);
+  }, [applyConnections]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -306,12 +310,31 @@ export default function ConnectionsPage() {
       <main className="site-shell">
         <Navbar />
         <section className="section-wide section-pad">
-          <PageHeader
-            eyebrow="Connections"
-            title="Cannot reach the API."
-            subtitle="The dashboard is up; the backend is not answering right now. It sleeps on the free tier - give it about 30 seconds."
+          <OfflineBanner onReconnect={refresh} />
+          <PageHeader eyebrow="Connections" title="Connect once. Every scorecard lands where your team works." />
+          <ErrorState
+            title="Could not load your connections."
+            body="The dashboard is up; the analysis server is not answering right now. It sleeps on the free tier - give it about 30 seconds. Connection status is never guessed, so nothing is shown until it answers."
+            onRetry={() => {
+              setRetrying(true);
+              refresh();
+            }}
+            retrying={retrying}
           />
-          <button className="btn-secondary" onClick={() => refresh()}>Try again</button>
+          <ColdStartNotice active={retrying} />
+        </section>
+      </main>
+    );
+  }
+
+  if (!data) {
+    return (
+      <main className="site-shell">
+        <Navbar />
+        <section className="section-wide section-pad">
+          <OfflineBanner />
+          <PageSkeleton rows={4} label="Checking your connections" />
+          <ColdStartNotice active />
         </section>
       </main>
     );
@@ -322,6 +345,7 @@ export default function ConnectionsPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
+        <OfflineBanner onReconnect={refresh} />
         <PageHeader
           eyebrow="Connect"
           title="Connect once. Every scorecard lands where your team works."

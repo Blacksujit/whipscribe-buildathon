@@ -49,3 +49,4 @@ node scripts/record-demo.mjs   # records the walkthrough to ../videos/demo/
 - Styling follows `../docs/DESIGN.md` - the WhipScribe visual system (lime
   brand, DM Serif Display headings, Inter body) with category colors reserved
   for evidence tags.
+

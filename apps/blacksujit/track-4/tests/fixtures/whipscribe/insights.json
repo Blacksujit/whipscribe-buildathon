@@ -1,0 +1,57 @@
+{
+ "insights": {
+  "summary": "Jesus from Clean Sky Energy called Janine Correa to enroll her in the EcoRigWolf 12 plan — a 12-month, 100% renewable electricity plan with a fixed rate of $0.2099 per kWh and $50 in Visa gift cards disbursed as two $25 payments over the term. Janine confirmed she is the account holder for National Grid (account #756-960-6021) at 305 Pine Grove Drive, Brockton, MA 02301, and verified her identity and eligibility during a third-party verification call with TPV360. The plan includes a $75 early termination fee, and service begins at the next meter read. Clean Sky Energy is not affiliated with National Grid, which remains responsible for delivery, billing, and emergency service.",
+  "quotes": [
+   {
+    "speaker": "Jesus",
+    "text": "The EcoRigWolf 12 plan offers 12 months of 100% renewable electricity and a fixed rate of $20.99 per kilowatt hour with non-monetary fees.",
+    "start": 187.4
+   },
+   {
+    "speaker": "Jesus",
+    "text": "Clean Sky Energy is not affiliated with the local electricity utility or any city or town energy program.",
+    "start": 23.78
+   },
+   {
+    "speaker": "Janine Correa",
+    "text": "Janine Correa.",
+    "start": 513.24
+   },
+   {
+    "speaker": "TPV360",
+    "text": "Do you understand that the representative who you spoke with earlier represents Clean Sky, in fact, Clean Sky is not an affiliate of National Grid, but is an approved supplier on the Energy Choice Program?",
+    "start": 692.86
+   },
+   {
+    "speaker": "Janine Correa",
+    "text": "Yes.",
+    "start": 714.46
+   }
+  ],
+  "topics": [
+   "Clean Sky Energy enrollment",
+   "EcoRigWolf 12 plan",
+   "National Grid account",
+   "renewable electricity plan",
+   "third-party verification",
+   "early termination fee",
+   "Visa gift cards",
+   "utility disaffiliation"
+  ],
+  "speakers": [
+   {
+    "speaker": "Jesus",
+    "summary": "Represented Clean Sky Energy, explained the EcoRigWolf 12 plan’s fixed rate ($0.2099/kWh), 100% renewable sourcing, $50 Visa gift cards, $75 early termination fee, and clarified Clean Sky’s non-affiliation with National Grid. Collected Janine’s name, address (305 Pine Grove Drive, Brockton, MA), account number, phone, birthday (April 15), and email."
+   },
+   {
+    "speaker": "Janine Correa",
+    "summary": "Confirmed she is the National Grid account holder at 305 Pine Grove Drive, Brockton, MA 02301; verified her name, account number (756-960-6021), phone (508-345-6904), birth date (April 15), and consented to enrollment during third-party verification."
+   },
+   {
+    "speaker": "TPV360",
+    "summary": "Conducted mandatory third-party verification, confirming Janine’s identity, enrollment intent, understanding of Clean Sky’s non-affiliation with National Grid, plan terms, early termination fee, and rescission rights; issued verification code TLEGTHOMAS0701260."
+   }
+  ]
+ },
+ "cache_hit": true
+}

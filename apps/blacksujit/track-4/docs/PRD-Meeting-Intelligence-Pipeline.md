@@ -1,5 +1,5 @@
 # PRD: Meeting Intelligence Pipeline (Track 4)
-**Product:** CallCoach — Investment Readiness QA for Founders  
+**Product:** CallCoach  Investment Readiness QA for Founders  
 **Author:** Buildathon Team  
 **Date:** September 2026  
 **Status:** MVP in Development  
@@ -17,14 +17,12 @@ Seed-stage founders manage 20+ investor calls per week. Each call is critical da
 - **Deal slippage**: Without systematic feedback, founders lose deals to competitors who iterate faster.
 
 ### Our Solution
-
 **CallCoach** transforms raw audio into a **Managerial Scorecard**. Using WhipScribe's API as our transcription backbone and a multi-agent AI pipeline for analysis, we provide:
 1.  Per-call Quality Reports (Compliance, Clarity, Friction, Action Items)
 2.  Cross-call Trend Analysis (Are you improving week over week?)
 3.  Prescriptive Coaching (Not "what happened," but "how to fix it")
 
 ### Key Innovation
-
 While competitors stop at a single-call scorecard, CallCoach builds a **coaching loop** across a portfolio of calls. The core insight: **"One call is data. A week of calls is a coaching signal. A multi-week trend is a performance engine."**
 
 ---
@@ -55,16 +53,19 @@ While competitors stop at a single-call scorecard, CallCoach builds a **coaching
 
 ### 2.2 User Research (Synthesized)
 
-**Primary Persona: Sarah**
+**Primary Persona: The Founder**
+- Seed-stage founder raising a round, 15-20 investor calls/week
+- Needs: "Will this investor give me the round?" not "What was said?"
+- Pain point: Vague feedback, cannot self-audit objectively; the same flaw
+  survives a dozen calls because nobody hears it twice
+
+**Secondary Persona: Sarah**
 - Customer Success Manager at $10M ARR SaaS
 - Manages 3 SDRs, 15-20 customer calls/week
 - Reads full transcripts (30-60 min/week), tracks issues in Google Docs
 - Misses ~30% of commitments weekly, delayed feedback (2-3 days)
-
-**Secondary Persona: The Founder**
-- Runs 20+ investor calls/week
-- Needs: "Will this investor give me the round?" not "What was said?"
-- Pain point: Vague feedback, can't self-audit objectively
+- The same pipeline generalizes to her; the founder is the persona this
+  entry is built and written around (see README)
 
 ### 2.3 Market Gap Analysis
 
@@ -88,7 +89,7 @@ Most Track 4 submissions follow a single-call pattern:
 ### 3.2 Product Strategy (6 Points)
 
 1.  **Solve one real job for one real user:** QA for founder-investor calls
-2.  **Make the workflow visible:** Upload → Analyze → Dashboard → Coach
+2.  **Make the workflow visible:** Upload  Analyze  Dashboard  Coach
 3.  **Show live evidence:** Timestamp-grounded quotes from WhipScribe transcripts
 4.  **Demonstrate comparison:** Multi-call trend analysis on `/trends`
 5.  **Build a coaching layer:** Prescriptive feedback on `/coach`
@@ -130,7 +131,7 @@ Most Track 4 submissions follow a single-call pattern:
 **Layout Contract (From design.md):**
 - Max content width: 1120px
 - Desktop padding: 28px / Mobile: 18px
-- Hero: Two-column (copy ↔ upload), collapses at 760px
+- Hero: Two-column (copy  upload), collapses at 760px
 - Rules over shadows, editorial spacing over SaaS card grids
 - Lime reserved for upload affordances, active tabs, links
 
@@ -138,45 +139,45 @@ Most Track 4 submissions follow a single-call pattern:
 
 ```
 src/components/
-├── ui/                     # Shared primitives (Button, Card, Skeleton)
-│   ├── Button.tsx
-│   ├── Card.tsx
-│   ├── Skeleton.tsx
-│   └── Toast.tsx
-├── dashboard/              # Dashboard-specific composites
-│   ├── UploadPanel.tsx     # Multi-tab uploader (File/Link/Record)
-│   ├── StatsCard.tsx       # Animated stat cards + pipeline stages
-│   └── RecordingsList.tsx  # Ruled list of recordings
-├── report/                 # Report page components
-│   ├── DealKillerCard.tsx
-│   ├── StrategicIntelligence.tsx
-│   ├── DealMomentum.tsx
-│   └── Scorecard.tsx
-└── ...
+ ui/                     # Shared primitives (Button, Card, Skeleton)
+    Button.tsx
+    Card.tsx
+    Skeleton.tsx
+    Toast.tsx
+ dashboard/              # Dashboard-specific composites
+    UploadPanel.tsx     # Multi-tab uploader (File/Link/Record)
+    StatsCard.tsx       # Animated stat cards + pipeline stages
+    RecordingsList.tsx  # Ruled list of recordings
+ report/                 # Report page components
+    DealKillerCard.tsx
+    StrategicIntelligence.tsx
+    DealMomentum.tsx
+    Scorecard.tsx
+ ...
 ```
 
 ### 4.3 Key User Flows
 
 1. **Upload & Analyze Flow**
    ```
-   [Upload recording] → [WhipScribe API transcribes] → [Multi-Agent Analysis]
-      ↓
+   [Upload recording]  [WhipScribe API transcribes]  [Multi-Agent Analysis]
+      
    [Report generated with Scorecard, Issues, Action Items]
-      ↓
-   [Data saved to SQLite → Trends Dashboard updates]
+      
+   [Data saved to SQLite  Trends Dashboard updates]
    ```
 
 2. **Trend Analysis Flow**
    ```
-   [Multiple reports in DB] → [metrics.py calculates Velocity & Momentum]
-      ↓
+   [Multiple reports in DB]  [metrics.py calculates Velocity & Momentum]
+      
    [/trends page renders Score Progression + Momentum Indicator]
    ```
 
 3. **Coaching Flow**
    ```
-   [User visits /coach] → [useCoach hook fetches coach-data API]
-      ↓
+   [User visits /coach]  [useCoach hook fetches coach-data API]
+      
    [AI generates prescriptive advice tied to timestamps]
    ```
 
@@ -207,7 +208,7 @@ graph TD
 
     subgraph "External APIs"
         WS_API[WhipScribe API]
-        LLM[OpenAI / Anthropic]
+        LLM[GROQ (default) / OpenAI / Anthropic]
         Notion_API[Notion API]
         Slack_API[Slack API]
     end
@@ -336,10 +337,10 @@ Four specialized agents run in parallel via `call_llm`:
 
 | Agent | Purpose | Key Output |
 |-------|---------|------------|
-| **Commitments** | Track explicit promises | List of commitments with timestamp |
-| **Friction** | Detect micro-tensions | Tension signals with quotes |
-| **Narrative** | Find clarity gaps | Vague language, hedging |
-| **Velocity** | Extract action items | New items + resolved items |
+| **ComplianceAgent** | Track unbacked promises and risky commitments | `compliance_risks` with quotes + timestamps |
+| **TensionAgent** | Detect micro-tensions | `tension_signals` with quotes |
+| **ClarityAgent** | Find clarity gaps | `clarity_issues` (vague language, hedging) |
+| **ActionItemAgent** | Extract action items and detect resolved ones | `action_items` + `resolved_items` |
 
 **Synthesis:** A "Chief Reviewer" LLM call synthesizes all findings into:
 - Overall Score (0-100)
@@ -353,35 +354,37 @@ Four specialized agents run in parallel via `call_llm`:
 
 ## 7. Implementation Plan
 
-### Phase 1: Foundation (Completed ✅)
-- ✅ Flask backend with `/api/upload`, `/api/report`, `/api/trends-data`
-- ✅ Multi-agent evaluator (`src/core/evaluator.py`)
-- ✅ Mathematical deal velocity (`src/core/metrics.py`)
-- ✅ SQLite store with action item tracking
-- ✅ Next.js frontend with TypeScript
+### Phase 1: Foundation (Completed )
+-  Flask backend with `/api/upload`, `/api/report`, `/api/trends-data`
+-  Multi-agent evaluator (`src/core/evaluator.py`)
+-  Mathematical deal velocity (`src/core/metrics.py`)
+-  SQLite store with action item tracking
+-  Next.js frontend with TypeScript
 
-### Phase 2: Modern UI (In Progress 🔄)
-- ✅ Added `@react-bits` MCP server
-- ✅ Installed `framer-motion`, `lucide-react`
-- ✅ Modern Button, Card, Skeleton components
-- ✅ Reimagined UploadPanel with 3-tab interface
-- ✅ StatsCard with animated metric displays
-- ✅ Pipeline stage visualization
-- ⏳ Dashboard redesign (in progress)
-- ⏳ Report page ("Strategic Dossier" redesign)
+### Phase 2: Modern UI (Done )
+-  Pipeline stage visualization on upload
+-  Real recordings list on the dashboard (stored scores, links to reports)
+-  Report page: score + category bars + evidence dossier (compliance, tension,
+  clarity, action items) with timestamp links into the recording
+-  Trends chart, coach insights, speakers, settings pages
+-  Drag-and-drop upload; error and empty states on every page
+-  Not built: 3-tab UploadPanel (file/link/record), reusable
+  Button/Card/Skeleton component library, lucide-react icons
+-  React Bits components beyond CountUp were removed (heavy three.js deps,
+  drift from the design system; see the README "what was removed and why")
 
 ### Phase 3: Production Polish (Planned)
-- ☐ Add Cypress/E2E testing
-- ☐ Implement error boundaries
-- ☐ Add loading skeletons everywhere
-- ☐ Connect to WhipScribe audio playback URLs
-- ☐ Full responsive design audit
+-  Add Cypress/E2E testing
+-  Implement error boundaries
+-  Add loading skeletons everywhere
+-  Connect to WhipScribe audio playback URLs
+-  Full responsive design audit
 
 ### Phase 4: Advanced Features (Future)
-- ☐ Golden Path benchmark comparison
-- ☐ CRM connector (HubSpot/Salesforce)
-- ☐ Speaker diarization analysis page
-- ☐ Export to Notion/PDF
+-  Golden Path benchmark comparison
+-  CRM connector (HubSpot/Salesforce)
+-  Speaker diarization analysis page
+-  Export to Notion/PDF
 
 ---
 
@@ -405,7 +408,7 @@ Before PR, we must demonstrate:
 2. Analyze it with the multi-agent pipeline
 3. Show the AI-generated report with scores, deal killers, and action items
 4. Show timestamp-grounded evidence (quotes linked to the transcript)
-5. Demonstrate cross-call comparison on `/trens`
+5. Demonstrate cross-call comparison on `/trends`
 6. Run the full flow from start to finish in under 2 minutes
 
 ---
@@ -415,43 +418,46 @@ Before PR, we must demonstrate:
 ### 9.1 File Structure Reference
 ```
 apps/blacksujit/track-4/
-├── app.py                      # Flask backend entry point
-├── frontend/                   # Next.js app
-│   ├── src/
-│   │   ├── app/                # Pages (app router)
-│   │   ├── components/         # UI components
-│   │   ├── hooks/              # React data hooks
-│   │   ├── lib/                # Utilities & API client
-│   │   ├── styles/             # Tailwind CSS
-│   │   └── types/              # TypeScript interfaces
-│   └── package.json
-├── src/                        # Backend modules
-│   ├── core/                   # Evaluator & metrics engine
-│   ├── api/                    # API clients (WhipScribe, etc.)
-│   └── database/               # SQLite store
-├── requirements.txt
-├── e2e_test.py                 # Integration test
-├── .mcp.json                   # MCP server config
-├── README.md
-├── PROBLEM.md
-└── design.md
+ app.py                      # Flask JSON API (dashboard pages were retired)
+ frontend/                   # Next.js app
+    src/
+       app/                # Pages (app router): /, /report/[id], /trends, /coach, /speakers, /settings
+       components/         # Navbar, PageTransition, reactbits/CountUp
+       lib/                # API client + shared types
+    scripts/                # record-demo.mjs (Playwright walkthrough capture)
+    package.json
+ src/                        # Backend modules
+    core/                   # Evaluator, metrics, comparison engine
+    api/                    # WhipScribe, Slack, Notion clients
+    database/               # SQLite store
+    mcp_server.py           # MCP server (4 tools)
+    main.py                 # CLI entry point
+ docs/                       # PRD + DESIGN.md (implemented design system)
+ videos/                     # Demo captures
+ requirements.txt
+ e2e_test.py                 # Integration test (--offline / --real)
+ .mcp.json                   # MCP server config for local tools
+ README.md
+ PROBLEM.md
+ design.md                   # superseded design direction (see docs/DESIGN.md)
 ```
 
 ### 9.2 Tech Stack Summary
 **Backend (Python):**
 - Flask, SQLite, NumPy, Requests
-- WhipScribe API, OpenAI/Anthropic LLMs
+- WhipScribe API, GROQ (default) / OpenAI / Anthropic LLMs
 - Multi-agent eval pipeline
 
 **Frontend (TypeScript):**
-- Next.js 14, React 19, Framer Motion, Tailwind CSS
-- Lucide React, TanStack Query
-- `cn()` utility with `clsx` + `tailwind-merge`
+- Next.js 16, React 19, Framer Motion
+- Tailwind CSS v4 (single `globals.css`, design tokens from docs/DESIGN.md)
 
 **Infrastructure:**
-- `.mcp.json` with `@whipscribe/mcp` registry
-- Render deployment configured
+- `.mcp.json` with the CallCoach MCP server entry
+- Render deployment configured (`render.yaml`)
 - Environment via `.env`
 
 ---
-*Document Version: 1.0 (September 2026)*
+*Document Version: 1.1 (September 2026) - updated to match the implemented system:
+provider is GROQ by default, agents are Compliance/Tension/Clarity/ActionItem,
+the dashboard is Next.js 16, and phase status reflects the code.*

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -19,8 +19,16 @@ import {
   TrendUpIcon,
 } from "@/components/icons";
 import { getTrends, TrendsResponse } from "@/lib/api";
+import {
+  ColdStartNotice,
+  EmptyState,
+  ErrorState,
+  OfflineBanner,
+  PageSkeleton,
+  SampleDataBadge,
+  useSampleFallback,
+} from "@/components/states";
 
-const springReveal = { type: "spring" as const, stiffness: 200, damping: 20 };
 
 const categoryColors: Record<string, string> = {
   action_items: "var(--cat-actions)",
@@ -47,32 +55,35 @@ export default function TrendsPage() {
   const [data, setData] = useState<TrendsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const isSample = useSampleFallback();
+
+  const applyTrends = useCallback((result: TrendsResponse | null) => {
+    if (result === null) {
+      setError(true);
+    } else {
+      setData(result);
+    }
+    setLoading(false);
+  }, []);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    getTrends().then(applyTrends);
+  }, [applyTrends]);
 
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setError(false);
-      const result = await getTrends();
-      if (result === null) {
-        setError(true);
-      } else {
-        setData(result);
-      }
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
+    getTrends().then(applyTrends);
+  }, [applyTrends]);
 
   if (loading) {
     return (
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <div className="skeleton skeleton-title" />
-          <div className="skeleton skeleton-line" style={{ width: "55%" }} />
-          <div className="card" style={{ marginTop: 24 }}>
-            <div className="skeleton" style={{ height: 260 }} />
-          </div>
+          <OfflineBanner />
+          <PageSkeleton rows={4} label="Loading score trends" />
+          <ColdStartNotice active={loading} />
         </div>
       </main>
     );
@@ -99,11 +110,15 @@ export default function TrendsPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
+        <OfflineBanner onReconnect={load} />
+        <SampleDataBadge show={isSample} />
         <PageHeader
           eyebrow="Trends"
           title="Is the pitch getting better?"
           subtitle={
-            meetingCount === 0
+            error
+              ? "Score progression across every call you have analysed."
+              : meetingCount === 0
               ? "Score a call and the trend starts here."
               : `${meetingCount} ${meetingCount === 1 ? "call" : "calls"} scored - hover the chart for any call.`
           }
@@ -114,20 +129,15 @@ export default function TrendsPage() {
           }
         />
 
-        {error && (
-          <div className="status-banner status-banner-error">
-            Could not reach the API. Start the Flask backend with <code>python app.py</code> and reload.
-          </div>
-        )}
+        {error && <ErrorState title="Could not load your score trends." onRetry={load} />}
 
         {!error && meetingCount === 0 && (
-          <motion.div className="card empty-state" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={springReveal}>
-            <span className="empty-state-icon" aria-hidden="true">
-              <InboxIcon size={28} />
-            </span>
-            <p className="section-subtitle">Nothing scored yet. Upload a call and come back.</p>
-            <Link href="/" className="btn-primary">Upload a call</Link>
-          </motion.div>
+          <EmptyState
+            icon={<InboxIcon size={24} />}
+            title="Nothing scored yet."
+            body="Upload a call or open a WhipScribe recording on the home page. The trend line starts with your first scorecard."
+            action={<Link href="/" className="btn-primary">Upload a call</Link>}
+          />
         )}
 
         {!error && meetingCount > 0 && (
@@ -171,15 +181,11 @@ export default function TrendsPage() {
               />
             </AnimatedContent>
 
+            {data?.category_scores && Object.keys(data.category_scores).length > 0 && (
             <AnimatedContent className="card" delay={0.2}>
               <h2 className="chart-title">Latest call, by category</h2>
               <div className="category-grid">
-                {Object.entries(data?.category_scores || {
-                  action_items: 0,
-                  clarity: 0,
-                  tension: 0,
-                  compliance: 0,
-                }).map(([cat, score]) => (
+                {Object.entries(data.category_scores).map(([cat, score]) => (
                   <div key={cat} className="category-row">
                     <div className="category-label">
                       <span className="cat-dot" style={{ color: categoryColors[cat] }}>
@@ -200,6 +206,7 @@ export default function TrendsPage() {
                 ))}
               </div>
             </AnimatedContent>
+            )}
 
             {(data?.changes?.length ?? 0) > 0 && (
               <AnimatedContent className="card" delay={0.25}>

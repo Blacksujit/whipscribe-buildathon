@@ -124,7 +124,7 @@ def main():
     args = parser.parse_args()
     load_env()
 
-    whip_key = os.getenv("WHIPSKRIBE_API_KEY")
+    whip_key = os.getenv("WHIPSCRIBE_API_KEY") or os.getenv("WHIPSKRIBE_API_KEY")
     provider, api_key, model = get_evaluation_settings(args)
 
     # --- Single meeting flow ---
@@ -138,7 +138,7 @@ def main():
             print("  Using sample transcript (LLM evaluation)")
         elif args.job_id:
             if not whip_key:
-                print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
+                print("  [ERROR] WHIPSCRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
                 sys.exit(1)
             job_id = args.job_id
             print(f"  Polling job {job_id}...")
@@ -148,7 +148,7 @@ def main():
             # Fetch additional WhipScribe context for richer LLM evaluation
             from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
             session_summary = get_session_summary(whip_key, job_id)
-            key_moments = get_high_signal_moments(whip_key, job_id)
+            key_moments, _reason = get_high_signal_moments(whip_key, job_id)
             try:
                 audio_data = get_audio_url(whip_key, job_id)
                 audio_url = audio_data.get("url")
@@ -156,7 +156,7 @@ def main():
                 pass
         elif args.file:
             if not whip_key:
-                print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
+                print("  [ERROR] WHIPSCRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
                 sys.exit(1)
             print(f"  Uploading {args.file}...")
             job_id = submit_file(whip_key, args.file, args.language)
@@ -166,7 +166,7 @@ def main():
             print(f"  Transcript fetched: {len(transcript.get('segments', []))} segments")
             from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
             session_summary = get_session_summary(whip_key, job_id)
-            key_moments = get_high_signal_moments(whip_key, job_id)
+            key_moments, _reason = get_high_signal_moments(whip_key, job_id)
             try:
                 audio_data = get_audio_url(whip_key, job_id)
                 audio_url = audio_data.get("url")
@@ -174,7 +174,7 @@ def main():
                 pass
         elif args.url:
             if not whip_key:
-                print("  [ERROR] WHIPSKRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
+                print("  [ERROR] WHIPSCRIBE_API_KEY not set. Copy .env.template to .env and add your key.")
                 sys.exit(1)
             print(f"  Submitting URL {args.url}...")
             job_id = submit_url(whip_key, args.url, args.language)
@@ -184,7 +184,7 @@ def main():
             print(f"  Transcript fetched: {len(transcript.get('segments', []))} segments")
             from src.api.whip_api import get_session_summary, get_high_signal_moments, get_audio_url
             session_summary = get_session_summary(whip_key, job_id)
-            key_moments = get_high_signal_moments(whip_key, job_id)
+            key_moments, _reason = get_high_signal_moments(whip_key, job_id)
             try:
                 audio_data = get_audio_url(whip_key, job_id)
                 audio_url = audio_data.get("url")
@@ -220,7 +220,7 @@ def main():
     # --- Multi-meeting comparison flow ---
     elif args.compare:
         if not whip_key:
-            print("  [ERROR] WHIPSKRIBE_API_KEY not set.")
+            print("  [ERROR] WHIPSCRIBE_API_KEY not set.")
             sys.exit(1)
 
         job_ids = [j.strip() for j in args.compare.split(",") if j.strip()]

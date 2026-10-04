@@ -1,0 +1,41 @@
+# Version control
+.git
+.gitignore
+
+# Secrets — never bake into an image
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.example
+
+# Node / frontend build artifacts
+node_modules
+**/node_modules
+.next
+**/.next
+
+# Python artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.venv
+**/.venv
+
+# Runtime data (SQLite, uploads, docker volume)
+evaluations.db
+*.db
+# ...except the shipped seed snapshot, which the app restores on first boot
+!seed_evaluations.db
+uploads
+data
+
+# Logs
+*.log
+backend.log
+
+# Not needed inside the image
+videos
+docs
+*.md
+.github

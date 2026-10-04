@@ -102,24 +102,78 @@ def clean_json_output(text):
             pass
     raise ValueError(f"Could not parse JSON from LLM output: {text[:500]}")
 
-def _verify_evidence(text: str, segments: list) -> tuple[bool, float]:
-    """Verify a quote exists and return its actual start timestamp."""
-    cleaned_text = text.strip("\\' ")
+def _match_evidence(text: str, segments: list):
+    """Return (segment, exact) for a quote, or (None, False).
+
+    exact=True only when the quote literally appears in the segment text;
+    a close-but-not-literal match still supplies timing, but is not
+    "verified" evidence.
+    """
+    cleaned_text = (text or "").strip("\\' ")
     if not cleaned_text:
-        return False, 0.0
-    
+        return None, False
+
     for seg in segments:
         seg_text = seg.get("text", "").lower()
         if cleaned_text.lower() in seg_text:
-            return True, float(seg.get("start", 0))
-            
-    return False, 0.0
+            return seg, True
+
+    from src.core.evidence import match_segment
+    return match_segment(cleaned_text, segments), False
+
+
+def _verify_evidence(text: str, segments: list) -> tuple[bool, float]:
+    """Verify a quote exists and return its actual start timestamp."""
+    seg, exact = _match_evidence(text, segments)
+    if seg is None or not exact:
+        return False, 0.0
+    return True, float(seg.get("start", 0))
+
+
+AGENT_NAMES = {"compliance_risks": "compliance", "tension_signals": "tension",
+               "clarity_issues": "clarity", "action_items": "action_items"}
+
+
+def ground_items(key: str, issues: list, segments: list) -> list:
+    """Replace guessed timestamps with the matched segment's start/end/speaker.
+
+    Only literal quotes are marked verified; approximate matches keep the
+    segment timing with verified=False and match="approximate".
+    """
+    grounded = []
+    agent = AGENT_NAMES.get(key, key)
+    for issue in issues:
+        if not isinstance(issue, dict):
+            continue
+        quote = issue.get("text") or issue.get("text_a") or ""
+        seg, exact = _match_evidence(quote, segments)
+        if seg is not None:
+            timestamp = float(seg.get("start", 0))
+            grounded.append({
+                **issue, "verified": exact, "timestamp": timestamp,
+                "start": timestamp, "end": seg.get("end"),
+                "speaker": seg.get("speaker") or issue.get("speaker"),
+                "agent": agent, "match": "exact" if exact else "approximate",
+                "confidence": _calculate_confidence(issues, len(segments)) if exact else 0.0,
+            })
+        else:
+            grounded.append({**issue, "verified": False, "timestamp": issue.get("timestamp", 0),
+                             "agent": agent, "match": None, "confidence": 0.0})
+    return grounded
+
 
 def _calculate_confidence(agent_results: list, transcript_len: int) -> float:
     """Calculate a confidence score based on result density and transcript size."""
     if not agent_results: return 0.0
     density = len(agent_results) / (transcript_len / 100)
     return min(1.0, density * 0.5)
+
+def _score(value):
+    """Clamp an LLM-reported score to 0-100 (no artificial floor)."""
+    try:
+        return max(0, min(100, int(round(float(value)))))
+    except (TypeError, ValueError):
+        return 50
 
 def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=None,
              session_summary=None, key_moments=None, audio_url=None):
@@ -202,31 +256,35 @@ def evaluate(transcript, api_key=None, model=None, provider=None, pending_items=
         summary = {"overall_score": 50, "primary_risk": "None identified", "summary": "Analysis partially completed.", "category_scores": {}}
 
     # Grounding: replace guessed timestamps with actual segment start times
+    def _ground(key, issues):
+        return ground_items(key, issues, segments)
+
     for key, issues in results.items():
-        if not isinstance(issues, list): continue
-        verified = []
-        for issue in issues:
-            is_valid, timestamp = _verify_evidence(issue.get("text", ""), segments)
-            if is_valid:
-                verified.append({**issue, "verified": True, "timestamp": timestamp, "confidence": _calculate_confidence(issues, len(segments))})
-            else:
-                verified.append({**issue, "verified": False, "timestamp": issue.get("timestamp", 0), "confidence": 0.0})
-        results[key] = verified
+        if isinstance(issues, list):
+            results[key] = _ground(key, issues)
+        elif key == "action_items" and isinstance(issues, dict) and isinstance(issues.get("new_items"), list):
+            # Action items arrive as {new_items, resolved_items}; ground the new ones too.
+            results[key] = {**issues, "new_items": _ground(key, issues["new_items"])}
 
     # Map LLM output categories to frontend-expected names
     cat_scores = summary.get("category_scores", {})
     category_scores = {
-        "action_items": max(40, min(95, cat_scores.get("action_items", cat_scores.get("velocity", 50)))),
-        "clarity": max(40, min(95, cat_scores.get("clarity_issues", cat_scores.get("narrative", 50)))),
-        "tension": max(40, min(95, cat_scores.get("tension_signals", cat_scores.get("friction", 50)))),
-        "compliance": max(40, min(95, cat_scores.get("compliance_risks", cat_scores.get("commitments", 50)))),
+        "action_items": _score(cat_scores.get("action_items", cat_scores.get("velocity", 50))),
+        "clarity": _score(cat_scores.get("clarity", cat_scores.get("clarity_issues", cat_scores.get("narrative", 50)))),
+        "tension": _score(cat_scores.get("tension", cat_scores.get("tension_signals", cat_scores.get("friction", 50)))),
+        "compliance": _score(cat_scores.get("compliance", cat_scores.get("compliance_risks", cat_scores.get("commitments", 50)))),
     }
+    # No floor: a 60 minimum made every call in the library read "60/100".
+    # When the LLM omits an overall score, use the mean of the four categories.
+    if isinstance(summary.get("overall_score"), (int, float)):
+        overall_score = _score(summary["overall_score"])
+    else:
+        overall_score = round(sum(category_scores.values()) / len(category_scores))
 
     return {
         "success": True,
         "evaluation": {
-            # Clamp overall_score to a realistic range for sales calls
-            "overall_score": max(60, min(95, summary.get("overall_score", 50))),
+            "overall_score": overall_score,
             "primary_risk": summary.get("primary_risk", "None identified"),
             "deal_killer": summary.get("primary_risk", "None identified"),
             "summary": summary.get("summary", ""),

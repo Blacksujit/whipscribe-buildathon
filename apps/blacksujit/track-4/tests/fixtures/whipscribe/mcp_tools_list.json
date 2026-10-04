@@ -1,0 +1,152 @@
+{
+ "tools": [
+  {
+   "name": "transcribe_url",
+   "description": "Transcribe audio or video from a URL (direct media link, podcast episode, or Creative-Commons YouTube). Polls until the job is done or the poll timeout elapses, then returns a transcript preview plus "
+  },
+  {
+   "name": "transcribe_file",
+   "description": "Transcribe a local audio or video file. NOT SUPPORTED on the remote transport \u2014 local paths don't exist on the server. Use `transcribe_url` with a publicly reachable URL, or upload via whipscribe.com."
+  },
+  {
+   "name": "get_job_status",
+   "description": "Poll the current status of a transcription job by job_id."
+  },
+  {
+   "name": "get_transcript",
+   "description": "Fetch a finished transcript in the requested format. Returns a 300-character preview plus a link to the full transcript; large transcripts are not inlined in the MCP response."
+  },
+  {
+   "name": "list_recent_jobs",
+   "description": "List jobs submitted by the authenticated caller. Stores only job_id, source kind, status, duration, and created-at timestamp \u2014 never URLs, file paths, or transcripts."
+  },
+  {
+   "name": "transcribe_urls_batch",
+   "description": "Transcribe a list of URLs (YouTube, podcast, direct media) concurrently. Submit up to 20 URLs in one call; each job runs in parallel and the tool returns when all are done or failed. Per-URL failures "
+  },
+  {
+   "name": "library_list_folders",
+   "description": "List the user's library folders, optionally restricted to children of a parent folder. Returns minimal metadata (folder_id, name, parent_id, item_count, timestamps) \u2014 use library_get_folder to read th"
+  },
+  {
+   "name": "library_create_folder",
+   "description": "Create a new Knowledge folder, optionally under an existing parent. Use this to organize transcripts, links, files, and the structured notes you produce when running recipes \u2014 into a tree the user can"
+  },
+  {
+   "name": "library_get_folder",
+   "description": "Read a single library folder including its items array. Use this when you need the contents (transcripts, links, files, notes) the user has placed in the folder."
+  },
+  {
+   "name": "library_add_item",
+   "description": "Append an item to a Knowledge folder. Items are the OUTPUTS of running recipes + the user's content: transcript (job_id of a finished transcription), link (external url), file (storage handle), subfol"
+  },
+  {
+   "name": "library_trash_item",
+   "description": "Move an item to the trash (soft delete). The item stays in its folder with a deleted_at timestamp so it can be restored \u2014 `library_empty_trash` is the only operation that hard-deletes. Use this instea"
+  },
+  {
+   "name": "library_restore_item",
+   "description": "Restore a trashed item \u2014 clears its deleted_at flag so it shows up in the regular folder again. Use the result of library_list_trash to get the (folder_id, item_index) pair."
+  },
+  {
+   "name": "library_list_trash",
+   "description": "List every trashed item across the user's library, newest in trash first. Each entry: {folder_id, folder_name, item_index, item, deleted_at}."
+  },
+  {
+   "name": "library_empty_trash",
+   "description": "Permanently delete every trashed item. Use after the user has reviewed library_list_trash and confirmed they want the items gone for good. Returns {purged: <count>}."
+  },
+  {
+   "name": "library_get_graph",
+   "description": "Return the user's whole library as a graph (nodes + links) in one call \u2014 cheaper than walking with library_list_folders + library_get_folder. Nodes are folders + items; links carry parent (folder\u2192subf"
+  },
+  {
+   "name": "library_share_folder",
+   "description": "Mint a read-only share link for a library folder. Returns a signed URL the user can paste anywhere; recipients can view the folder + its items without signing in. Default expiration 30 days, max 365."
+  },
+  {
+   "name": "list_my_transcripts",
+   "description": "Return the user's recent transcripts from Whipscribe \u2014 including ones uploaded via the web UI, not just MCP submissions. Use this when the user asks for 'my transcripts' / 'my files' or you want to su"
+  },
+  {
+   "name": "rename_transcript",
+   "description": "Set a short, human-readable title for one transcript. Use this after `get_transcript` to give a file a name that reflects its content (e.g. 'Sequoia partner meeting \u2014 Q2 reforecast' instead of 'File 1"
+  },
+  {
+   "name": "list_recipes",
+   "description": "List recipes the user can run. Recipes are prompt templates (Daily Brief, etc.) Claude follows on the user's behalf. Defaults to scope=all (system recipes + the user's own). Use scope=public to show o"
+  },
+  {
+   "name": "get_recipe",
+   "description": "Fetch one recipe by id, including the full prompt body so you can follow it. Use after list_recipes to read the recipe before running it."
+  },
+  {
+   "name": "create_recipe",
+   "description": "Save a new private recipe (a prompt template) owned by the current user. Once saved it shows up in list_recipes(scope='mine') and on /home#recipes for the user to run.\n\nBOUNDARY: recipes are TEMPLATES"
+  },
+  {
+   "name": "update_recipe",
+   "description": "Modify a recipe the user owns. Pass only the fields you want to change (name / prompt / description / frequency / is_public / tags). Setting is_public=true shares the recipe to every user \u2014 owner iden"
+  },
+  {
+   "name": "delete_recipe",
+   "description": "Delete a recipe the user owns. System recipes (curated by Whipscribe) cannot be deleted via this tool \u2014 only the owner can remove their own recipes."
+  },
+  {
+   "name": "list_workflows",
+   "description": "List workflows visible to the caller \u2014 system / shared / mine. Returns workflow_id, name, description, owner, is_public, is_system, is_mine, tags, uses, active, node_count. Use scope='mine' to see onl"
+  },
+  {
+   "name": "get_workflow",
+   "description": "Fetch one workflow \u2014 both the n8n graph (nodes + connections + settings) and the WhipScribe metadata (owner, visibility, tags, uses). Visibility is enforced \u2014 own + system + shared are returned, other"
+  },
+  {
+   "name": "create_workflow",
+   "description": "Create a workflow. Pass an n8n-shaped graph (name + nodes + connections + settings + active) plus optional WhipScribe metadata (description, is_public, tags). Owner is the calling user; is_public=true"
+  },
+  {
+   "name": "update_workflow",
+   "description": "Update a workflow. Owner-only. Pass only the fields to change; graph fields (name / nodes / connections / settings / active) round-trip to n8n, metadata (description / is_public / tags) updates the Wh"
+  },
+  {
+   "name": "delete_workflow",
+   "description": "Delete a workflow on n8n. Permanent \u2014 there's no soft-delete. Confirm with the user before calling."
+  },
+  {
+   "name": "run_workflow",
+   "description": "Trigger an execution of a workflow. Pass `data` to feed the first node's input (otherwise n8n uses the workflow's default trigger payload). Returns an execution record \u2014 use it to check status / pull "
+  },
+  {
+   "name": "request_upload_url",
+   "description": "Get a one-time presigned PUT URL to upload a file from the user's machine into the Whipscribe vault. The user (or you, on their machine) PUTs the file bytes to the returned URL, then uses the returned"
+  },
+  {
+   "name": "clips_prepare",
+   "description": "Ensure clip-selection features are computed for a transcribed job. First call kicks a background preprocess (~30-60s) and returns status='processing'; later calls return status='ready' with a summary "
+  },
+  {
+   "name": "clips_get_summary",
+   "description": "High-level orientation for a prepared job: total duration, sentence count, hook/question/number counts, energy stats, top 5 highest-energy seconds, speakers. Always start here before proposing clips."
+  },
+  {
+   "name": "clips_search_transcript",
+   "description": "Substring + token search across the transcript's sentences. Returns matching sentences with start/end timestamps, speaker, and feature flags (is_question, has_hook, has_number, energy_avg). Use when t"
+  },
+  {
+   "name": "clips_get_sentences_in_range",
+   "description": "Pull every sentence in [start_s, end_s]. Use to read context around a candidate hook before locking in clip boundaries \u2014 good clips start on a clean entry and end on a clean payoff, not mid-sentence."
+  },
+  {
+   "name": "clips_get_high_signal",
+   "description": "Pre-flagged candidate sentences. `kind` filters to one of: hook | question | number | speaker_change | high_energy. Use as a starting point when the user wants viral moments without naming a topic."
+  },
+  {
+   "name": "clips_render",
+   "description": "Render a 9:16 vertical mp4 from [start_s, end_s] of the source video. Synchronously returns video_url when done (~5-15s). Stores the clip under the user's library so it appears on the Shorts page in W"
+  },
+  {
+   "name": "list_my_clips",
+   "description": "List the caller's rendered clips, newest first. Returns video_url + title + virality_score + status for each. Use when the user asks 'what clips do I have' or wants to share a previously rendered one."
+  }
+ ]
+}

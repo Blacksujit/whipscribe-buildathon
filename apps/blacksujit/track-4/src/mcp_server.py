@@ -8,7 +8,7 @@ Run (stdio):
   python src/mcp_server.py
 
 Env (loaded from the project .env when present):
-  WHIPSKRIBE_API_KEY
+  WHIPSCRIBE_API_KEY (legacy WHIPSKRIBE_API_KEY also accepted)
   LLM_PROVIDER (groq | openai | anthropic)
   LLM_MODEL
   GROQ_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / LLM_API_KEY
@@ -37,7 +37,7 @@ store.init_db()
 
 mcp = MCPServer("CallCoach-AI")
 
-API_KEY = os.environ.get("WHIPSKRIBE_API_KEY")
+API_KEY = os.environ.get("WHIPSCRIBE_API_KEY") or os.environ.get("WHIPSKRIBE_API_KEY")
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq")
 LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
 LLM_API_KEY = (
@@ -77,7 +77,7 @@ async def analyze_meeting(job_id: str) -> str:
     """Analyze a meeting for quality, clarity, tension and compliance. Returns the score summary."""
     try:
         if not API_KEY:
-            return "WHIPSKRIBE_API_KEY is not set for this MCP server."
+            return "WHIPSCRIBE_API_KEY is not set for this MCP server."
         _, core = _load_or_evaluate(job_id)
         return (
             f"Analysis complete for {job_id}\n"

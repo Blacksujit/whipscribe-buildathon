@@ -1,0 +1,9 @@
+{
+ "_fixture_note": "Shape from https://whipscribe.com/docs (Poll job status / transcript_locked); the test account has credit so no live locked job exists.",
+ "job_id": "bcfcea2d-b6d7-4cff-b75c-d5e3628ec5e7",
+ "status": "done",
+ "progress": 100,
+ "locked": true,
+ "locked_code": "transcript_locked",
+ "unlock_url": "https://whipscribe.com/credits"
+}

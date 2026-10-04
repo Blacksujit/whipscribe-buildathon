@@ -1,13 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { getCoachData, getPlan, getCommitments, CoachDataResponse, CoachInsight, exportTrendsToSlack, type CoachingPlanResponse, type LedgerResponse } from "@/lib/api";
+import { getCoachData, getPlan, getCommitments, CoachDataResponse, exportTrendsToSlack, type CoachingPlanResponse, type LedgerResponse } from "@/lib/api";
 import PageTransition from "@/components/PageTransition";
 import PageHeader from "@/components/PageHeader";
 import AnimatedContent from "@/components/reactbits/AnimatedContent/AnimatedContent";
+import {
+  ColdStartNotice,
+  EmptyState,
+  ErrorState,
+  OfflineBanner,
+  PageSkeleton,
+  SampleDataBadge,
+  useSampleFallback,
+} from "@/components/states";
 import {
   ShieldCheckIcon,
   WaveformIcon,
@@ -43,22 +52,37 @@ function InsightIcon({ metric, size = 18 }: { metric: string; size?: number }) {
 export default function CoachPage() {
   const [data, setData] = useState<CoachDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const isSample = useSampleFallback();
   const [shareState, setShareState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [shareMessage, setShareMessage] = useState("");
   const [plan, setPlan] = useState<CoachingPlanResponse | null>(null);
   const [ledger, setLedger] = useState<LedgerResponse | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const result = await getCoachData();
-      setData(result);
-      setLoading(false);
-    }
-    fetchData();
+  // Fetch + apply; the initial run happens from the effect without a synchronous setState.
+  const applyCoach = useCallback((result: CoachDataResponse | null) => {
+    setData(result);
+    setFailed(result === null);
+    setLoading(false);
+  }, []);
+
+  const fetchAll = useCallback(() => {
+    getCoachData().then(applyCoach);
     getPlan().then(setPlan).catch(() => setPlan(null));
     getCommitments().then(setLedger).catch(() => setLedger(null));
-  }, []);
+  }, [applyCoach]);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setFailed(false);
+    fetchAll();
+  }, [fetchAll]);
+
+  useEffect(() => {
+    getCoachData().then(applyCoach);
+    getPlan().then(setPlan).catch(() => setPlan(null));
+    getCommitments().then(setLedger).catch(() => setLedger(null));
+  }, [applyCoach]);
 
   async function handleShare() {
     setShareState("sending");
@@ -77,27 +101,38 @@ export default function CoachPage() {
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <div className="skeleton skeleton-title" />
-          <div className="skeleton skeleton-line" style={{ width: "48%" }} />
-          <div className="card" style={{ marginTop: 24 }}>
-            <div className="skeleton skeleton-row" />
-            <div className="skeleton skeleton-row" />
-          </div>
+          <OfflineBanner />
+          <PageSkeleton rows={3} label="Loading coaching insights" />
+          <ColdStartNotice active={loading} />
         </div>
       </main>
     );
   }
 
-  if (!data || !data.ready) {
+  if (failed || !data) {
     return (
       <main className="site-shell">
         <Navbar />
         <div className="section-wide section-pad">
-          <PageHeader
-            eyebrow="Coach"
-            title="Two calls is the minimum."
-            subtitle={data?.message || "Score two or more calls and the coaching reads what changed between them."}
-            actions={<Link href="/" className="btn-primary">Upload a call</Link>}
+          <OfflineBanner onReconnect={load} />
+          <PageHeader eyebrow="Coach" title="What to fix next." />
+          <ErrorState title="Could not load your coaching insights." onRetry={load} />
+        </div>
+      </main>
+    );
+  }
+
+  if (!data.ready) {
+    return (
+      <main className="site-shell">
+        <Navbar />
+        <div className="section-wide section-pad">
+          <SampleDataBadge show={isSample} />
+          <PageHeader eyebrow="Coach" title="What to fix next." />
+          <EmptyState
+            title="Two scored calls is the minimum."
+            body={data.message || "Score two or more calls and the coaching reads what changed between them."}
+            action={<Link href="/" className="btn-primary">Upload a call</Link>}
           />
         </div>
       </main>
@@ -112,6 +147,8 @@ export default function CoachPage() {
     <main className="site-shell">
       <Navbar />
       <section className="section-wide section-pad">
+        <OfflineBanner onReconnect={load} />
+        <SampleDataBadge show={isSample} />
         <PageHeader
           eyebrow="Coach"
           title="What to fix next."
@@ -159,12 +196,11 @@ export default function CoachPage() {
         )}
 
         {insights.length === 0 && (
-          <div className="card empty-state">
-            <span className="empty-state-icon" aria-hidden="true">
-              <CheckCircleIcon size={28} />
-            </span>
-            <p className="section-subtitle">Nothing to fix - the calls read clean.</p>
-          </div>
+          <EmptyState
+            icon={<CheckCircleIcon size={24} />}
+            title="Nothing to fix - the calls read clean."
+            body="No recurring compliance, tension, clarity or follow-up issues across your scored calls."
+          />
         )}
 
         <div className="coach-grid">

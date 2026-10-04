@@ -1,0 +1,57 @@
+{
+ "jobs": [
+  {
+   "job_id": "7ebaeca0-9076-4c14-97be-a8b1948c8482",
+   "status": "done",
+   "filename": "Q4 Rollout Plan Discussion",
+   "original_filename": "test_speech.wav",
+   "source": "api",
+   "audio_duration_seconds": 38.269938,
+   "created_at": 1790776144.9302185,
+   "completed_at": 1790776148.786163,
+   "progress": 100,
+   "speech_detected": true,
+   "speech_ratio": 0.684610472645794,
+   "tier": 2,
+   "error": null,
+   "stage": null
+  },
+  {
+   "job_id": "bcfcea2d-b6d7-4cff-b75c-d5e3628ec5e7",
+   "status": "done",
+   "filename": "Sample Call ENG MA",
+   "original_filename": "Sample_Call_ENG_MA.mp3",
+   "source": "api",
+   "audio_duration_seconds": 819.36,
+   "created_at": 1790699958.143038,
+   "completed_at": 1790699980.8565123,
+   "progress": 100,
+   "speech_detected": true,
+   "speech_ratio": 0.6822397969146651,
+   "tier": 2,
+   "error": null,
+   "stage": null
+  },
+  {
+   "job_id": "50709c7a-88fc-455d-85d0-8349986dfed9",
+   "status": "failed",
+   "filename": "50709c7a-88fc-455d-85d0-8349986dfed9.url",
+   "source": "url",
+   "audio_duration_seconds": null,
+   "created_at": 1790689332.9808493,
+   "completed_at": 1790689333.599811,
+   "progress": 1,
+   "tier": 2,
+   "error": "That link on example.com is gone — the video was removed, expired, or was never public. Check the URL, or upload the audio directly.",
+   "stage": null
+  }
+ ],
+ "limit": 100,
+ "offset": 0,
+ "count": 100,
+ "total": null,
+ "q": null,
+ "sort": "created",
+ "dir": "desc",
+ "_fixture_note": "Real GET /api/v1/jobs response (2026-10-03), trimmed to 3 rows; identity/billing fields (api_key_id, submitter_email, claim_token, idempotency_key, posthog_*, country, transcript_text) removed."
+}

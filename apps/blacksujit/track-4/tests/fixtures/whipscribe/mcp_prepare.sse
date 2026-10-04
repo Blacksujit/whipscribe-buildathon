@@ -1,0 +1,3 @@
+event: message
+data: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\": true, \"job_id\": \"bcfcea2d-b6d7-4cff-b75c-d5e3628ec5e7\", \"status\": \"processing\", \"task_id\": \"46a312c8-ce31-4235-9d84-f2e66fe97cb5\", \"hint\": \"Re-call clips_get_summary in 30-60s to check readiness.\"}"}],"isError":false}}
+

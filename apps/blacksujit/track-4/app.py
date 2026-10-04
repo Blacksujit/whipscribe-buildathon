@@ -13,7 +13,10 @@ Routes:
   /api/connections/notion/test POST send a test page
   /api/connections/whipscribe/test POST verify the WhipScribe key
   /api/jobs                  GET WhipScribe jobs, enriched with stored scores
-  /api/report/<job_id>       GET one stored report (transcript + evaluation)
+  /api/report/<job_id>       GET one stored report (transcript + evaluation + audio/moments/summary)
+  /api/audio/<job_id>        GET 302 to a fresh signed WhipScribe playback URL
+  /api/ask                   POST Griot Q&A (WhipScribe MCP retrieval, local-index fallback)
+  /api/sample                GET job_id of a seeded, already-scored demo call
   /api/speakers              GET speaker-level issue analysis
   /api/analyze/<job_id>      POST evaluate one existing job
   /api/analyze-all           POST evaluate every finished job on the account
@@ -46,8 +49,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.api.whip_api import (
     list_jobs, get_transcript, poll_job, submit_file, submit_url, get_audio_url, get_me,
-    get_session_summary, get_high_signal_moments, get_insights,
+    get_high_signal_moments, fetch_insights, moments_from_insights, env_api_key,
+    REASON_NO_KEY, REASON_AUDIO_EXPIRED, REASON_UNAVAILABLE,
 )
+from src.api import whip_mcp
+from src.core.evidence import annotate_evaluation
 from src.api.notion import NOTION_API, deliver_report
 from src.api.slack import (
     collect_top_issues,
@@ -107,7 +113,7 @@ CORS(app, origins=_cors_origins if _cors_origins else "*", supports_credentials=
 def get_api_key():
     """Get a request-scoped key, then fall back to env or local settings."""
     request_key = request.headers.get("X-API-Key", "").strip()
-    return request_key or os.environ.get("WHIPSKRIBE_API_KEY") or store.get_setting("whipscribe_api_key")
+    return request_key or env_api_key() or store.get_setting("whipscribe_api_key")
 
 
 def get_eval_settings():
@@ -131,6 +137,42 @@ def get_eval_settings():
         model = "claude-3-5-sonnet-20241022"
 
     return provider, api_key, model
+
+
+def _whip_error_message(exc):
+    """Turn a WhipScribe API error into a clear, human message.
+
+    A 402 from WhipScribe means the account (free "guest" plan) has no
+    transcription credits - surfacing it as a 502 "bad gateway" hides the
+    real problem and makes the app look broken.
+    """
+    import requests as _requests
+
+    if isinstance(exc, _requests.exceptions.HTTPError):
+        resp = exc.response
+        status = resp.status_code if resp is not None else None
+        if status == 402:
+            return "WhipScribe account is out of transcription credits (402 Payment Required). Add credits or upgrade the plan to transcribe new recordings."
+        if status == 401:
+            return "WhipScribe rejected the API key (401 Unauthorized)."
+        if status == 429:
+            return "WhipScribe is rate-limiting requests (429 Too Many Requests). Try again shortly."
+        if status is not None:
+            return f"WhipScribe returned HTTP {status}."
+    return str(exc)
+
+
+def _whip_error_status(exc):
+    """Map a WhipScribe API error to the HTTP status we surface to the client."""
+    import requests as _requests
+
+    if isinstance(exc, _requests.exceptions.HTTPError):
+        status = exc.response.status_code if exc.response is not None else None
+        if status in (401, 402, 429):
+            return status
+        if status is not None and 500 <= status < 600:
+            return 502
+    return 502
 
 
 def _core_eval(evaluation):
@@ -258,27 +300,53 @@ def _auto_enabled(tool):
     return _stored_setting(f"deliver_auto_{tool}") != "0"
 
 
+def _clean_insights(insights):
+    """The slice of WhipScribe insights the report shows."""
+    if not isinstance(insights, dict):
+        return {}
+    return {
+        "summary": str(insights.get("summary") or "")[:1200],
+        "topics": (insights.get("topics") or [])[:8],
+        "quotes": (insights.get("quotes") or [])[:8],
+        "speakers": (insights.get("speakers") or [])[:6],
+    }
+
+
 def _whip_extras(api_key, job_id):
-    """Extra WhipScribe API reads per analysis: summary, insights, moments, audio URL."""
-    extras = {}
+    """Extra WhipScribe reads per analysis: insights (summary), key moments, audio URL.
+
+    Every extra that could not be fetched records why in extras["status"]
+    (e.g. "transcript_locked", "preparing", "unavailable: ...") so the report
+    can say so instead of silently showing nothing.
+    """
+    extras = {"status": {}}
+    insights = None
     try:
-        summary = get_session_summary(api_key, job_id)
-        if summary:
-            extras["session_summary"] = summary
-    except Exception:
-        pass
-    try:
-        insights = get_insights(api_key, job_id)
+        insights, reason = fetch_insights(api_key, job_id)
         if insights:
             extras["insights"] = insights
-    except Exception:
-        pass
+            summary = str(insights.get("summary") or "").strip()
+            if summary:
+                extras["session_summary"] = summary
+            else:
+                extras["status"]["session_summary"] = REASON_UNAVAILABLE
+        else:
+            extras["status"]["insights"] = reason
+            extras["status"]["session_summary"] = reason
+    except Exception as exc:  # noqa: BLE001
+        extras["status"]["session_summary"] = f"{REASON_UNAVAILABLE}: {type(exc).__name__}"
     try:
-        moments = get_high_signal_moments(api_key, job_id)
+        moments, reason = get_high_signal_moments(api_key, job_id)
         if moments:
             extras["key_moments"] = moments
-    except Exception:
-        pass
+        else:
+            extras["status"]["key_moments"] = reason or REASON_UNAVAILABLE
+    except Exception as exc:  # noqa: BLE001
+        extras["status"]["key_moments"] = f"{REASON_UNAVAILABLE}: {type(exc).__name__}"
+    if not extras.get("key_moments") and insights:
+        fallback = moments_from_insights(insights)
+        if fallback:
+            extras["key_moments"] = fallback
     try:
         audio = get_audio_url(api_key, job_id)
         if isinstance(audio, dict) and audio.get("url"):
@@ -289,7 +357,11 @@ def _whip_extras(api_key, job_id):
 
 
 def _attach_whip_extras(evaluation, extras):
-    """Keep the WhipScribe extras on the stored record for the report page."""
+    """Keep the WhipScribe extras on the stored record for the report page.
+
+    The signed audio URL is deliberately not stored: it expires (expires_in
+    3600 s on the live API); /api/audio/<job_id> mints a fresh one instead.
+    """
     if not isinstance(evaluation, dict) or not extras:
         return
     inner = evaluation.get("evaluation")
@@ -298,24 +370,17 @@ def _attach_whip_extras(evaluation, extras):
     clean = {}
     summary = extras.get("session_summary")
     if isinstance(summary, dict):
-        clean["session_summary"] = summary.get("summary") or summary.get("text") or ""
-    elif isinstance(summary, str):
-        clean["session_summary"] = summary
+        summary = summary.get("summary") or summary.get("text") or ""
+    if isinstance(summary, str) and summary.strip():
+        clean["session_summary"] = summary.strip()
     moments = extras.get("key_moments")
-    if isinstance(moments, dict):
-        moments = moments.get("moments") or moments.get("candidates") or moments.get("clips") or []
     if isinstance(moments, list) and moments:
         clean["key_moments"] = moments[:5]
     insights = extras.get("insights")
     if isinstance(insights, dict):
-        clean["insights"] = {
-            "summary": str(insights.get("summary") or "")[:1200],
-            "topics": (insights.get("topics") or [])[:8],
-            "quotes": (insights.get("quotes") or [])[:8],
-            "speakers": (insights.get("speakers") or [])[:6],
-        }
-    if extras.get("audio_url"):
-        clean["audio_url"] = extras["audio_url"]
+        clean["insights"] = _clean_insights(insights)
+    if extras.get("status"):
+        clean["status"] = {k: v for k, v in extras["status"].items() if v}
     if clean:
         inner["whip"] = clean
 
@@ -412,7 +477,7 @@ def _notion_database_id(value):
 def api_connections():
     """Integration status. Secrets are never returned, only states and sources."""
     api_key = get_api_key()
-    whip_env = bool(os.environ.get("WHIPSKRIBE_API_KEY"))
+    whip_env = bool(env_api_key())
     whip_stored = bool(_stored_setting("whipscribe_api_key"))
     provider, llm_key, model = get_eval_settings()
 
@@ -592,6 +657,29 @@ def _set_upload_state(job_id, **fields):
         state["updated_at"] = time.time()
 
 
+def _score_and_store(job_id, api_key, transcript, name=None, pending_items=None, extras=None):
+    """Run the four-agent evaluation, store it, and dispatch deliveries.
+
+    Shared by the upload worker and the analyze worker. Returns the inner
+    evaluation dict so callers can report the score.
+    """
+    provider, llm_key, model = get_eval_settings()
+    evaluation = evaluate(
+        transcript, api_key=llm_key, model=model, provider=provider,
+        pending_items=pending_items,
+        session_summary=(extras or {}).get("session_summary"),
+        key_moments=(extras or {}).get("key_moments"),
+        audio_url=(extras or {}).get("audio_url"),
+    )
+    _attach_whip_extras(evaluation, extras or {})
+    store.save_evaluation(job_id, transcript, evaluation, meeting_name=name)
+    core = _core_eval(evaluation)
+    _dispatch_async(job_id, core, transcript, name)
+    for item in core.get("resolved_items", []):
+        store.resolve_action_item(item.get("text", ""), job_id=job_id)
+    return core
+
+
 def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT, name=None):
     """Background worker: transcribe, score, store. Updates the live stage."""
     try:
@@ -601,22 +689,8 @@ def _process_upload(api_key, job_id, poll_timeout=UPLOAD_POLL_TIMEOUT, name=None
         _set_upload_state(job_id, stage="scoring", message="Four agents are reading the transcript.")
 
         pending_items = store.get_unresolved_action_items()
-        provider, llm_key, model = get_eval_settings()
         extras = _whip_extras(api_key, job_id)
-        evaluation = evaluate(
-            transcript, api_key=llm_key, model=model,
-            provider=provider, pending_items=pending_items,
-            session_summary=extras.get("session_summary"),
-            key_moments=extras.get("key_moments"),
-            audio_url=extras.get("audio_url"),
-        )
-        _attach_whip_extras(evaluation, extras)
-        store.save_evaluation(job_id, transcript, evaluation, meeting_name=name)
-
-        core = _core_eval(evaluation)
-        _dispatch_async(job_id, core, transcript, name)
-        for item in core.get("resolved_items", []):
-            store.resolve_action_item(item.get("text", ""), job_id=job_id)
+        core = _score_and_store(job_id, api_key, transcript, name=name, pending_items=pending_items, extras=extras)
 
         _set_upload_state(
             job_id,
@@ -673,7 +747,7 @@ def api_upload():
     try:
         job_id = submit_file(api_key, filepath)
     except Exception as exc:
-        return jsonify({"success": False, "error": str(exc)}), 502
+        return jsonify({"success": False, "error": _whip_error_message(exc)}), _whip_error_status(exc)
     finally:
         try:
             os.remove(filepath)
@@ -780,49 +854,189 @@ def api_jobs():
         return jsonify({"jobs": [], "success": False, "error": str(e)}), 500
 
 
+# Signed playback URLs are short-lived (expires_in 3600 s on the live API), so
+# they are cached per job and re-minted shortly before they expire.
+_AUDIO_CACHE = {}
+_AUDIO_LOCK = threading.Lock()
+# Key moments that are still being prepared server-side: retry after this long.
+_MOMENTS_RETRY = {}
+MOMENTS_RETRY_SECONDS = 45
+
+
+def _fresh_audio_url(api_key, job_id, force=False):
+    """(url, reason). Uses the cache unless the URL is about to expire."""
+    now = time.time()
+    with _AUDIO_LOCK:
+        cached = _AUDIO_CACHE.get(job_id)
+    if cached and not force and cached["expires_at"] - 60 > now:
+        return cached["url"], None
+    try:
+        data = get_audio_url(api_key, job_id)
+    except requests.exceptions.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else None
+        reason = REASON_AUDIO_EXPIRED if status == 410 else f"{REASON_UNAVAILABLE}: HTTP {status}"
+        return None, reason
+    except Exception as exc:  # noqa: BLE001
+        return None, f"{REASON_UNAVAILABLE}: {type(exc).__name__}"
+    url = data.get("url") if isinstance(data, dict) else None
+    if not url:
+        return None, REASON_UNAVAILABLE
+    try:
+        ttl = float(data.get("expires_in") or 600)
+    except (TypeError, ValueError):
+        ttl = 600.0
+    with _AUDIO_LOCK:
+        _AUDIO_CACHE[job_id] = {"url": url, "expires_at": now + ttl}
+    return url, None
+
+
+def _persist_whip_block(job_id, whip):
+    """Write the evaluation's "whip" block back without touching created_at."""
+    try:
+        conn = store._connect()
+        row = conn.execute("SELECT evaluation FROM evaluations WHERE job_id = ?", (job_id,)).fetchone()
+        if row:
+            data = json.loads(row[0]) if row[0] else {}
+            target = data.get("evaluation") if isinstance(data.get("evaluation"), dict) else data
+            target["whip"] = whip
+            conn.execute("UPDATE evaluations SET evaluation = ? WHERE job_id = ?", (json.dumps(data), job_id))
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def _report_whip_fields(api_key, job_id, evaluation):
+    """session_summary, key_moments, insights + per-field reasons for the report.
+
+    Stored values (captured at analysis time) are used first; anything
+    missing is fetched live once and persisted, so later views are instant.
+    """
+    core = _core_eval(evaluation)
+    whip = dict(core.get("whip") or {})
+    status = dict(whip.get("status") or {})
+    changed = False
+
+    insights = whip.get("insights") or {}
+    if api_key and not insights.get("summary"):
+        try:
+            fresh, reason = fetch_insights(api_key, job_id)
+            if fresh:
+                insights = _clean_insights(fresh)
+                whip["insights"] = insights
+                status.pop("insights", None)
+                changed = True
+            elif reason:
+                status["insights"] = reason
+        except Exception as exc:  # noqa: BLE001
+            status["insights"] = f"{REASON_UNAVAILABLE}: {type(exc).__name__}"
+
+    session_summary = whip.get("session_summary") or insights.get("summary") or None
+    if session_summary and not whip.get("session_summary"):
+        whip["session_summary"] = session_summary
+        changed = True
+    if session_summary:
+        status.pop("session_summary", None)
+    else:
+        status["session_summary"] = status.get("insights") or (REASON_UNAVAILABLE if api_key else REASON_NO_KEY)
+
+    moments = whip.get("key_moments") or []
+    # Moments derived from insights quotes are a fallback; try the real
+    # high-signal sentences again until they exist.
+    only_fallback = bool(moments) and all(m.get("source") == "whipscribe-insights" for m in moments if isinstance(m, dict))
+    if api_key and (not moments or only_fallback) and time.time() >= _MOMENTS_RETRY.get(job_id, 0):
+        try:
+            fresh_moments, reason = get_high_signal_moments(api_key, job_id)
+        except Exception as exc:  # noqa: BLE001
+            fresh_moments, reason = [], f"{REASON_UNAVAILABLE}: {type(exc).__name__}"
+        if fresh_moments:
+            moments = fresh_moments
+            whip["key_moments"] = moments
+            status.pop("key_moments", None)
+            changed = True
+        else:
+            status["key_moments"] = reason or REASON_UNAVAILABLE
+            _MOMENTS_RETRY[job_id] = time.time() + MOMENTS_RETRY_SECONDS
+    if not moments and insights.get("quotes"):
+        moments = moments_from_insights(insights)
+    if not moments and not api_key:
+        status["key_moments"] = REASON_NO_KEY
+    if moments and status.get("key_moments") and not only_fallback:
+        status.pop("key_moments", None)
+
+    if changed:
+        whip["status"] = status
+        _persist_whip_block(job_id, whip)
+    return {
+        "session_summary": session_summary,
+        "key_moments": [m for m in moments if isinstance(m, dict)][:5],
+        "insights": insights,
+        "status": status,
+    }
+
+
 @app.route("/api/report/<job_id>")
 def api_report(job_id):
-    """JSON endpoint for a single meeting report."""
+    """JSON endpoint for a single meeting report.
+
+    Besides the stored transcript + evaluation it returns:
+      audio_url       "/api/audio/<job_id>" (302 to a fresh signed WhipScribe URL) or null
+      key_moments     [{start, end, title, why, speaker, source}] from WhipScribe
+      session_summary WhipScribe's summary of the call (insights.summary) or null
+      whip_status     {field: reason} for every WhipScribe extra that is missing
+    and every evidence item carries start/end/speaker/agent from the
+    transcript segment its quote was verified against.
+    """
     result = store.get_evaluation(job_id)
     if result is None:
         return jsonify({"success": False, "error": "No evaluation found. Analyze first."}), 404
 
     transcript = result["transcript"]
     evaluation = result["evaluation"]
+    api_key = get_api_key()
 
     audio_url = None
-    api_key = get_api_key()
+    audio_reason = REASON_NO_KEY
     if api_key:
-        try:
-            audio_data = get_audio_url(api_key, job_id)
-            audio_url = audio_data.get("url")
-        except Exception:
-            pass
+        signed, audio_reason = _fresh_audio_url(api_key, job_id)
+        if signed:
+            audio_url = f"/api/audio/{job_id}"
 
-    # WhipScribe's own read of this call: fresh when possible, stored otherwise.
-    whip_read = (evaluation.get("whip") or {}).get("insights") or {}
-    if api_key:
-        try:
-            fresh = get_insights(api_key, job_id)
-            if fresh:
-                whip_read = {
-                    "summary": str(fresh.get("summary") or "")[:1200],
-                    "topics": (fresh.get("topics") or [])[:8],
-                    "quotes": (fresh.get("quotes") or [])[:8],
-                    "speakers": (fresh.get("speakers") or [])[:6],
-                }
-        except Exception:
-            pass
+    whip = _report_whip_fields(api_key, job_id, evaluation)
+    whip_status = dict(whip["status"])
+    if not audio_url:
+        whip_status["audio_url"] = audio_reason
 
     return jsonify({
         "success": True,
         "job_id": job_id,
         "transcript": transcript,
-        "evaluation": evaluation,
+        "evaluation": annotate_evaluation(evaluation, transcript),
         "audio_url": audio_url,
+        "key_moments": whip["key_moments"],
+        "session_summary": whip["session_summary"],
+        "whip_status": whip_status,
         "dynamics": analyze_dynamics(transcript),
-        "whip_read": whip_read,
+        "whip_read": whip["insights"],
     })
+
+
+@app.route("/api/audio/<job_id>")
+def api_audio(job_id):
+    """302 to a fresh signed WhipScribe playback URL (they expire, so never store them)."""
+    if not re.fullmatch(r"[0-9a-fA-F-]{8,64}", job_id or ""):
+        return jsonify({"success": False, "error": "Bad job id."}), 400
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"success": False, "error": "No WhipScribe key configured on the server."}), 401
+    url, reason = _fresh_audio_url(api_key, job_id, force=request.args.get("refresh") == "1")
+    if not url:
+        status = 410 if reason == REASON_AUDIO_EXPIRED else 404
+        return jsonify({"success": False, "error": f"Audio unavailable ({reason})."}), status
+    response = app.response_class(status=302)
+    response.headers["Location"] = url
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/api/speakers")
@@ -892,34 +1106,45 @@ def api_speakers():
     })
 
 
+def _analyze_worker(api_key, job_id):
+    """Background worker: score one already-transcribed job and store it."""
+    try:
+        _set_upload_state(job_id, stage="scoring", message="Four agents are reading the transcript.")
+        transcript = get_transcript(api_key, job_id)
+        pending_items = store.get_unresolved_action_items()
+        extras = _whip_extras(api_key, job_id)
+        core = _score_and_store(job_id, api_key, transcript, pending_items=pending_items, extras=extras)
+        _set_upload_state(
+            job_id,
+            stage="done",
+            message="Report ready.",
+            score=core.get("overall_score", 0),
+            segments=len(transcript.get("segments", [])),
+        )
+    except Exception as exc:
+        _set_upload_state(job_id, stage="error", message=str(exc))
+
+
 @app.route("/api/analyze/<job_id>", methods=["POST"])
 def api_analyze(job_id):
-    """API endpoint: analyze a single meeting and return JSON."""
+    """API endpoint: analyze a single meeting and return JSON.
+
+    Scoring runs in a background thread and returns immediately; the caller
+    polls /api/upload/status/<job_id> until stage is "done" or "error". This
+    keeps the request short so the Vercel/Render proxy never times out (502)
+    while the four agents plus WhipScribe extras run.
+    """
     api_key = get_api_key()
     if not api_key:
         return jsonify({"success": False, "error": "No API key configured"}), 401
 
-    provider, llm_key, model = get_eval_settings()
-    try:
-        transcript = get_transcript(api_key, job_id)
-        extras = _whip_extras(api_key, job_id)
-        evaluation = evaluate(
-            transcript, api_key=llm_key, model=model, provider=provider,
-            session_summary=extras.get("session_summary"),
-            key_moments=extras.get("key_moments"),
-            audio_url=extras.get("audio_url"),
-        )
-        _attach_whip_extras(evaluation, extras)
-        store.save_evaluation(job_id, transcript, evaluation)
-        core = _core_eval(evaluation)
-        _dispatch_async(job_id, core, transcript)
-        return jsonify({
-            "success": True,
-            "job_id": job_id,
-            "score": core.get("overall_score", 0),
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    with UPLOAD_LOCK:
+        already_running = (UPLOAD_JOBS.get(job_id) or {}).get("stage") in ("transcribing", "scoring")
+    if already_running:
+        return jsonify({"success": True, "job_id": job_id, "stage": "scoring", "started": False}), 202
+
+    threading.Thread(target=_analyze_worker, args=(api_key, job_id), daemon=True).start()
+    return jsonify({"success": True, "job_id": job_id, "stage": "scoring", "started": True}), 202
 
 
 _SWEEP = {"running": False, "evaluated": 0, "skipped": 0, "total": 0,
@@ -1004,9 +1229,46 @@ def api_analyze_all_status():
     return jsonify({"success": True, **{k: v for k, v in _SWEEP.items() if k != "started_at"}, "elapsed_seconds": elapsed})
 
 
+def _mcp_citations(api_key, question, evaluations, job_id=None):
+    """Cross-call transcript evidence from the WhipScribe MCP server.
+
+    Returns (citations, info). Raises whip_mcp.WhipMCPError when MCP cannot
+    be used at all, so the caller falls back to the local index.
+    """
+    jobs = [
+        {"job_id": row.get("job_id"), "meeting_name": row.get("meeting_name")}
+        for row in evaluations
+        if not job_id or row.get("job_id") == job_id
+    ]
+    found = whip_mcp.search_calls(api_key, question, jobs, max_calls=8)
+    # MCP sentences carry speaker=null; take the diarized speaker from the
+    # stored transcript segment that covers the cited second.
+    by_job = {row.get("job_id"): row for row in evaluations}
+    for cite in found["citations"]:
+        if cite.get("speaker"):
+            continue
+        transcript = (by_job.get(cite["job_id"]) or {}).get("transcript")
+        if isinstance(transcript, str):
+            try:
+                transcript = json.loads(transcript)
+            except (ValueError, TypeError):
+                transcript = {}
+        for seg in (transcript or {}).get("segments", []) or []:
+            if float(seg.get("start") or 0) <= cite["start"] + 0.05 <= float(seg.get("end") or 0) + 0.1:
+                cite["speaker"] = seg.get("speaker")
+                break
+    return found["citations"], {k: found.get(k) for k in ("searched", "not_ready", "errors", "query")}
+
+
 @app.route("/api/ask", methods=["POST"])
 def api_ask():
-    """Griot: grounded Q&A over the stored evaluations."""
+    """Griot: grounded Q&A over the stored evaluations.
+
+    Retrieval: the WhipScribe MCP server's clips_search_transcript over each
+    stored call (source "whipscribe-mcp"). If MCP is unreachable, has no
+    search tool, or finds nothing, the local index over the stored
+    transcripts is used instead (source "local-index").
+    """
     payload = request.get_json(silent=True) or {}
     question = (payload.get("question") or "").strip()
     if not question:
@@ -1018,12 +1280,36 @@ def api_ask():
     provider, llm_key, model = get_eval_settings()
     evaluations = store.get_all_evaluations()
     evidence = companion.build_evidence(evaluations, job_id=job_id)
-    result = companion.ask(question, evidence, provider=provider, api_key=llm_key, model=model)
+
+    citations, source, retrieval = [], "local-index", {}
+    api_key = get_api_key()
+    if api_key:
+        try:
+            citations, retrieval = _mcp_citations(api_key, question, evaluations, job_id=job_id)
+            if citations:
+                source = "whipscribe-mcp"
+            else:
+                retrieval["fallback_reason"] = "no MCP matches"
+        except Exception as exc:  # noqa: BLE001 - any MCP failure falls back
+            retrieval = {"fallback_reason": f"whipscribe-mcp failed: {getattr(exc, 'code', None) or type(exc).__name__}"}
+    else:
+        retrieval = {"fallback_reason": REASON_NO_KEY}
+    if not citations:
+        citations = companion.local_citations(question, evaluations, job_id=job_id)
+        source = "local-index"
+
+    result = companion.ask(
+        question, evidence, provider=provider, api_key=llm_key, model=model,
+        citations=citations, source=source,
+    )
     return jsonify({
         "success": True,
         "answer": result.get("answer", ""),
         "mode": result.get("mode", "data"),
         "sources": result.get("sources", []),
+        "citations": citations,
+        "source": source,
+        "retrieval": retrieval,
         "calls_used": len(evidence.get("calls", [])),
     })
 
@@ -1541,6 +1827,56 @@ def api_oauth_config():
     return jsonify({"success": True, "tools": oauth.config(_public_base())})
 
 
+def _seed_job_ids():
+    """job_ids shipped in seed_evaluations.db (real, already-scored calls)."""
+    import sqlite3
+
+    seed = os.path.join(PROJECT_DIR, "seed_evaluations.db")
+    if not os.path.exists(seed):
+        return []
+    try:
+        conn = sqlite3.connect(f"file:{seed}?mode=ro", uri=True)
+        rows = conn.execute(
+            "SELECT job_id FROM evaluations ORDER BY LENGTH(transcript) DESC"
+        ).fetchall()
+        conn.close()
+        return [r[0] for r in rows]
+    except Exception:
+        return []
+
+
+@app.route("/api/sample")
+def api_sample():
+    """A seeded, already-scored demo call so "Try a sample call" opens a real report.
+
+    Picks the richest seeded call (longest transcript) that is present in the
+    working DB; falls back to the richest stored call of any origin.
+    """
+    seeded = _seed_job_ids()
+    for jid in seeded:
+        row = store.get_evaluation(jid)
+        if row:
+            core = _core_eval(row["evaluation"])
+            return jsonify({
+                "success": True,
+                "job_id": jid,
+                "meeting_name": row.get("meeting_name"),
+                "overall_score": core.get("overall_score"),
+                "seeded": True,
+            })
+    rows = store.get_all_evaluations()
+    if rows:
+        best = max(rows, key=lambda r: len(r.get("transcript") or ""))
+        return jsonify({
+            "success": True,
+            "job_id": best["job_id"],
+            "meeting_name": best.get("meeting_name"),
+            "overall_score": _core_eval(json.loads(best["evaluation"]) if isinstance(best["evaluation"], str) else best["evaluation"]).get("overall_score"),
+            "seeded": False,
+        })
+    return jsonify({"success": False, "error": "No scored calls yet."}), 404
+
+
 @app.route("/api/sample/run", methods=["POST"])
 def api_sample_run():
     """Transcribe and score the bundled 26-second sample call (real API usage)."""
@@ -1553,7 +1889,7 @@ def api_sample_run():
     try:
         job_id = submit_file(api_key, sample_path)
     except Exception as exc:  # noqa: BLE001
-        return jsonify({"success": False, "error": f"WhipScribe rejected the sample upload: {exc}"}), 502
+        return jsonify({"success": False, "error": _whip_error_message(exc)}), _whip_error_status(exc)
     _set_upload_state(job_id, stage="transcribing", message="WhipScribe is transcribing the sample call.")
     threading.Thread(
         target=_process_upload,

@@ -5,9 +5,13 @@
 
 **Product Demo** : [Video Demo](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
 
+**Read next** : [Decisions & what I threw away](DECISIONS.md) · [What I learned about the WhipScribe API](docs/LEARNING.md)
+
 ---
 
 ## What this Solves:
+
+**Every investor call, scored, with the quotes to prove it.**
 
 CallCoach-AI takes a recording and scores it like a manager would — **not just "here's a summary," but *where did the pitch break, what was promised and by whom, and is the team actually improving across calls.***
 
@@ -35,6 +39,12 @@ Upload a file, paste a link, or record in the browser. WhipScribe transcribes it
 
 5.) **📦 No empty dashboard :** Ships `seed_evaluations.db` - 8 real scored calls restored automatically, plus a one-click 26-second sample call that runs the live WhipScribe API end to end.
 
+7.) **🔊 Hear the moment :** every flagged quote has ▶ Hear it - the call audio plays from that exact second, on a timeline of the whole call coloured by judge. `/report/<id>?t=42` deep-links straight to a moment.
+
+8.) **🔎 Griot on the WhipScribe MCP server :** cross-call answers are retrieved with the MCP tool `clips_search_transcript` (key moments with `clips_get_high_signal`), cited by call · speaker · second, and labelled with their source (MCP or local index).
+
+9.) **✅ Measured quality :** 139 offline pytest tests in CI, axe-core 0 serious/critical violations on every page, no overflow at 390/320 px, designed loading/empty/error/offline states.
+
 6.) **💻 CLI + MCP :** Process any recordings, calls, audios, investor meetings, without leaving your terminal, completely offline - supports local LLMs via Ollama. An MCP server exposes `analyze_meeting`, `get_deal_velocity`, `get_coaching_insights`, and `export_meeting_report`.
 
 ### Architecture
@@ -54,7 +64,7 @@ flowchart LR
     U --> REC
 
     subgraph FRONTEND["Frontend - Next.js (Vercel)"]
-        PAGES["Dashboard · Live · Trends · Coach · Speakers · Report · Connect Center"]
+        PAGES["Home · Report (timeline + audio) · Spotter · Trends · Coach · Speakers · Connect Center"]
         WIDGET["Griot chat (floating, every page)"]
     end
 
@@ -77,11 +87,13 @@ flowchart LR
     PAGES -->|"HTTP /api/* (rewrite)"| API
 
     subgraph EXTERNAL["External APIs"]
-        WHIP["WhipScribe API - submit file/URL → poll → transcript + speakers + timestamps + summary · insights · key moments"]
+        WHIP["WhipScribe REST - submit file/URL → poll → transcript + speakers + timestamps · insights · signed audio URL"]
+        WMCP["WhipScribe MCP - clips_search_transcript (Griot) · clips_get_high_signal (key moments)"]
         GROQ["Groq API (openai/gpt-oss-120b) - LLM-as-a-judge + OpenAI / Anthropic / Ollama alternates"]
     end
 
     API -->|"transcribe"| WHIP
+    API -->|"search · key moments"| WMCP
     WHIP -->|"transcript JSON"| EVAL
     EVAL -->|"grading prompt"| GROQ
     GROQ -->|"scores + evidence"| EVAL
@@ -115,6 +127,10 @@ flowchart LR
 
 ## What I learned or had to look up
 
+The full write-up is in [docs/LEARNING.md](docs/LEARNING.md). The short version: three documented WhipScribe REST routes (`/clips/*`, `/summary`) return 404 live, so key moments and search come from the WhipScribe MCP server instead. MCP needs `Authorization: Bearer` and returns SSE. Signed audio URLs expire after 1 h, so the app redirects to a fresh one. And my own tests caught a bug that made three of the four category scores always 50.
+
+Earlier, on the build side:
+
 1. **Windows SWC binary blocking** — The Next.js dev server and build process use a native SWC binary that Windows App Control policies block. Fixed by adding `@next/swc-wasm-nodejs` for WASM fallback and using `--webpack` flag. This was learned by reading the Next.js source code in `node_modules/next/dist/build/swc/index.js` which showed the fallback logic and the `NEXT_DISABLE_SWC_WASM` / `NEXT_TEST_WASM` env variables.
 2. **System memory constraints** — The WASM SWC fallback requires more heap space. Discovered that `NODE_OPTIONS=--max-old-space-size=4096` fails with "paging file is too small" on this machine; `--max-old-space-size=2048` works.
 3. **Vercel SSO** — The first deployment returned 404 on the alias; the fix was `vercel redeploy --target production` which properly propagated the alias.
@@ -140,7 +156,7 @@ Tick what is true of this PR:
 - [x] Keyboard reachable, readable contrast, labelled controls (semantic HTML, aria-labels, role attributes)
 - [x] Copy is in the user's words, not the system's (user-tested phrasing: "Press record and grant microphone access")
 - [x] The first run is designed (homepage shows upload before any data; empty states on all pages)
-- [x] Before/after screenshots or a short recording attached (screenshots in `frontend/*.png`, demo video in `videos/demo/`)
+- [x] Before/after screenshots or a short recording attached (screenshots in `docs/screenshots/feature-*.png`, demo video linked above)
 
 ### Shipped apps
 
@@ -154,14 +170,14 @@ Tick what is true of this PR:
 
 - [x] The README explains the decisions, not just the features
 - [x] Commits are small and named for the change
-- [x] I removed or rewrote something the tool produced, and say what and why (removed Tailwind CSS, React Bits heavy components like Three.js/ogl, replaced with vanilla CSS following WhipScribe design tokens)
+- [x] I removed or rewrote something the tool produced, and say what and why (deleted a mock "MCP integration", a static "13 features active" dashboard and a localhost-only live page - see DECISIONS.md; earlier: removed Tailwind and heavy React Bits components)
 - [x] No invented API behaviour: every call matches the docs or a real response (WhipScribe API calls verified via e2e_test.py)
 
 ### Finishing
 
-- [x] One full flow works end to end from a clean install (`python e2e_test.py --offline` runs without any keys)
+- [x] One full flow works end to end from a clean install (`python -m pytest -q` - 139 offline tests, no keys; CI on every push)
 - [x] Someone other than me used it and I changed something because of it (feedback incorporated from Track 1 challenge review)
-- [x] The README says exactly what does not work yet (Section 4 of README)
+- [x] The README says exactly what does not work yet (README → "What doesn't work yet")
 - [x] Install and run instructions work on a machine that is not mine (Render deploy configured with `render.yaml`)
 
 ### Ownership and teamwork
@@ -182,7 +198,7 @@ Tick what is true of this PR:
 
 ### Learning
 
-- [x] I name something that was new to me and how I learned it (Windows SWC binary blocking, Vercel SSO, memory constraints)
+- [x] I name something that was new to me and how I learned it (WhipScribe MCP over Streamable HTTP with Bearer auth + SSE; documented REST routes that 404 live - docs/LEARNING.md)
 - [x] I describe a thing that went wrong and how I found and fixed it (memory allocation, 404 on Vercel alias)
 - [x] I asked a question in an issue early instead of guessing late
 
