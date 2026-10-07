@@ -6,9 +6,13 @@
 
 Drop in a call recording. CallCoach-AI tells you where the pitch broke, what you promised, and the exact second it happened. Press play to hear it.
 
-**[Try it live →](https://callcoachai.sujit.top/)** &nbsp;·&nbsp; [Watch the demo](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
+**[Try it live →](https://callcoachai.sujit.top/)** &nbsp;·&nbsp; **[▶ Watch the launch film](https://cdn.jsdelivr.net/gh/Blacksujit/whipscribe-buildathon@main/apps/blacksujit/track-4/docs/media/callcoach-launch.mp4)** (0:55, sound on) &nbsp;·&nbsp; [Product walkthrough](https://videotourl.com/videos/1790703784383-893d45c0-0e34-4ade-84b1-0c732fbc65c0.webm)
 
 [![CI](https://github.com/Blacksujit/callcoach-ai-whhipscribe/actions/workflows/ci.yml/badge.svg)](https://github.com/Blacksujit/callcoach-ai-whhipscribe/actions/workflows/ci.yml)
+
+<a href="https://cdn.jsdelivr.net/gh/Blacksujit/whipscribe-buildathon@main/apps/blacksujit/track-4/docs/media/callcoach-launch.mp4" title="Play the CallCoach-AI launch film (0:55)"><img src="docs/media/launch-film-poster.png" alt="Play the CallCoach-AI launch film (0:55)" width="900"></a>
+
+<sub>Click to play the film in your browser. You can also <a href="docs/media/callcoach-launch.mp4">download the MP4</a>.</sub>
 
 <img src="docs/screenshots/readme-home.png" alt="CallCoach-AI home page: Every investor call, scored, with the quotes to prove it" width="900">
 
